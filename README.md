@@ -9,3 +9,10 @@ See issue https://github.com/BebeSparkelSparkel/biparsing/issues/1
 **masaeedu**
 
 "I suspect a "clean" way to do this sort of thing will eventually reveal within a profunctor encoding, but I haven't put much time into it yet :)" **ChrisPenner**
+
+"Are there any bidirectional parser libraries ready to use?" **TheMatten**
+
+"None that are good.
+Well "good" is not the right word here
+Basically the best current approach to bidirectional parsing in haskell does not have the ideal interface"
+**chessai**
