@@ -1,8 +1,7 @@
 # biparsing
 
 ## Reference Links
-- https://github.com/masaeedu/co-optics/blob/master/src/Examples/Biparsing.hs
-- [Composing bidirectional programs monadically](https://arxiv.org/pdf/1902.06950.pdf)
+See issue https://github.com/BebeSparkelSparkel/biparsing/issues/1
 
 ## Notable Quotes
 
