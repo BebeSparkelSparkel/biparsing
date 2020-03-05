@@ -23,36 +23,36 @@ Basically the best current approach to bidirectional parsing in haskell does not
 Codec makes it simple to write composable bidirectional serializers with a consistent interface.
 
 Pros
--
+- ...
 
 Cons
--
+- ...
 
 Features we would like to also have
--
+- ...
 
 ## [lens](https://hackage.haskell.org/package/lens) Lenses, Folds and Traversals
 
 Pros
--
+- ...
 
 Cons
--
+- ...
 
 Features we would like to also have
--
+- ...
 
 ## [boomerang](https://hackage.haskell.org/package/boomerang) Library for invertible parsing and printing
 Specify a single unified grammar which can be used for parsing and pretty-printing
 
 Pros
--
+- ...
 
 Cons
--
+- ...
 
 Features we would like to also have
--
+- ...
 
 ## [roundtrip](https://hackage.haskell.org/package/roundtrip) Bidirectional (de-)serialization
 Roundtrip allows the definition of bidirectional (de-)serialization specifications. The specification language is based on the ideas described in the paper Invertible Syntax Descriptions: Unifying Parsing and Pretty Printing by Tillmann Rendel and Klaus Ostermann, Haskell Symposium 2010.
@@ -60,22 +60,22 @@ This package does not provide concrete instances of the specification classes, s
 The package contains slightly modified code from Tillmann Rendel's partial-isomorphisms and invertible-syntax packages (Copyright (c) 2010-11 University of Marburg).
 
 Pros
--
+- ...
 
 Cons
--
+- ...
 
 Features we would like to also have
--
+- ...
 
 ## [attoparsec](https://hackage.haskell.org/package/attoparsec) with [unparse-attoparsec](https://github.com/Lysxia/unparse-attoparsec)
 This library provides an interface to build programs that can be interpreted both as parsers and as printers.
 
 Pros
--
+- ...
 
 Cons
--
+- ...
 
 Features we would like to also have
--
+- ...
