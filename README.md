@@ -1,5 +1,8 @@
 # biparsing
 
+## Chat
+Active converstaions on https://funprog.zulipchat.com/#narrow/stream/225296-Biparsing
+
 ## Reference Links
 See issue https://github.com/BebeSparkelSparkel/biparsing/issues/1
 
