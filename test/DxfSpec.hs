@@ -1,3 +1,5 @@
+-- Notes:
+-- This is only an approximation of what I want so if anything is wrong then feel free to change it
 {-# OPTIONS_GHC -fno-warn-type-defaults #-}
 module DxfSpec where
 
@@ -28,6 +30,7 @@ biLines :: Biparser (LineError error) a (EOL a, [a])
 -- biLines = biSplit "\n" <|> biSplit "\r\n" -- not sure if alternative will actually work here
 biLines = error "biLines"
 
+-- Indicates that the type for this is wrong https://github.com/BebeSparkelSparkel/biparsing/issues/4
 biMany :: Biparser error from to -> Biparser error from [to] -- may need a func
 biMany = error "biMany"
 
