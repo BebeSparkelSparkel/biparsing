@@ -26,10 +26,13 @@ Basically the best current approach to bidirectional parsing in haskell does not
 Codec makes it simple to write composable bidirectional serializers with a consistent interface.
 
 Pros
-- ...
+- JSON and binary supported natively
+- Allows any kind of token not just Char and Word8
 
 Cons
-- ...
+- Does not give any helper functions for common parsing needs like parsec-combinators
+- More could be handled in the type level
+- Dependant on the constructor argument order. The constructor arguments need to be reorderd if the parser changes. Type errors are not clear as to which field there is a problem parsing for.
 
 Features we would like to also have
 - ...
