@@ -1,5 +1,11 @@
 # biparsing
 
+## Required Features
+- Disjoint ordering of the data Constructors and the parsing order. Monadic parsers assign parsed values to variables that can then be used in any order to construct the final data instance. Many biparsers us Applicative Functors which require the parse order to match the data constructor arguments.
+- Polymorphic Streams and Token types. This should not just be for parsing Text, String, or ByteString streams but any kind of tokenized streams.
+- Parser compostion. If the parser consumes stream 'a' and produces stream 'b' it should be composible with another parser that consumes stream 'b'.
+- Ability to have guaranteed serialization. Parsing needs to be able to fail.
+
 ## Chat
 Active conversations on https://funprog.zulipchat.com/#narrow/stream/225296-Biparsing
 
