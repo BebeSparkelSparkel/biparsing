@@ -10,9 +10,9 @@
 Active conversations on https://funprog.zulipchat.com/#narrow/stream/225296-Biparsing
 
 ## Reference Links
-- See issue https://github.com/BebeSparkelSparkel/biparsing/issues/1
+- [List Relevant References](https://github.com/BebeSparkelSparkel/biparsing/issues/1)
 - [Invertible Syntax Descriptions: Unifying Parsing and Pretty Printing](./papers/rendel10invertible.pdf)
-
+- [Composing bidirectional programs monadically](./papers/1902.06959.pdf)
 
 ## Notable Quotes
 
@@ -158,4 +158,7 @@ class Alternative f where -- lacks Applicative superclass
 I would have preferred that the definition of `data Iso a b = Iso (a -> Maybe b) (b -> a)` have been used instead to force successful serialization. This would however put more complexity in the types to enforce this.
 Also, due to using applicative the order of the parsing must coincide with the constructor arguments. With monadic parsers the parsed value can be assigned to a variable which disconnects the constructor argument order and the parser order.
 Type lists may be able to enforce: guaranteed serialization with Alternative, and unordered parsing.
+
+## [Composing bidirectional programs monadically](./papers/1902.06959.pdf)
+
 
