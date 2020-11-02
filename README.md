@@ -81,7 +81,10 @@ Cons
 Features we would like to also have
 - ...
 
-## [invertible-syntax](http://hackage.haskell.org/package/invertible-syntax)
+## [sexp-grammar](http://hackage.haskell.org/package/sexp-grammar)
+Grammar combinator framework to build invertible parsing libraries for concrete syntax.
+
+Contains [invertible-syntax](http://hackage.haskell.org/package/invertible-syntax)
 
 Pros
 - ...
@@ -91,9 +94,6 @@ Cons
 
 Features we would like to also have
 - ...
-
-## [sexp-grammar](http://hackage.haskell.org/package/sexp-grammar)
-Grammar combinator framework to build invertible parsing libraries for concrete syntax.
 
 Based On
 - Invertible Syntax Descriptions: Unifying Parsing and Pretty Printing by Tillmann Rendel and Klaus Ostermann
@@ -113,7 +113,7 @@ Features we would like to also have
 - ...
 
 Based On
-- Unifying Parsing and Pretty Printing by Tillmann Rendel and Klaus Ostermann, Haskell Symposium 2010
+- Invertible Syntax Descriptions: Unifying Parsing and Pretty Printing by Tillmann Rendel and Klaus Ostermann
 - partial-isomorphisms by Tillmann Rendel
 - invertible-syntax
 
@@ -150,4 +150,6 @@ class Alternative f where -- lacks Applicative superclass
 ```
 
 I would have preferred that the definition of `data Iso a b = Iso (a -> Maybe b) (b -> a)` have been used instead to force successful serialization. This would however put more complexity in the types to enforce this.
+Also, due to using applicative the order of the parsing must coincide with the constructor arguments. With monadic parsers the parsed value can be assigned to a variable which disconnects the constructor argument order and the parser order.
+Type lists may be able to enforce: guaranteed serialization with Alternative, and unordered parsing.
 
