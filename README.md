@@ -13,6 +13,7 @@ Active conversations on https://funprog.zulipchat.com/#narrow/stream/225296-Bipa
 - [List Relevant References](https://github.com/BebeSparkelSparkel/biparsing/issues/1)
 - [Invertible Syntax Descriptions: Unifying Parsing and Pretty Printing](./papers/rendel10invertible.pdf)
 - [Composing bidirectional programs monadically](./papers/1902.06959.pdf)
+- [Generalized Convolution and Efficient Language Recognition](http://conal.net/papers/convolution/) by Conal Elliott
 
 ## Notable Quotes
 
