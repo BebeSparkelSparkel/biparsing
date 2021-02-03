@@ -1,0 +1,22 @@
+{
+  "name": "polish-notation-biparser",
+  "version": "1.0.0",
+  "description": "Uses biparsing to parse and serialize polish notation",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha"
+  },
+  "keywords": [
+    "polish-notation",
+    "biparsing",
+    "parsing",
+    "serialize",
+    "parse",
+    "partial-isomorphism"
+  ],
+  "author": "William Rusnack",
+  "license": "MIT",
+  "devDependencies": {
+    "mocha": "^8.2.1"
+  }
+}

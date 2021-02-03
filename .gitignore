@@ -1,3 +1,4 @@
 .stack-work/
 biparsing.cabal
 *~
+node_modules
