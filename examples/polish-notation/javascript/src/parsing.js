@@ -1,11 +1,8 @@
 'use strict'
 
 const {State, runState, evalState} = require('./RWS')
-const {
-  defer,
-  Just, Nothing, maybe, fromMaybe,
-  foldl, foldr
-  } = require('./functional')
+const { defer, foldl, foldr } = require('./functional')
+const { Just, Nothing, maybe, fromMaybe } = require('./Maybe')
 
 
 function Parser(tokens) {
@@ -45,13 +42,11 @@ Parser.prototype.string = string
 // Parser a -> [a]
 function many(parser) {
   return maybe(
+    [],
     function(x) {
       const accumulated = this.many(parser)
       accumulated.unshift(x)
       return accumulated
-    },
-    function() {
-      return []
     }
   ).bind(this)(this.optional(parser))
 }
@@ -92,11 +87,11 @@ exports.digit = digit
 function number() {
   const isNegative = fromMaybe(false)(this.optional(defer(string)('-')))
   const wholeDigits = this.many1(digit)
-  const wholeValue = foldl((x,y) => x * 10 + Number.parseInt(y), 0, wholeDigits)
+  const wholeValue = foldl((x,y) => x * 10 + Number.parseInt(y))(0)(wholeDigits)
   const fractionalValue = fromMaybe(0)(this.optional(function() {
     this.string('.')
     const fractionalDigits = this.many1(digit)
-    const fractionalValue = foldr((x,y) => Number.parseInt(x) + y / 10, 0, fractionalDigits) / 10
+    const fractionalValue = foldr((x,y) => Number.parseInt(x) + y / 10)(0)(fractionalDigits) / 10
     return fractionalValue
   }))
   return (isNegative ? -1 : 1) * (wholeValue + fractionalValue)

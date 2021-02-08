@@ -54,7 +54,8 @@ function tell(write) {
   this.writer = this.writer + write
   return undefined
 }
-exports.tell = defer(tell)
+// exports.tell = defer(tell)
+exports.tell = tell
 Writer.prototype.tell = tell
 
 function State(state) {

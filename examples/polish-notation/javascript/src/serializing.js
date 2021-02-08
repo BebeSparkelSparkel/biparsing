@@ -7,6 +7,7 @@ function Serializer(toSerialize) {
   this.writer = ''
 }
 exports.Serializer = Serializer
+Serializer.prototype = Object.assign(Serializer.prototype, Reader.prototype, Writer.prototype)
 
 // function runSerializer(func, serializer) {
 //   const newSerializer = new Serializer()
@@ -24,5 +25,4 @@ function execSerializer(func, serializer) {
   return newSerializer.writer
 }
 exports.execSerializer = execSerializer
-Serializer.prototype = Object.assign(Serializer.prototype, Reader.prototype, Writer.prototype)
 

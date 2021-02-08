@@ -1,7 +1,7 @@
 'use strict'
 
 const assert = require('assert')
-const {Just, Nothing, fromMaybe} = require('../src/functional')
+const {Just, Nothing, fromMaybe} = require('../src/Maybe')
 
 const {
   Parser, runParser, evalParser,

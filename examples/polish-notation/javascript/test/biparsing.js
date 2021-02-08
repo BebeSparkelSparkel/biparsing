@@ -2,19 +2,21 @@
 
 const assert = require('assert')
 
-const {defer, Just, Nothing, fromMaybe} = require('../src/functional')
+const {compose, identity, defer, constant, map} = require('../src/functional')
+const {Just, Nothing, maybe, fromMaybe} = require('../src/Maybe')
 const {
+  log,
   genParserSerializer,
   Parser, runParser, evalParser,
   Serializer, execSerializer,
-  take, string, optional, many,
-  digit,
+  condition, pFunction,
+  take, string, optional, many, manyN,
   } = require('../src/biparsing')
 
 
 describe('biparsing', function() {
-  describe.only('take', function() {
-    const biparser = take(2, x => Array.from(x.chars))
+  describe('take', function() {
+    const biparser = take(2, x => x.chars)
     const {parser, serializer} = genParserSerializer(biparser)
 
     it('parse', function() {
@@ -48,7 +50,7 @@ describe('biparsing', function() {
   })
 
   describe('optional', function() {
-    const biparser = optional(string('abc'), x => x === 'def')
+    const biparser = optional(x => x === 'def', string('abc'))
     const {parser, serializer} = genParserSerializer(biparser)
 
     describe('parse', function() {
@@ -58,8 +60,8 @@ describe('biparsing', function() {
       })
 
       it('fail', function() {
-        const s = new Parser('a')
-        assert.deepEqual(evalParser(parser, s), Nothing)
+        const s = new Parser('cba')
+        assert.deepEqual(runParser(parser, s), [Nothing,'cba'])
       })
 
     })
@@ -76,28 +78,82 @@ describe('biparsing', function() {
   })
 
   describe('many', function() {
-    const biparser = many(string('abc'), xs => xs.map(x => (x*2).toString() + ' '))
+    const biparser = many(
+      take(3, x => x.join('')),
+      compose(
+        map(x => x.split('').reverse()),
+        ({a}) => a,
+      )
+    )
     const {parser, serializer} = genParserSerializer(biparser)
 
     it('parse', function() {
-      const s = new Parser('abcabcabcdef')
-      assert.deepEqual(runParser(parser, s), [['abc','abc','abc'],'def'])
+      const s = new Parser('abcdefhijkl')
+      assert.deepEqual(runParser(parser, s), [['abc','def','hij'],'kl'])
     })
 
     it('serialize', function() {
-      const r = new Reader([1,2,3])
-      assert.deepEqual(execSerializer(serializer, r), '2 4 6 ')
+      const r = new Serializer({a:['cba','fed','jih']})
+      assert.equal(execSerializer(serializer, r), 'abcdefhij')
     })
   })
 
-  describe('digit', function() {
-    const {parser, serializer} = genParserSerializer(digit)
+  describe('asssignments', function() {
+    it('newAssignmentSpace', function() {
+      const biparser = function() {
+        this.string('1')
+        this.assign('a')
+        this.string('2')
+        this.assign('b')
+        this.newAssignmentSpace(function() {
+          this.string('3')
+          this.assign('a')
+          this.string('4')
+          this.assign('b')
+          this.referenceAll()
+        })
+        this.assign('c')
+        this.referenceAll()
+      }
+      const {parser} = genParserSerializer(biparser)
+      const s = new Parser('123456')
+      assert.deepEqual(
+        runParser(parser,s),
+        [{a:1,b:2,c:{a:3,b:4}},'56']
+      )
+    })
 
-    it('parse', function() {
-      assert.deepEqual(runParser(parser, new Parser('1u')), ['1','u'])
-      assert.throws(defer(runParser)(parser, new Parser('u1')))
+    it('newAssignmentSpace optional', function() {
+      const biparser = function() {
+        this.optional(constant(true), string('1'))
+        this.assign('a')
+        this.newAssignmentSpace(function() {
+          this.optional(constant(true), string('2'))
+          this.assign('a')
+          this.referenceAll()
+        })
+        this.assign('b')
+        this.referenceAll()
+      }
+      const {parser} = genParserSerializer(biparser)
+      const s = new Parser('123')
+      assert.deepEqual(
+        runParser(parser,s),
+        [{a: new Just('1'), b: {a: new Just('2')}}, '3']
+      )
+    })
+
+    it('newAssignmentSpace at start', function() {
+      function biparser() { this.newAssignmentSpace(function() {
+        this.string('-')
+      })}
+      const {parser} = genParserSerializer(biparser)
+      const s = new Parser('-abc')
+      assert.deepEqual(
+        runParser(parser,s),
+        ['-','abc']
+      )
     })
   })
 
 })
-
