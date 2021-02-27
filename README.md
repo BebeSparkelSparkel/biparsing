@@ -1,5 +1,13 @@
 # biparsing
 
+Biparsing is a bidirectional programming technique that specializes in constructing parsing and serialization programs simultaneously.
+
+## Objectives
+
+Find a suitable methodology to allow biparsing to be implemented in common programming languages.
+
+In the meantime, document and critique bidirectional programming ideas, implementations, and papers with a focus on parsing streams of objects and reversing the production back into the stream..
+
 ## Required Features
 - Disjoint ordering of the data Constructors and the parsing order. Monadic parsers assign parsed values to variables that can then be used in any order to construct the final data instance. Many biparsers us Applicative Functors which require the parse order to match the data constructor arguments.
 - Polymorphic Streams and Token types. This should not just be for parsing Text, String, or ByteString streams but any kind of tokenized streams.
