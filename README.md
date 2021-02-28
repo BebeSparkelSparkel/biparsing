@@ -8,10 +8,82 @@ Find a suitable methodology to allow biparsing to be implemented in common progr
 
 In the meantime, document and critique bidirectional programming ideas, implementations, and papers with a focus on parsing streams of objects and reversing the production back into the stream..
 
+## Current Implementations and their Problems
+
+### Applicative Functor Composition
+
+Currently, a viable solution for constructing biparsers. The drawback is that it is hard to modify since it requires that the parser constructor function must be defined separately from the parsing logic. Also, for serialization an extractor function is required to remove what is to be serialized from the parse type.
+
+```haskell
+data Person = Person String String
+
+-- constructor function
+person :: String -> String -> Person
+person f l = Person f l
+
+-- extractor functions
+firstName :: Person -> String
+firstName (Person x _) = x
+lastName :: Person -> String
+lastName (Person _ x) = x
+
+personBiparser :: Biparser String Person
+personBiparser = 
+  person <$> -- sets constructor function
+  many firstName alpha <*> -- Parsing: `many` passes the consumed alpha characters as the first argument of the `person` constructor function. Serializing: `many` uses the extractor function `firstName` to get the first name charcaters from a `Person` instance and passes each single caracter to the alpha serializer
+  (spaces *> many lastName alpha) -- Parsing: `spaces` skips the spaces, `many` passes the consumed alpha characters as the second argument of the `person` constructor function. Serializing: `spaces` writes a " " space. `many lastName alpha` does what the above line does.
+
+spaces :: Biparser a String
+spaces = many (const [' ']) space
+
+many :: (a -> [b]) -> Biparser b c -> Biparser a [c]
+many extractor biparser = ...
+```
+
+Another, example from the linked **codec** package.
+```haskell
+data RecordB = RecordB
+  { recordBString :: String
+  , recordBDouble :: Double
+  } deriving (Eq, Ord, Show)
+
+recordBObjCodec :: JSONCodec RecordB
+recordBObjCodec = asObject "RecordB" $
+  RecordB
+    <$> recordBString =. field "string"
+    <*> recordBDouble =. field "double"
+```
+
+### Monadic Composition
+
+Monadic composition does not have a valid implementation yet but does have an example implementation **unparse-attoparsec**, details below, that is outlined in [Composing bidirectional programs monadically](./papers/1902.06959.pdf).f
+
+```haskell
+int :: Biparser Int Int
+int = do
+  let printedInt n = show n ++ " "
+  ds <- digits 'upon' printedInt
+  return (read ds)
+
+digits :: Biparser String String
+digits = do
+  d <- char 'upon' head
+  if isDigit d then do
+    igits <- digits 'upon' tail
+    return (d : igits)
+  else if d == ' ' then return " "
+  else error "Expected digit or space"
+```
+
+### Optics Compositon
+
+Optics compostion can be used to create bidirectional programs by utilizing Iso (isomorphisms) and Prisms. These are ready to go and can be used to create composable bidirectional programms. Unfortuantely at this point, optics do not support state very well so it's difficult to report errors with locations.
+
 ## Required Features
+
 - Disjoint ordering of the data Constructors and the parsing order. Monadic parsers assign parsed values to variables that can then be used in any order to construct the final data instance. Many biparsers us Applicative Functors which require the parse order to match the data constructor arguments.
 - Polymorphic Streams and Token types. This should not just be for parsing Text, String, or ByteString streams but any kind of tokenized streams.
-- Parser compostion. If the parser consumes stream 'a' and produces stream 'b' it should be composible with another parser that consumes stream 'b'.
+- Parser composition. If the parser consumes stream 'a' and produces stream 'b' it should be composable with another parser that consumes stream 'b'.
 - Ability to have guaranteed serialization. Parsing needs to be able to fail.
 
 ## Chat
@@ -23,7 +95,7 @@ Active conversations on https://funprog.zulipchat.com/#narrow/stream/225296-Bipa
 - [Composing bidirectional programs monadically](./papers/1902.06959.pdf)
 - [Generalized Convolution and Efficient Language Recognition](http://conal.net/papers/convolution/) by Conal Elliott
 
-## Notable Quotes
+# Notable Quotes
 
 "IMO it's a mistake (although not an infrequent one) to try and use an optic as a parser or a printer or whatever. It's like trying to light a fire by striking your lighter against a rock. The whole point of polymorphic profunctor optics is that they can adjust arbitrary profunctors, including natural representations of parsers and printers"
 **masaeedu**
@@ -132,8 +204,8 @@ Based On
 - partial-isomorphisms by Tillmann Rendel
 - invertible-syntax
 
-## [attoparsec](https://hackage.haskell.org/package/attoparsec) with [unparse-attoparsec](https://github.com/Lysxia/unparse-attoparsec)
-This library provides an interface to build programs that can be interpreted both as parsers and as printers.
+## [unparse-attoparsec](https://github.com/Lysxia/unparse-attoparsec)
+This library provides a wrapper [attoparsec](https://hackage.haskell.org/package/attoparsec) to build programs that can be interpreted both as parsers and as printers.
 
 Pros
 - ...
@@ -169,5 +241,4 @@ Also, due to using applicative the order of the parsing must coincide with the c
 Type lists may be able to enforce: guaranteed serialization with Alternative, and unordered parsing.
 
 ## [Composing bidirectional programs monadically](./papers/1902.06959.pdf)
-
 
