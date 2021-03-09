@@ -242,3 +242,12 @@ Type lists may be able to enforce: guaranteed serialization with Alternative, an
 
 ## [Composing bidirectional programs monadically](./papers/1902.06959.pdf)
 
+# Definitions
+
+- Parser - a function that converts Data to a Data-Structure
+- Serializer - a function that converts the Data-Structure produced by a Parser back to the Data that the parser consumes
+- Data - typically a stream of Tokens, but could be any structure that supports the Head and Tail functions. Examples: string, list of strings, tree of integers
+- Data-Structure - a native programatic construct that can be more easily inspected and modified by a program than Data
+- Token - typically a finite piece of data. Examples: character, string, integer, algebraic data type
+- Head function - returns the first element of a monomorphic container. `MonoFoldable mono => NonNull mono -> Element mono` https://hackage.haskell.org/package/mono-traversable-1.0.15.1/docs/Data-NonNull.html#v:head
+- Tail function - return the container less the element returned by head `IsSequence seq => NonNull seq -> seq` https://hackage.haskell.org/package/mono-traversable-1.0.15.1/docs/Data-NonNull.html#v:tail
