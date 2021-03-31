@@ -13,7 +13,7 @@ function compose(as) {
   if (!Array.isArray(as)) as = arguments
   return function(x) {
   return foldr((f,y) => f.bind(this)(y))(x)(as)
-}}
+} }
 exports.compose = compose
 
 // (a -> b) -> a -> b

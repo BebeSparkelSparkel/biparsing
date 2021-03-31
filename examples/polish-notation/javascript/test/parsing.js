@@ -6,8 +6,8 @@ const {Just, Nothing, fromMaybe} = require('../src/Maybe')
 const {
   Parser, runParser, evalParser,
   optional, string,
-  digit, number
-  } = require('../src/parsing')
+  digit, number,
+} = require('../src/parsing')
 
 describe('parsing', function() {
   it('take', function() {
@@ -20,7 +20,7 @@ describe('parsing', function() {
     assert.deepEqual(runParser(takeSome, s), [['0','123'],'45'])
   })
 
-  it('stringg', function() {
+  it('string', function() {
     const s = new Parser('abc123')
     assert.deepEqual(runParser(string('abc'), s), ['abc','123'])
   })

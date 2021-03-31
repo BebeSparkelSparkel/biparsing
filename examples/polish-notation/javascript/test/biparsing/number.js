@@ -11,7 +11,7 @@ const {
   Serializer, execSerializer,
   condition, pFunction,
   take, string, optional, many, manyN,
-  } = require('../../src/biparsing')
+} = require('../../src/biparsing')
 const {digit, numberSimple, number, numberZoom} =  require('../../src/biparsing/number')
 
 describe('number', function() {
