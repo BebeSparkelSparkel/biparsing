@@ -2,11 +2,11 @@
 const assert = require('assert')
 
 const {
-  Reader, runReader, withReader, ask,
+  Reader, runReader, ask,
   Writer, runWriter,
   State, runState,
-  RWS, runRWS
-  } = require('../src/RWS.js')
+  RWS, runRWS,
+} = require('../src/RWS.js')
 
 
 describe('RWS', function() {
@@ -21,13 +21,13 @@ describe('RWS', function() {
     })
 
     it('withReader', function() {
-      const r = new Reader({a:1,b:2})
+      const r = new Reader({a: 1,b: 2})
       function withReaderTest() {
         const x = this.ask()
         const y = this.withReader(x => x.b, ask)
         return [x,y]
       }
-      assert.deepEqual(runReader(withReaderTest, r), [{a:1,b:2},2])
+      assert.deepEqual(runReader(withReaderTest, r), [{a: 1,b: 2},2])
     })
   })
 

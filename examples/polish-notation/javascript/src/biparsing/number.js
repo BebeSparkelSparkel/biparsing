@@ -1,22 +1,15 @@
 'use strict'
 
 const { Just, Nothing, fromMaybe, maybe } = require('../Maybe')
-const { identity, defer, compose, constant, foldl, foldr, unfold } = require('../functional')
-const {
-  Biparser,
-  genParserSerializer,
-  Parser, runParser, evalParser,
-  Serializer, execSerializer,
-  condition, pFunction,
-  take, takeWhile, string, optional, many, manyN,
-  } = require('../biparsing')
+const { identity, compose, constant, foldl, foldr, unfold } = require('../functional')
+const { Biparser, string, optional } = require('../biparsing')
 
 
 // uses built in parsing and serializing javascript functions (not proud of this parser)
 function numberSimple() {
   this.takeWhile(
     x => '-.0123456789'.includes(x), // return true if the character should be in a number. no ordering accounted for so an ill formed number charcaters would still be parsed
-    x => x.toString() // uses the built in javascript number to string serializer to convert the number to a string for serialization
+    x => x.toString(), // uses the built in javascript number to string serializer to convert the number to a string for serialization
   )
   this.pFunction(Number.parseFloat) // uses the built in javascript Number.parseFloat to parse the string of charaters from takeWhile into a number
   this.condition(x => !Number.isNaN(x), constant('Expected a number not NaN')) // throws a parse error if the parsed number is NaN
@@ -29,7 +22,7 @@ function digit() {
   this.take(1, identity) // take one char while parsing and write one char when serializing
   this.condition(
     x => '0123456789'.includes(x), // check if character is a digit
-    x => `digit expected a 0123456789 but received ${x}` // constructs the ParseError if the character is not a digit
+    x => `digit expected a 0123456789 but received ${x}`, // constructs the ParseError if the character is not a digit
   )
 }
 exports.digit = digit
@@ -40,7 +33,7 @@ function number() {
   // biparses the negative sign or lack of positive sign
   this.optional(
     x => x < 0, // while serializing if the value is less than 0, run the serializaion function of `string('-')`
-    string('-') // biparses the negative symbol '-'
+    string('-'), // biparses the negative symbol '-'
   )
   this.pFunction(fromMaybe('')) // if no negative sign is parsed return an empty string for the sign
   this.assign('sign') // assign to parsing variable 'sign' the value '-' or '' that was produced by the sign section
@@ -51,7 +44,7 @@ function number() {
   this.manyN(
     1, // at least one digit needs to be parsed
     digit, // digit biparser. While parsing digit will be run by manN until it fails to parse a digit character. It will usually fail on the decimal point. While serializing manyN will pass a digit character to digit and digit will write that to the output string.
-    x => Array.from(getWholePart(x).toString()) // converts the whole part of the number to an array of digit charaters that will be individually passed to the serializing part of digit
+    x => Array.from(getWholePart(x).toString()), // converts the whole part of the number to an array of digit charaters that will be individually passed to the serializing part of digit
   )
   function arrayDigits2stringDigits(digits) {return digits.reduce((x,y) => x + y)} // converts the array of digits that the parsing part of many and manyN produces into a string of the digits. Ex. ['1','2','3'] is converted to '123'
   this.pFunction(arrayDigits2stringDigits) // combines all the digts that the parsing part of manyN and digit produced into a string
@@ -66,10 +59,10 @@ function number() {
       this.string('.') // because biparser is in optional, this.string('.') tries to biparse the decimal point. While parsing if this.string('.') fails optional exits and returns the Nothing object. While serializing this will only be run if the first function argument to optional returns true, otherwise optional does not run the serialization.
       this.many( // attempts to get many digits after the decimal point
         digit,
-        x => Array.from(getFractionalPart(x).toString().slice(2)) // isolates the fractional part of the number and breaks it up into individual digit charaters for serialization
+        x => Array.from(getFractionalPart(x).toString().slice(2)), // isolates the fractional part of the number and breaks it up into individual digit charaters for serialization
       )
       this.pFunction(arrayDigits2stringDigits)
-    }
+    },
   )
   this.pFunction(fromMaybe('')) // if no fractional characters were matched while parsing return an empty string as the parse result
   this.assign('fractionalDigits') // assign to the parse variable fractionalDigits the string that was parsed in the fractional number section
@@ -106,13 +99,13 @@ function numberZoom() { this.newAssignmentSpace(function() {
             const z = x - y
             return [y.toString(), z > 0 ? new Just(z) : Nothing]
           },
-          x => x * 10
+          x => x * 10,
         )))
         this.pFunction(compose(
           x => x / 10,
-          foldr((x,y) => Number.parseInt(x) + y / 10)(0)
+          foldr((x,y) => Number.parseInt(x) + y / 10)(0),
         ))
-      })
+      }),
     )
     this.pFunction(fromMaybe(0))
     this.assign('fractional')

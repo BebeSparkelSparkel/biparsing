@@ -1,33 +1,52 @@
+'use strict'
 // number   : /-?[0-9]+/
 // operator : '+' | '-' | '*' | '/'
-// expr     : <number> | '(' <operator> <expr>+ ')'
+// expr     : <number> | <operator> <expr>+
 // polishn  : /^/ <operator> <expr>+ /$/
 
-const {number} = require('./number')
-
-
-// (a, [Node a]) -> Node a
-function Node(x, children) {
-  this.x = x
-  this.children = children
-}
-
-// a -> Node a
-function Leef(x) {return new Node(x,[])}
+const {number, numberSimple} = require('./number')
+const {Biparser} = require('../biparsing')
+const {identity} = require('../functional')
 
 // Biparser r ((Number,Number) -> Number)
 function operator() {
-  this.take(1, x => 
+  this.take(1, identity)
   this.condition(x => '+-*/'.includes(x), x => `While parsing an operator a '${x}' was recieved but expected one of the operatros + - * /`)
 }
-function add(x,y) {return x + y}
-function subtract(x,y) {return x - y}
-function multiply(x,y) {return x * y}
-function divide(x,y) {return x / y}
+exports.operator = operator
+Biparser.prototype.operator = operator
 
-// Biparser r (Either Number Node 
+function hasOwnProperty(obj, prop) { return Object.prototype.hasOwnProperty.call(obj, prop) }
+
+// Biparser r (Either Number Node
 function expr() {
+  this.numberSimple()
+  this.pFunction(x => ({number: x}))
+  // function isNumber(x) {return hasOwnProperty(x,'mumber')}
+  // function isExpr(x) {return hasOwnProperty(x,'operator') && hasOwnProperty(x,'expr')}
+  // function parenExpr() {
+  //   this.polishn()
+  //   this.referenceAll()
+  // }
+  // this.alternative(isNumber, number, isExpr, parenExpr)
 }
+exports.expr = expr
+Biparser.prototype.expr = expr
 
 function polishn() {
+  this.spaces()
+  this.operator()
+  this.assign('operator')
+  this.many(
+    function() {
+      this.spaces()
+      this.expr()
+    },
+    ({exprs}) => exprs
+  )
+  this.assign('exprs')
+  this.referenceAll()
 }
+exports.polishn = polishn
+Biparser.prototype.polishn = polishn
+

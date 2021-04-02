@@ -1,6 +1,6 @@
 'use strict'
 
-const {Reader, Writer, runWriter, execWriter} = require('./RWS')
+const {Reader, Writer} = require('./RWS')
 
 function Serializer(toSerialize) {
   this.reader = toSerialize

@@ -1,17 +1,29 @@
 'use strict'
 
-const {State, runState, evalState} = require('./RWS')
-const { defer, foldl, foldr } = require('./functional')
-const { Just, Nothing, maybe, fromMaybe } = require('./Maybe')
+const {State} = require('./RWS')
+const {defer, foldl, foldr} = require('./functional')
+const {Just, Nothing, maybe, fromMaybe} = require('./Maybe')
 
 
 function Parser(tokens) {
   this.state = tokens
 }
+Object.assign(Parser.prototype, State.prototype)
 exports.Parser = Parser
-exports.runParser = runState
-exports.evalParser = evalState
-Parser.prototype = State.prototype
+
+// (ParserModifier, Parser s) -> [a,s]
+function runParser(func, parser) {
+  const newParser = new Parser(parser.state)
+  return [func.bind(newParser)(), newParser.state]
+}
+exports.runParser = runParser
+
+/// (ParserModifier, Parser s) -> a
+function evalParser(func, parser) {
+  const [x] = runParser(func, parser)
+  return x
+}
+exports.evalParser = evalParser
 
 function ParseError(message = '') {
   this.name = 'ParseError'
@@ -33,7 +45,7 @@ Parser.prototype.take = take
 
 function string(s) {
   const head = this.take(s.length)
-  if (head == s) return head
+  if (head === s) return head
   throw new ParseError(`string parser could not match string "${s}"`)
 }
 exports.string = defer(string)
@@ -47,7 +59,7 @@ function many(parser) {
       const accumulated = this.many(parser)
       accumulated.unshift(x)
       return accumulated
-    }
+    },
   ).bind(this)(this.optional(parser))
 }
 exports.many = defer(many)

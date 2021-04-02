@@ -3,21 +3,18 @@
 // const assert = require('assert')
 const assert = require('assert')
 
-const {defer, constant} = require('../../src/functional')
-const {Just, Nothing, maybe, fromMaybe} = require('../../src/Maybe')
+const {defer} = require('../../src/functional')
 const {
   genParserSerializer,
-  Parser, runParser, evalParser,
+  Parser, runParser,
   Serializer, execSerializer,
-  condition, pFunction,
-  take, string, optional, many, manyN,
 } = require('../../src/biparsing')
 const {digit, numberSimple, number, numberZoom} =  require('../../src/biparsing/number')
 
 describe('number', function() {
   describe('digit', function() {
     const biparser = digit
-    const {parser, serializer} = genParserSerializer(biparser)
+    const {parser} = genParserSerializer(biparser)
 
     it('parse', function() {
       assert.deepEqual(runParser(parser, new Parser('1u')), ['1','u'])

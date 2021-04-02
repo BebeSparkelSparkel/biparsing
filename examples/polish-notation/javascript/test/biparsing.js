@@ -2,15 +2,13 @@
 
 const assert = require('assert')
 
-const {compose, identity, defer, constant, map} = require('../src/functional')
-const {Just, Nothing, maybe, fromMaybe} = require('../src/Maybe')
+const {compose, defer, constant, map} = require('../src/functional')
+const {Just, Nothing} = require('../src/Maybe')
 const {
-  log,
   genParserSerializer,
   Parser, runParser, evalParser,
   Serializer, execSerializer,
-  condition, pFunction,
-  take, string, optional, many, manyN,
+  take, string, optional, many, alternative,
   } = require('../src/biparsing')
 
 
@@ -83,7 +81,7 @@ describe('biparsing', function() {
       compose(
         map(x => x.split('').reverse()),
         ({a}) => a,
-      )
+      ),
     )
     const {parser, serializer} = genParserSerializer(biparser)
 
@@ -93,8 +91,25 @@ describe('biparsing', function() {
     })
 
     it('serialize', function() {
-      const r = new Serializer({a:['cba','fed','jih']})
+      const r = new Serializer({a: ['cba','fed','jih']})
       assert.equal(execSerializer(serializer, r), 'abcdefhij')
+    })
+  })
+
+  describe('alternative', function() {
+    const biparser = alternative(x => x === 'a', string('a'), x => x === 'b', string('b'))
+    const {parser, serializer} = genParserSerializer(biparser)
+
+    it('parse', function() {
+      assert.deepEqual(runParser(parser, new Parser('ab')), [new Just('a'),'b'])
+      assert.deepEqual(runParser(parser, new Parser('bb')), [new Just('b'),'b'])
+      assert.deepEqual(runParser(parser, new Parser('ba')), [new Just('b'),'a'])
+    })
+
+    it('serialize', function() {
+      assert.equal(execSerializer(serializer, new Serializer('a')), 'a')
+      assert.equal(execSerializer(serializer, new Serializer('b')), 'b')
+      assert.equal(execSerializer(serializer, new Serializer('c')), '')
     })
   })
 
@@ -119,7 +134,7 @@ describe('biparsing', function() {
       const s = new Parser('123456')
       assert.deepEqual(
         runParser(parser,s),
-        [{a:1,b:2,c:{a:3,b:4}},'56']
+        [{a: 1,b: 2,c: {a: 3,b: 4}},'56'],
       )
     })
 
@@ -139,7 +154,7 @@ describe('biparsing', function() {
       const s = new Parser('123')
       assert.deepEqual(
         runParser(parser,s),
-        [{a: new Just('1'), b: {a: new Just('2')}}, '3']
+        [{a: new Just('1'), b: {a: new Just('2')}}, '3'],
       )
     })
 
@@ -151,7 +166,7 @@ describe('biparsing', function() {
       const s = new Parser('-abc')
       assert.deepEqual(
         runParser(parser,s),
-        ['-','abc']
+        ['-','abc'],
       )
     })
   })

@@ -3,11 +3,11 @@
 const parsing = require('./parsing')
 const {ParseError} = parsing
 const {withReader} = require('./RWS')
-const { identity, defer, compose, constant, traverse_ } = require('./functional')
-const { Just, Nothing } = require('./Maybe')
-const {Serializer, runSerializer, execSerializer} = require('./serializing')
+const {identity, defer, compose, constant, traverse_} = require('./functional')
+const {Just, Nothing} = require('./Maybe')
+const {Serializer, execSerializer} = require('./serializing')
+exports.ParseError = parsing.ParseError
 exports.Serializer = Serializer
-exports.runSerializer = runSerializer
 exports.execSerializer = execSerializer
 
 
@@ -18,16 +18,12 @@ function Biparser() {
 }
 exports.Biparser = Biparser
 
-// composeParser :: Biparser -> (a -> b) -> Biparser
-Biparser.prototype.composeParser = function(func) {this.parser = compose(func, this.parser)}
-Biparser.prototype.composeSerializer = function(func) {this.serializer = compose(func, this.serializer)}
-
 function Parser(tokens) {
   this.state = tokens
   this.assignments = {}
 }
 exports.Parser = Parser
-Parser.prototype = parsing.Parser.prototype
+Object.assign(Parser.prototype, parsing.Parser.prototype)
 
 // (ParserModifier, Parser s) -> [a,s]
 function runParser(func, parser) {
@@ -47,16 +43,13 @@ exports.evalParser = evalParser
 function genParserSerializer(func) {
   const biparser = new Biparser()
   func.bind(biparser)()
-  return {
-    parser: biparser.parser,
-    serializer: biparser.serializer,
-  }
+  return biparser
 }
 exports.genParserSerializer = genParserSerializer
 
 // (a -> Bool, a -> String) -> Biparser a
 function condition(pred, genErrorMsg) {
-  this.composeParser(function(x) {
+  this.pFunction(function(x) {
     if (pred(x)) return x
     throw new ParseError(genErrorMsg(x))
   })
@@ -66,20 +59,24 @@ Biparser.prototype.condition = condition
 
 // Biparser type needs to be updated to show how the function changes the Biparser type
 // (a -> b) -> Biparser r b
-function pFunction(func) { this.composeParser(func) }
+function pFunction(func) {this.parser = compose(func, this.parser)}
 exports.pFunction = defer(pFunction)
 Biparser.prototype.pFunction = pFunction
 
+function sFunction(func) {this.serializer = compose(func, this.serializer)}
+exports.sFunction = defer(sFunction)
+Biparser.prototype.sFunction = sFunction
+
 // (r -> [Char]) -> Biparser r String
 function takeDynamic(serialize) {
-  this.composeParser(function(n) {
+  this.pFunction(function(n) {
     const x = this.get()
     const head = x.slice(0,n)
     if (head.length < n) throw new ParseError(`take could not consume ${n} tokens`)
     this.put(x.slice(n))
     return head
   })
-  this.composeSerializer(function() {
+  this.sFunction(function() {
     const r = this.ask()
     this.tell(serialize(r))
   })
@@ -97,7 +94,7 @@ Biparser.prototype.take = take
 
 // (Char -> Bool, r -> [Char]) -> Biparser r String
 function takeWhile(pred, serialize) {
-  this.composeParser(function() {
+  this.pFunction(function() {
     const s = this.get()
     let n = 0
     for (const c of s) {
@@ -119,20 +116,27 @@ function string(s) {
 exports.string = defer(string)
 Biparser.prototype.string = string
 
+// Biparser r String
+function spaces() {
+  this.takeWhile(x => x === ' ', constant([' ']))
+}
+exports.spaces = defer(spaces)
+Biparser.prototype.spaces = spaces
+
 // (r -> Bool, Biparser r a) -> Biparser r (Maybe a)
 function optional(optSerialize, biparser) {
   const {parser, serializer} = genParserSerializer(biparser)
-  this.composeParser(function(x) {
+  this.pFunction(function(x) {
     const s = this.get()
     try {
       return new Just(parser.bind(this)(x))
-    } catch(e) {
+    } catch (e) {
       this.put(s)
       if (e.name === ParseError.name) return Nothing
       throw e
     }
   })
-  this.composeSerializer(function() {
+  this.sFunction(function() {
     const r = this.ask()
     if (optSerialize(r)) serializer.bind(this)()
   })
@@ -145,8 +149,8 @@ function many(biparser, serialize) {
   const {parser, serializer} = genParserSerializer(biparser)
   // would have rather used the optional biparser recursively but not sure how to accomplish that
   this.zoom(serialize, function() {
-    this.composeParser(parsing.many(parser))
-    this.composeSerializer(function() {
+    this.pFunction(parsing.many(parser))
+    this.sFunction(function() {
       const xs = this.ask()
       traverse_(function(x) {
         this.withReader(constant(x), serializer)
@@ -164,18 +168,27 @@ function manyN(n, biparser, serialize) {
 exports.manyN = defer(manyN)
 Biparser.prototype.manyN = manyN
 
-// (r -> Bool, Biparser r a) -> (r -> Bool, Biparser r a) -> Biparser r a
-function alternative(xPred, x) { return function(yPred, y) {
-  this.optional(xPred, x)
-  this.optional(yPred, y)
-}}
-exports.alternative = alternative
+// (r -> Bool, Biparser r a) -> (r -> Bool, Biparser r a) -> Biparser r (Maybe a)
+function alternative(xPred, xBi, yPred, yBi) {
+  const {parser: xParser, serializer: xSerializer} = genParserSerializer(xBi)
+  const {parser: yParser, serializer: ySerializer} = genParserSerializer(yBi)
+  this.pFunction(function() {
+    const xResult = this.optional(xParser)
+    return xResult.isJust ? xResult : this.optional(yParser)
+  })
+  this.sFunction(function() {
+    const x = this.ask()
+    if (xPred(x)) xSerializer.bind(this)()
+    else if (yPred(x)) ySerializer.bind(this)()
+  })
+}
+exports.alternative = defer(alternative)
 Biparser.prototype.alternative = alternative
 
 // Biparser type needs to be updated to show how the assignment changes the Biparser type
 // String -> Biparser r undefined
 function assign(name) {
-  this.composeParser(function(x) {
+  this.pFunction(function(x) {
     this.assignments[name] = x
   })
 }
@@ -185,7 +198,7 @@ Biparser.prototype.assign = assign
 // Biparser type needs to be updated to show how the assignment changes the Biparser type
 // String -> Biparser r a
 function reference(name) {
-  this.composeParser(function() {
+  this.pFunction(function() {
     return this.assignments[name]
   })
 }
@@ -195,7 +208,7 @@ Biparser.prototype.reference = reference
 // Biparser type needs to be updated to show how the assignment changes the Biparser type
 // Biparser r {..}
 function referenceAll() {
-  this.composeParser(function() {
+  this.pFunction(function() {
     return this.assignments
   })
 }
@@ -206,14 +219,14 @@ Biparser.prototype.referenceAll = referenceAll
 // Biparser r a -> Biparser r a
 function newAssignmentSpace(biparser) {
   const {parser, serializer} = genParserSerializer(biparser)
-  this.composeParser(function(x) {
+  this.pFunction(function(x) {
     const superAssignments = this.assignments
     this.assignments = {}
     const y = parser.bind(this)(x)
     this.assignments = superAssignments
     return y
   })
-  this.composeSerializer(serializer)
+  this.sFunction(serializer)
 }
 exports.newAssignmentSpace = defer(newAssignmentSpace)
 Biparser.prototype.newAssignmentSpace = newAssignmentSpace
@@ -221,8 +234,8 @@ Biparser.prototype.newAssignmentSpace = newAssignmentSpace
 // ('r -> r, Biparser r a) -> Biparser r' a
 function zoom(z, biparser) {
   const {parser, serializer} = genParserSerializer(biparser)
-  this.composeParser(parser)
-  this.composeSerializer(withReader(z, serializer))
+  this.pFunction(parser)
+  this.sFunction(withReader(z, serializer))
 }
 exports.zoom = defer(zoom)
 Biparser.prototype.zoom = zoom
