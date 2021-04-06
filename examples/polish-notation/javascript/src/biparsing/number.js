@@ -1,8 +1,8 @@
 'use strict'
 
-const { Just, Nothing, fromMaybe, maybe } = require('../Maybe')
-const { identity, compose, constant, foldl, foldr, unfold } = require('../functional')
-const { Biparser, string, optional } = require('../biparsing')
+const {Just, Nothing, fromMaybe, maybe} = require('../Maybe')
+const {identity, compose, constant, foldl, foldr, unfold} = require('../functional')
+const {Biparser, string, optional} = require('../biparsing')
 
 
 // uses built in parsing and serializing javascript functions (not proud of this parser)

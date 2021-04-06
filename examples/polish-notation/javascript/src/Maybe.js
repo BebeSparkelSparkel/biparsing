@@ -23,3 +23,10 @@ exports.maybe = maybe
 function fromMaybe(x) { return maybe(x, y => y) }
 exports.fromMaybe = fromMaybe
 
+// error -> Maybe a -> MonadFail a
+function fromJust(error) { return function (x) {
+  if (x.isJust) return x.value
+  else throw error
+}}
+exports.fromJust = fromJust
+

@@ -3,8 +3,8 @@
 const parsing = require('./parsing')
 const {ParseError} = parsing
 const {withReader} = require('./RWS')
-const {identity, defer, compose, constant, traverse_} = require('./functional')
-const {Just, Nothing} = require('./Maybe')
+const {identity, defer, compose, constant, traverse_, foldr} = require('./functional')
+const {Just, Nothing, fromJust} = require('./Maybe')
 const {Serializer, execSerializer} = require('./serializing')
 exports.ParseError = parsing.ParseError
 exports.Serializer = Serializer
@@ -117,8 +117,8 @@ exports.string = defer(string)
 Biparser.prototype.string = string
 
 // Biparser r String
-function spaces() {
-  this.takeWhile(x => x === ' ', constant([' ']))
+function spaces(numberSerializedSpaces) {
+  this.takeWhile(x => x === ' ', constant([' '.repeat(numberSerializedSpaces)]))
 }
 exports.spaces = defer(spaces)
 Biparser.prototype.spaces = spaces
@@ -168,13 +168,13 @@ function manyN(n, biparser, serialize) {
 exports.manyN = defer(manyN)
 Biparser.prototype.manyN = manyN
 
-// (r -> Bool, Biparser r a) -> (r -> Bool, Biparser r a) -> Biparser r (Maybe a)
+// r -> Bool -> Biparser r a) -> r -> Bool -> Biparser r a -> Biparser r (Maybe a)
 function alternative(xPred, xBi, yPred, yBi) {
   const {parser: xParser, serializer: xSerializer} = genParserSerializer(xBi)
   const {parser: yParser, serializer: ySerializer} = genParserSerializer(yBi)
-  this.pFunction(function() {
-    const xResult = this.optional(xParser)
-    return xResult.isJust ? xResult : this.optional(yParser)
+  this.pFunction(function(x) {
+    const xResult = this.optional(defer(xParser)(x))
+    return xResult.isJust ? xResult : this.optional(defer(yParser)(x))
   })
   this.sFunction(function() {
     const x = this.ask()
@@ -184,6 +184,15 @@ function alternative(xPred, xBi, yPred, yBi) {
 }
 exports.alternative = defer(alternative)
 Biparser.prototype.alternative = alternative
+
+// Like alternative but throws error if all parses fail
+// r -> Bool -> Biparser r a) -> r -> Bool -> Biparser r a -> error -> Biparser r (Maybe a)
+function alternativeOrError(xPred, xBi, yPred, yBi, error) {
+  this.alternative(xPred, xBi, yPred, yBi)
+  this.pFunction(fromJust(error))
+}
+exports.alternativeOrError = defer(alternativeOrError)
+Biparser.prototype.alternativeOrError = alternativeOrError
 
 // Biparser type needs to be updated to show how the assignment changes the Biparser type
 // String -> Biparser r undefined
@@ -230,6 +239,28 @@ function newAssignmentSpace(biparser) {
 }
 exports.newAssignmentSpace = defer(newAssignmentSpace)
 Biparser.prototype.newAssignmentSpace = newAssignmentSpace
+
+// Assign to object properyty while parsing and extract property value while serializing
+// (String :: propName) -> Biparser r a -> Biparser {} {propName: a}
+function assignProperty(propName, biparser) {
+  const {parser, serializer} = genParserSerializer(biparser)
+  this.pFunction(function(x) {
+    const newObj = Object.assign({}, x)
+    newObj[propName] = parser.bind(this)()
+    return newObj
+  })
+  this.sFunction(withReader(x => x[propName], serializer))
+}
+exports.assignProperty = defer(assignProperty)
+Biparser.prototype.assignProperty = assignProperty
+
+// Return a new object while parsing. Used with assignProperty when a new namespace is needed.
+// Biparser a {}
+function newNamespace() {
+  this.pFunction(constant({}))
+}
+exports.newNamespace = newNamespace
+Biparser.prototype.newNamespace = newNamespace
 
 // ('r -> r, Biparser r a) -> Biparser r' a
 function zoom(z, biparser) {

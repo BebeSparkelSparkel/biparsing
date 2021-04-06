@@ -1,11 +1,23 @@
 'use strict'
 const assert = require('assert')
 
-const {compose, foldl, foldr, unfold, foldM, defer} = require('../src/functional.js')
+const {constant, compose, foldl, foldr, unfold, foldM, defer} = require('../src/functional.js')
 const {Just, Nothing} = require('../src/Maybe')
 
 
 describe('functional', function() {
+  describe('constant', function() {
+    it('mutable object', function() {
+      const initObj = {abc: 'def'}
+      const initRefObj = Object.assign({}, initObj)
+      const retObj = constant(initObj)()
+      assert.deepEqual(retObj, initRefObj)
+      retObj['abc'] = 'ghi'
+      assert.notDeepEqual(retObj, initRefObj)
+      assert.deepEqual(initObj, initRefObj)
+    })
+  })
+
   it('compose', function() {
     assert.equal(compose([x => x / 10, x => x / 2])(100), 5)
     assert.equal(compose([x => x / 10])(100), 10)

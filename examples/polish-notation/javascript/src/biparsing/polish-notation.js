@@ -4,9 +4,9 @@
 // expr     : <number> | <operator> <expr>+
 // polishn  : /^/ <operator> <expr>+ /$/
 
-const {number, numberSimple} = require('./number')
-const {Biparser} = require('../biparsing')
-const {identity} = require('../functional')
+const {numberSimple: number} = require('./number')
+const {Biparser, many, assignProperty} = require('../biparsing')
+const {identity, constant} = require('../functional')
 
 // Biparser r ((Number,Number) -> Number)
 function operator() {
@@ -16,36 +16,33 @@ function operator() {
 exports.operator = operator
 Biparser.prototype.operator = operator
 
-function hasOwnProperty(obj, prop) { return Object.prototype.hasOwnProperty.call(obj, prop) }
 
 // Biparser r (Either Number Node
 function expr() {
-  this.numberSimple()
-  this.pFunction(x => ({number: x}))
-  // function isNumber(x) {return hasOwnProperty(x,'mumber')}
-  // function isExpr(x) {return hasOwnProperty(x,'operator') && hasOwnProperty(x,'expr')}
-  // function parenExpr() {
-  //   this.polishn()
-  //   this.referenceAll()
-  // }
-  // this.alternative(isNumber, number, isExpr, parenExpr)
+  function hasOwnProperty(obj, prop) { return Object.prototype.hasOwnProperty.call(obj, prop) }
+  function isNumber(x) {return hasOwnProperty(x,'mumber')}
+  function isExpr(x) {return hasOwnProperty(x,'operator') && hasOwnProperty(x,'expr')}
+
+  this.pFunction(constant({}))
+  this.alternative(
+    isNumber, assignProperty('number', number),
+    // isExpr,   assignProperty('expr',   polishn),
+    isExpr,   assignProperty('expr',   number),
+  )
 }
 exports.expr = expr
 Biparser.prototype.expr = expr
 
 function polishn() {
-  this.spaces()
-  this.operator()
-  this.assign('operator')
-  this.many(
-    function() {
-      this.spaces()
+  this.spaces(0)
+  this.pFunction(constant({}))
+  this.assignProperty('operator', operator)
+  this.assignProperty('exprs', many(function() {
+      this.spaces(1)
       this.expr()
     },
-    ({exprs}) => exprs
-  )
-  this.assign('exprs')
-  this.referenceAll()
+    identity,
+  ))
 }
 exports.polishn = polishn
 Biparser.prototype.polishn = polishn

@@ -7,7 +7,7 @@
     "test": "npx mocha --recursive",
     "test-watch": "find package.json src/ test/ -name '*.js' -or -name '*.json' | entr -c npm run test",
     "lint": "npx eslint src test",
-    "lint-watch": "find .eslintrc.yml src/ test/ -name '*.js' -or -name '*.yml' | entr -c npx eslint /_"
+    "lint-watch": "npm run lint; find .eslintrc.yml src/ test/ -name '*.js' -or -name '*.yml' | entr -cp npx eslint /_"
   },
   "keywords": [
     "polish-notation",
@@ -20,7 +20,11 @@
   "author": "William Rusnack",
   "license": "MIT",
   "devDependencies": {
+    "deepfreeze": "^2.0.0",
     "eslint": "^7.23.0",
     "mocha": "^8.3.2"
+  },
+  "dependencies": {
+    "clone": "^2.1.2"
   }
 }

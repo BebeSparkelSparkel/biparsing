@@ -1,11 +1,15 @@
 'use strict'
 
 const {maybe} = require('./Maybe')
+const clone = require('clone')
 
 function identity(x) { return x }
 exports.identity = identity
 
-function constant(x) { return function () {return x} }
+function constant(x) {
+  const y = clone(x)
+  return function () {return y}
+}
 exports.constant = constant
 
 // [c -> d, ..., a -> b] -> a -> d
@@ -24,7 +28,7 @@ function defer(f) {
 } } }
 exports.defer = defer
 
-// (b,a) -> b -> b -> [a] -> b
+// ((b,a) -> b) -> b -> [a] -> b
 function foldl(f) { return function(x) { return function(xs) {
   if (xs.length <= 0) return x
   const [y,...ys] = xs
@@ -32,7 +36,7 @@ function foldl(f) { return function(x) { return function(xs) {
 }}}
 exports.foldl = foldl
 
-// (a,b) -> b -> b -> [a] -> b
+// ((a,b) -> b) -> b -> [a] -> b
 function foldr(f) { return function(x) { return function(xs) {
   if (xs.length <= 0) return x
   const [y,...ys] = xs

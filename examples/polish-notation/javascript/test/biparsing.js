@@ -1,15 +1,17 @@
 'use strict'
 
 const assert = require('assert')
+const deepfreeze = require('deepfreeze')
 
-const {compose, defer, constant, map} = require('../src/functional')
+const {identity, compose, defer, constant, map} = require('../src/functional')
 const {Just, Nothing} = require('../src/Maybe')
 const {
   genParserSerializer,
   Parser, runParser, evalParser,
   Serializer, execSerializer,
   take, string, optional, many, alternative,
-  } = require('../src/biparsing')
+  recurseExampleA, recurseExampleB,
+} = require('../src/biparsing')
 
 
 describe('biparsing', function() {
@@ -171,4 +173,23 @@ describe('biparsing', function() {
     })
   })
 
+  describe('assignProperty', function() {
+    const biparser = function() {
+      this.assignProperty('abc', take(3, identity))
+      this.assignProperty('def', take(3, identity))
+    }
+    const {parser, serializer} = genParserSerializer(biparser)
+
+    const toParse = 'ghijkl'
+    const toSerialize = deepfreeze({abc: 'ghi', def: 'jkl'})
+
+    it('parse', function() {
+      assert.deepEqual(evalParser(parser, new Parser(toParse)), toSerialize)
+    })
+
+    it('serialize', function() {
+      assert.equal(execSerializer(serializer, new Serializer(toSerialize)), toParse)
+    })
+  })
 })
+
