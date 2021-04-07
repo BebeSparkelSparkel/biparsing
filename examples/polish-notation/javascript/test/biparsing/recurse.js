@@ -3,39 +3,85 @@
 const assert = require('assert')
 const deepfreeze = require('deepfreeze')
 
-const {identity, compose, defer, constant, map} = require('../../src/functional')
-const {Just, Nothing} = require('../../src/Maybe')
+const {defer} = require('../../src/functional')
+const {fromJust} = require('../../src/Maybe')
 const {
-  genParserSerializer,
-  Parser, runParser, evalParser,
+  Biparser, genParserSerializer,
+  Parser, evalParser, ParseError,
   Serializer, execSerializer,
-  take, string, optional, many, alternative,
+  string, assignProperty,
 } = require('../../src/biparsing')
-const {recurseExampleA, recurseExampleB } = require('../../src/biparsing/recurse')
+const {recurse} = require('../../src/biparsing/recurse')
 
 
 describe('recursive biparsing', function() {
   describe('example', function() {
-    it('no stack overflow with construction', function() {
-      const {parser: pA, serializer: sA} = genParserSerializer(recurseExampleA)
-      assert.equal(typeof pA, 'function')
-      assert.equal(typeof sA, 'function')
-      // const {parser: pB, serializer: sB} = genParserSerializer(recurseExampleB)
-      // assert.equal(typeof pB, 'function')
-      // assert.equal(typeof sB, 'function')
+
+    const recurseExampleA = recurse(function recurseExampleA_biparser() {
+      const args = arguments
+      this.newNamespace()
+      this.assignProperty('a', string('A'))
+      this.assignProperty('recurseA', defer(recurseExampleB)(...args))
+    })
+    Biparser.prototype.recurseExampleA = recurseExampleA
+
+    const recurseExampleB = recurse(function recurseExampleB_biparser() {
+      const args = arguments
+      const endProp = 'end'
+      this.alternativeOrError(
+        x => Object.prototype.hasOwnProperty.call(x, endProp), assignProperty(endProp, string(endProp)),
+        x => Object.prototype.hasOwnProperty.call(x, 'recurseB'), function() {
+          this.assignProperty('b', string('B'))
+          // this.assignProperty('recurseB', defer(recurseExampleA)(...arguments))
+          this.assignProperty('recurseB', function() {return recurseExampleA.bind(this)(...args)})
+        },
+        fromJust(new ParseError('all alternatives failed to parse')),
+      )
+    })
+    Biparser.prototype.recurseExampleB = recurseExampleB
+
+    describe('A', function() {
+      it('no stack overflow with construction', function() {
+        const {parser, serializer} = genParserSerializer(recurseExampleA)
+        assert.equal(typeof parser, 'function')
+        assert.equal(typeof serializer, 'function')
+      })
+
+      const toParse = 'ABAend'
+      const toSerialize = deepfreeze({a: 'A', recurseA: {b: 'B', recurseB: {a: 'A', recurseA: {end: 'end'}}}})
+
+      it('parse', function() {
+        const {parser} = genParserSerializer(recurseExampleA)
+        assert.deepEqual(evalParser(parser, new Parser(toParse)), toSerialize)
+      })
+
+      it('serialize', function() {
+        const {serializer} = genParserSerializer(recurseExampleA)
+        assert.equal(execSerializer(serializer, new Serializer(toSerialize)), toParse)
+      })
+
     })
 
-    const toParse = 'ABAend'
-    const toSerialize = deepfreeze({A: 'A', recurseA: {B: 'B', recurseB: {A: 'A', recurseA: {end: 'end'}}}})
+    describe('B', function() {
+      it('no stack overflow with construction', function() {
+        const {parser, serializer} = genParserSerializer(recurseExampleB)
+        assert.equal(typeof parser, 'function')
+        assert.equal(typeof serializer, 'function')
+      })
 
-    it.only('parse', function() {
-      const {parser} = genParserSerializer(recurseExampleA)
-      assert.deepEqual(evalParser(parser, new Parser(toParse)), toSerialize)
-    })
+      const toParse = 'BAend'
+      const toSerialize = deepfreeze({b: 'B', recurseB: {a: 'A', recurseA: {end: 'end'}}})
 
-    it('serialize', function() {
-      const {serializer} = genParserSerializer(recurseExampleA)
-      assert.equal(execSerializer(serializer, new Serializer(toSerialize)), toParse)
+      it('parse', function() {
+        const {parser} = genParserSerializer(recurseExampleB)
+        assert.deepEqual(evalParser(parser, new Parser(toParse)), toSerialize)
+      })
+
+      it('serialize', function() {
+        const {serializer} = genParserSerializer(recurseExampleB)
+        assert.equal(execSerializer(serializer, new Serializer(toSerialize)), toParse)
+      })
+
     })
   })
 })
