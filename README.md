@@ -2,6 +2,13 @@
 
 Biparsing is a bidirectional programming technique that specializes in constructing parsing and serialization programs simultaneously.
 
+### Why you should care
+
+Bidirectionality of biparsers is an important but undeveloped programming technique that:
+- Less Bugs, keeps the programs in sync so that when the biparsing code is modified both the parser and serializer are updated
+- Less Costs, reduces mantainence and upgrade costs since changes only need to be made in a single location
+- Less Code, reduces project size in half since two parts are written simutaniously
+
 ## Objectives
 
 Find a suitable methodology to allow biparsing to be implemented in common programming languages.
