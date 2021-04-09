@@ -1,8 +1,8 @@
 'use strict'
 
 const {State} = require('./RWS')
-const {defer, foldl, foldr} = require('./functional')
-const {Just, Nothing, maybe, fromMaybe} = require('./Maybe')
+const {defer, foldl, foldr, compose} = require('./functional')
+const {Just, Nothing, fromMaybe, caseMaybe} = require('./Maybe')
 
 
 function Parser(tokens) {
@@ -32,6 +32,8 @@ function ParseError(message = '') {
 exports.ParseError = ParseError
 ParseError.prototype = Error.prototype
 
+Parser.prototype.caseMaybe = caseMaybe
+
 // Int -> State String String
 function take(n) {
   const x = this.get()
@@ -51,27 +53,57 @@ function string(s) {
 exports.string = defer(string)
 Parser.prototype.string = string
 
-// Parser a -> [a]
-function many(parser) {
-  return maybe(
-    [],
-    function(x) {
-      const accumulated = this.many(parser)
-      accumulated.unshift(x)
-      return accumulated
-    },
-  ).bind(this)(this.optional(parser))
+// atLeastN :: Int -> Parser a -> Parser [a]
+function atLeastN(n) {
+  function atLeastN_internal(parser) {
+    const o = this.optional(parser)
+    // console.log('o', o)
+    return this.caseMaybe(function(x) {
+        const xs = atLeastN(n-1).bind(this)(parser)
+        xs.unshift(x)
+        return xs
+      },
+      function() {
+        if (n > 0) throw new ParseError('atLeastN could not parse enough elements')
+        else return []
+      },
+    // )(this.optional(parser))
+    )(o)
+  }
+  return atLeastN_internal
 }
+exports.atLeastN = compose(defer, atLeastN)
+Parser.prototype.atLeastN = function(n) { return atLeastN(n).bind(this) }
+
+// function many1(parser) {
+//   const xs = this.many(parser)
+//   if (xs.length > 0) return xs
+//   throw new ParseError('many1 could not parse at least one item')
+// }
+// exports.many1 = defer(many1)
+// Parser.prototype.many1 = many1
+const atLeast1 = atLeastN(1)
+exports.atLeast1 = defer(atLeast1)
+Parser.prototype.atLeast1 = atLeast1
+
+
+// Parser a -> [a]
+// Be careful with recursion. If many calls mutually recursive many then a loop of empty arrays will occure and cause a stack overflow. Use atLeast1 or atLeastN to aviod this.
+// function many(parser) {
+//   return maybe(
+//     [],
+//     function(x) {
+//       const accumulated = this.many(parser)
+//       accumulated.unshift(x)
+//       return accumulated
+//     },
+//   ).bind(this)(this.optional(parser))
+// }
+// exports.many = defer(many)
+// Parser.prototype.many = many
+const many = atLeastN(0)
 exports.many = defer(many)
 Parser.prototype.many = many
-
-function many1(parser) {
-  const xs = this.many(parser)
-  if (xs.length > 0) return xs
-  throw new ParseError('many1 could not parse at least one item')
-}
-exports.many1 = defer(many1)
-Parser.prototype.many1 = many1
 
 function optional(parser) {
   const s = this.get()
@@ -98,11 +130,11 @@ exports.digit = digit
 
 function number() {
   const isNegative = fromMaybe(false)(this.optional(defer(string)('-')))
-  const wholeDigits = this.many1(digit)
+  const wholeDigits = this.atLeast1(digit)
   const wholeValue = foldl((x,y) => x * 10 + Number.parseInt(y))(0)(wholeDigits)
   const fractionalValue = fromMaybe(0)(this.optional(function() {
     this.string('.')
-    const fractionalDigits = this.many1(digit)
+    const fractionalDigits = this.atLeast1(digit)
     const fractionalValue = foldr((x,y) => Number.parseInt(x) + y / 10)(0)(fractionalDigits) / 10
     return fractionalValue
   }))

@@ -27,24 +27,41 @@ describe('polish notation', function() {
     })
   })
 
-  // describe('polishn', function() {
-  //   const biparser = polishn
-  //   const {parser, serializer} = genParserSerializer(biparser)
+  describe('polishn', function() {
+    const biparser = polishn
+    const {parser, serializer} = genParserSerializer(biparser)
 
-  //   const simpleToParse = '+ 1 2'
-  //   const simpleToSerialize = {operator: '+', exprs: [{number: 1}, {number: 2}]}
+    const simple = '+ 1 2'
+    describe(simple, function() {
+      const toParse = simple
+      const toSerialize = {operator: '+', exprs: [{number: 1}, {number: 2}]}
 
-  //   describe('parse', function() {
-  //     it(simpleToParse, function() {
-  //       assert.deepEqual(evalParser(parser, new Parser(simpleToParse)), simpleToSerialize)
-  //     })
-  //   })
+      it(toParse, function() {
+        assert.deepEqual(evalParser(parser, new Parser(toParse)), toSerialize)
+      })
 
-  //   describe('serialize', function() {
-  //     it(simpleToParse, function() {
-  //       assert.equal(execSerializer(serializer, new Serializer(simpleToSerialize)), simpleToParse)
-  //     })
-  //   })
-  // })
-})
+      it(toParse, function() {
+        assert.equal(execSerializer(serializer, new Serializer(toSerialize)), toParse)
+      })
+    })
 
+    const double = '/ 2 + 6 5'
+    describe(double, function() {
+      const toParse = double
+      const toSerialize = {operator: '/', exprs: [{number: 2}, {expr: {operator: '+', exprs: [{number: 6}, {number: 5}]}}]}
+
+      it(toParse, function() {
+        assert.deepEqual(evalParser(parser, new Parser(toParse)), toSerialize)
+      })
+
+      it(toParse, function() {
+        assert.equal(execSerializer(serializer, new Serializer(toSerialize)), toParse)
+      })
+    })
+
+  })                 
+})                   
+                     
+                     
+                     
+                     

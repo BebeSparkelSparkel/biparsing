@@ -5,7 +5,7 @@ const {Just, Nothing, fromMaybe} = require('../src/Maybe')
 
 const {
   Parser, runParser, evalParser,
-  optional, string,
+  optional, string, atLeastN,
   digit, number,
 } = require('../src/parsing')
 
@@ -43,6 +43,24 @@ describe('parsing', function() {
       }
       assert.equal(evalParser(containsOptional, new Parser('2')), '2')
       assert.equal(evalParser(containsOptional, new Parser('a')), 'not 2')
+    })
+  })
+
+  describe('atLeastN', function() {
+    it('has exact amount', function() {
+      const parser = atLeastN(3)(digit)
+      assert.deepEqual(runParser(parser, new Parser('123a')), [['1','2','3'],'a'])
+    })
+
+    it('has more', function() {
+      const parser = function() {
+        return this.atLeastN(3)(digit)
+      }
+      assert.deepEqual(runParser(parser, new Parser('12345a')), [['1','2','3','4','5'],'a'])
+    })
+
+    it('not enough', function() {
+      assert.throws(() => runParser(atLeastN(3)(digit), new Parser('12a')))
     })
   })
 

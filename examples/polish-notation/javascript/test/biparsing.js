@@ -10,7 +10,6 @@ const {
   Parser, runParser, evalParser,
   Serializer, execSerializer,
   take, string, optional, many, alternative,
-  recurseExampleA, recurseExampleB,
 } = require('../src/biparsing')
 
 

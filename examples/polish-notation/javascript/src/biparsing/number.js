@@ -41,13 +41,12 @@ function number() {
   // whole number section
   // biparses the digits between the sign and the decimal point
   function getWholePart(x) {return Math.floor(Math.abs(x))} // function to isolate the whole positive part of the number. Basically, removes negative sign, decimal point, and fractional (right of decimal point) digits
-  this.manyN(
-    1, // at least one digit needs to be parsed
-    digit, // digit biparser. While parsing digit will be run by manN until it fails to parse a digit character. It will usually fail on the decimal point. While serializing manyN will pass a digit character to digit and digit will write that to the output string.
+  this.atLeast1( // at least one digit needs to be parsed
+    digit, // digit biparser. While parsing digit will be run by manN until it fails to parse a digit character. It will usually fail on the decimal point. While serializing atLeast1 will pass a digit character to digit and digit will write that to the output string.
     x => Array.from(getWholePart(x).toString()), // converts the whole part of the number to an array of digit charaters that will be individually passed to the serializing part of digit
   )
-  function arrayDigits2stringDigits(digits) {return digits.reduce((x,y) => x + y)} // converts the array of digits that the parsing part of many and manyN produces into a string of the digits. Ex. ['1','2','3'] is converted to '123'
-  this.pFunction(arrayDigits2stringDigits) // combines all the digts that the parsing part of manyN and digit produced into a string
+  function arrayDigits2stringDigits(digits) {return digits.reduce((x,y) => x + y)} // converts the array of digits that the parsing part of many and atLeast1 produces into a string of the digits. Ex. ['1','2','3'] is converted to '123'
+  this.pFunction(arrayDigits2stringDigits) // combines all the digts that the parsing part of atLeast1 and digit produced into a string
   this.assign('wholeDigits') // assigns the variable wholeDigits the string of digits parsed in the whole number section
 
   // fractional number section
@@ -85,7 +84,7 @@ function numberZoom() { this.newAssignmentSpace(function() {
   this.assign('sign')
   this.zoom(Math.abs, function() {
     this.zoom(Math.floor, function() {
-      this.manyN(1, digit, x => Array.from(x.toString())) // should probably use unfold for serialization for demonstration purposes
+      this.atLeast1(digit, x => Array.from(x.toString())) // should probably use unfold for serialization for demonstration purposes
       this.pFunction(foldl((x,y) => x * 10 + Number.parseInt(y))(0))
       this.assign('whole')
     })
@@ -93,7 +92,7 @@ function numberZoom() { this.newAssignmentSpace(function() {
       x => {const y = Math.abs(x); return y - Math.floor(y)},
       optional(x => x > 0, function() {
         this.string('.')
-        this.manyN(1, digit, unfold(compose(
+        this.atLeast1(digit, unfold(compose(
           x => {
             const y = Math.floor(x)
             const z = x - y

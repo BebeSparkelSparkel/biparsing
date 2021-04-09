@@ -3,7 +3,7 @@
 const parsing = require('./parsing')
 const {ParseError} = parsing
 const {withReader} = require('./RWS')
-const {identity, defer, compose, constant, traverse_, foldr} = require('./functional')
+const {identity, defer, compose, constant, traverse_, equal} = require('./functional')
 const {Just, Nothing, fromJust} = require('./Maybe')
 const {Serializer, execSerializer} = require('./serializing')
 exports.ParseError = parsing.ParseError
@@ -118,7 +118,10 @@ Biparser.prototype.string = string
 
 // Biparser r String
 function spaces(numberSerializedSpaces) {
-  this.takeWhile(x => x === ' ', constant([' '.repeat(numberSerializedSpaces)]))
+  this.takeWhile(
+    equal(' '),
+    constant([' '.repeat(numberSerializedSpaces)]),
+  )
 }
 exports.spaces = defer(spaces)
 Biparser.prototype.spaces = spaces
@@ -144,12 +147,10 @@ function optional(optSerialize, biparser) {
 exports.optional = defer(optional)
 Biparser.prototype.optional = optional
 
-// (Biparser r' a, r -> [r']) -> Biparser r [a]
-function many(biparser, serialize) {
+function atLeastN(n) { return function(biparser, serialize) {
   const {parser, serializer} = genParserSerializer(biparser)
-  // would have rather used the optional biparser recursively but not sure how to accomplish that
   this.zoom(serialize, function() {
-    this.pFunction(parsing.many(parser))
+    this.pFunction(parsing.atLeastN(n)(parser))
     this.sFunction(function() {
       const xs = this.ask()
       traverse_(function(x) {
@@ -157,16 +158,36 @@ function many(biparser, serialize) {
       }).bind(this)(xs)
     })
   })
-}
+
+  // this.many(biparser, serialize)
+  // this.condition(x => x.length > 0, x => constant(`atLeastN expected at least ${n} parsed elements but only parsed ${x.length} elements`))
+}}
+exports.atLeastN = compose(defer, atLeastN)
+Biparser.prototype.atLeastN = atLeastN
+
+const atLeast1 = atLeastN(1)
+exports.atLeast1 = defer(atLeast1)
+Biparser.prototype.atLeast1 = atLeast1
+
+// // (Biparser r' a, r -> [r']) -> Biparser r [a]
+// function many(biparser, serialize) {
+//   const {parser, serializer} = genParserSerializer(biparser)
+//   // would have rather used the optional biparser recursively but not sure how to accomplish that
+//   this.zoom(serialize, function() {
+//     this.pFunction(parsing.many(parser))
+//     this.sFunction(function() {
+//       const xs = this.ask()
+//       traverse_(function(x) {
+//         this.withReader(constant(x), serializer)
+//       }).bind(this)(xs)
+//     })
+//   })
+// }
+// exports.many = defer(many)
+// Biparser.prototype.many = many
+const many = atLeastN(0)
 exports.many = defer(many)
 Biparser.prototype.many = many
-
-function manyN(n, biparser, serialize) {
-  this.many(biparser, serialize)
-  this.condition(x => x.length > 0, x => constant(`manyN expected at least ${n} parsed elements but only parsed ${x.length} elements`))
-}
-exports.manyN = defer(manyN)
-Biparser.prototype.manyN = manyN
 
 // r -> Bool -> Biparser r a) -> r -> Bool -> Biparser r a -> Biparser r (Maybe a)
 function alternative(xPred, xBi, yPred, yBi) {

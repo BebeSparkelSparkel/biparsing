@@ -5,8 +5,9 @@
 // polishn  : /^/ <operator> <expr>+ /$/
 
 const {numberSimple: number} = require('./number')
-const {Biparser, many, assignProperty} = require('../biparsing')
-const {identity, constant} = require('../functional')
+const {Biparser, atLeast1, assignProperty, ParseError} = require('../biparsing')
+const {identity, constant, defer} = require('../functional')
+const {recurse} = require('./recurse')
 
 // Biparser r ((Number,Number) -> Number)
 function operator() {
@@ -18,32 +19,34 @@ Biparser.prototype.operator = operator
 
 
 // Biparser r (Either Number Node
-function expr() {
-  function hasOwnProperty(obj, prop) { return Object.prototype.hasOwnProperty.call(obj, prop) }
-  function isNumber(x) {return hasOwnProperty(x,'mumber')}
-  function isExpr(x) {return hasOwnProperty(x,'operator') && hasOwnProperty(x,'expr')}
+const expr = recurse(function exprBiparser() {
+  const args = arguments
 
-  this.pFunction(constant({}))
-  this.alternative(
-    isNumber, assignProperty('number', number),
-    // isExpr,   assignProperty('expr',   polishn),
-    isExpr,   assignProperty('expr',   number),
+  this.newNamespace()
+  this.alternativeOrError(
+    hasOwnProperty('number'), assignProperty('number', number),
+    hasOwnProperty('expr'),   assignProperty('expr',   defer(polishn)(...args)),
+    new ParseError('could not match number nor expr'),
   )
-}
+})
 exports.expr = expr
 Biparser.prototype.expr = expr
 
-function polishn() {
+const polishn = recurse(function polishnBiparser() {
+  const args = arguments
+
   this.spaces(0)
-  this.pFunction(constant({}))
+  this.newNamespace()
   this.assignProperty('operator', operator)
-  this.assignProperty('exprs', many(function() {
+  this.assignProperty('exprs', atLeast1(function() {
       this.spaces(1)
-      this.expr()
+      this.expr(...args)
     },
     identity,
   ))
-}
+})
 exports.polishn = polishn
 Biparser.prototype.polishn = polishn
+
+function hasOwnProperty(prop) { return function(obj) { return Object.prototype.hasOwnProperty.call(obj, prop) } }
 

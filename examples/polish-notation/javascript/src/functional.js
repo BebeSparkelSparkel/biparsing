@@ -69,3 +69,13 @@ exports.traverse_ = traverse_
 
 function map(f) {return function(xs) { return xs.map(f) } }
 exports.map = map
+
+function equal(x) { return function(y) { return x === y } }
+exports.equal = equal
+
+function notEqual(x) { return compose(not, equal(x)) }
+exports.notEqual = notEqual
+
+function not(x) { return !x }
+exports.not = not
+

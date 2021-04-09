@@ -30,3 +30,12 @@ function fromJust(error) { return function (x) {
 }}
 exports.fromJust = fromJust
 
+function caseMaybe(justCase, nothingCase) {
+  function caseMaybe_internal(x) {
+    if (x.isJust) return justCase.bind(this)(x.value)
+    return nothingCase.bind(this)(x)
+  }
+  return caseMaybe_internal.bind(this)
+}
+exports.caseMaybe = caseMaybe
+

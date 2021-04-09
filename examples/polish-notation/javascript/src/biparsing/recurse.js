@@ -1,18 +1,7 @@
 'use strict'
 
-const parsing = require('../parsing')
-const {ParseError} = parsing
-const {withReader} = require('../RWS')
-const {identity, defer, compose, constant, traverse_, foldr} = require('../functional')
-const {Just, Nothing, fromJust} = require('../Maybe')
-const {Serializer, execSerializer} = require('../serializing')
-const {Biparser, genParserSerializer, string, assignProperty} = require('../biparsing')
-exports.Biparser = Biparser
-exports.ParseError = parsing.ParseError
-exports.Serializer = Serializer
-exports.execSerializer = execSerializer
-
-function log() {return console.log(...arguments)}
+const {defer} = require('../functional')
+const {genParserSerializer} = require('../biparsing')
 
 
 // Allows recursive data structures to be constructed without stack overflow
@@ -31,7 +20,8 @@ function recurse(biparser) { return function() {
     this.sFunction(serializer)
   } else if (recurseRoot === biparser) {
     const psLoop = arg1
-    this.pFunction(function(x) { try { return psLoop.parser.bind(this)(x) } catch (e) { return e } })
+    // this.pFunction(function(x) { try { return psLoop.parser.bind(this)(x) } catch (e) { return e } })
+    this.pFunction(function(x) { return psLoop.parser.bind(this)(x) })
     this.sFunction(function(x) { return psLoop.serializer.bind(this)(x) })
   } else {
     biparser.bind(this)(...arguments)
