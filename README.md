@@ -8,6 +8,25 @@ Find a suitable methodology to allow biparsing to be implemented in common progr
 
 In the meantime, document and critique bidirectional programming ideas, implementations, and papers with a focus on parsing streams of objects and reversing the production back into the stream..
 
+## Examples
+
+The `./examples` directory contains various biparsing implementations, any implementation language allowed, created specifically for this repo.
+
+Example implementations should choose a format that has the following properties:
+- recursive structure
+
+Currently, there are implementations for:
+
+### [Polish Notation](https://wiki.c2.com/?PolishNotation)
+
+[archive link](https://archive.vn/xTUPg)
+
+A simple syntax that is recursive in nature that can easily be understood and used to illustrate biparsing techniques.
+
+Language Implementations:
+- JavaScript (actually not a bad language for `this`)
+- More to come
+
 ## Current Implementations and their Problems
 
 ### Applicative Functor Composition
