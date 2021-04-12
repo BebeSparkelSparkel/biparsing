@@ -216,6 +216,18 @@ Cons
 Features we would like to also have
 - ...
 
+## [Boomerang](https://alliance.seas.upenn.edu/~harmony/)
+
+[archived](https://archive.vn/quUhK). Boomerang is a programming language for writing lenses—well-behaved bidirectional transformations—that operate on ad-hoc, textual data formats.
+
+Pros
+- ...
+
+Cons
+- ...
+
+Features we would like to also have
+- ...
 # Implementation Critiques
 
 ## [Invertible Syntax Descriptions: Unifying Parsing and Pretty Printing](./papers/rendel10invertible.pdf)
@@ -251,3 +263,7 @@ Type lists may be able to enforce: guaranteed serialization with Alternative, an
 - Token - typically a finite piece of data. Examples: character, string, integer, algebraic data type
 - Head function - returns the first element of a monomorphic container. `MonoFoldable mono => NonNull mono -> Element mono` https://hackage.haskell.org/package/mono-traversable-1.0.15.1/docs/Data-NonNull.html#v:head
 - Tail function - return the container less the element returned by head `IsSequence seq => NonNull seq -> seq` https://hackage.haskell.org/package/mono-traversable-1.0.15.1/docs/Data-NonNull.html#v:tail
+
+# Other Sources
+
+- [Bx Wiki](http://bx-community.wikidot.com/)
