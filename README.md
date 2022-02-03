@@ -184,6 +184,7 @@ Based On
 - invertible-syntax
 
 ## [Zwaluw](http://hackage.haskell.org/package/Zwaluw)
+Combinators for bidirectional URL routing.
 
 Pros
 - ...
