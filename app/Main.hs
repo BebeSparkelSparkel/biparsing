@@ -26,7 +26,7 @@ number = undefined
 data GroupCodeValueType a = GroupCodeValueType Int a
 
 groupCodeValueTypes :: Biparser ([NumberedLine] -> [(LineNumber, GroupCodeValueType String)]) ([GroupCodeValueType String] -> [String])
-groupCodeValueTypes = Biparser parse serialize
+groupCodeValueTypes = Biparser { parse, serialize }
   where
   parse =
 

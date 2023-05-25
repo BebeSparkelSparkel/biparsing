@@ -3,23 +3,63 @@ version: 0.0.0.1
 
 dependencies:
   - base >=4.10 && < 5
-  - microlens
   - transformers
-  - generic-functor
-  - generic-monoid
-  - barbies
 
 default-extensions:
-  - DeriveGeneric
-  - DerivingVia
-  - DeriveFunctor
-  - LambdaCase
   - BlockArguments
-
-executable:
-  main: app/Main.hs
-  dependencies:
-    - biparsing
+  - ConstraintKinds
+  - DeriveFunctor
+  - DeriveGeneric
+  - FlexibleContexts
+  - FlexibleInstances
+  - ImportQualifiedPost
+  - LambdaCase
+  - RankNTypes
+  - RecordWildCards
+  - TupleSections
+  - TypeApplications
+  - TypeFamilies
+  - TypeOperators
+  - ViewPatterns
+  - ScopedTypeVariables
+  - MultiParamTypeClasses
+  - FunctionalDependencies
 
 library:
   source-dirs: src/
+  dependencies:
+    - base >=4.10 && < 5
+    - mono-traversable
+    - string-conversions
+    - profunctors
+    - monad-loops
+  default-extensions:
+    - NoImplicitPrelude
+  ghc-options:
+    - -Werror
+    - -Weverything
+  
+    - -Wno-missing-kind-signatures
+    - -Wno-missing-safe-haskell-mode
+    - -Wno-implicit-prelude
+    - -Wno-safe
+    - -Wno-unsafe
+    - -Wno-missing-deriving-strategies
+
+tests:
+  spec:
+    main: Spec.hs
+    source-dirs: tests/
+    dependencies:
+      - biparsing
+      - hspec
+      - hspec-discover
+      - QuickCheck
+      - text
+      - bytestring
+      - containers
+      - vector
+    default-extensions:
+      - OverloadedStrings
+      - OverloadedLists
+
