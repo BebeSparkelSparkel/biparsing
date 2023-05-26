@@ -24,13 +24,14 @@ default-extensions:
   - ScopedTypeVariables
   - MultiParamTypeClasses
   - FunctionalDependencies
+  - StandaloneKindSignatures
 
 library:
   source-dirs: src/
   dependencies:
     - base >=4.10 && < 5
     - mono-traversable
-    - string-conversions
+    #- string-conversions
     - profunctors
     - monad-loops
   default-extensions:

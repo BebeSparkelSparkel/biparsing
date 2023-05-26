@@ -8,21 +8,19 @@ import Data.Bifunctor
 import Data.Functor
 import Data.Functor.Identity
 import Data.ByteString.Char8 (ByteString)
-import Data.ByteString.Internal (w2c, c2w)
 import Data.Char
 import Data.Sequence (Seq)
 import Data.Text (Text)
-import Data.Word (Word8)
 import Data.Vector (Vector)
-import Prelude hiding (take, takeWhile)
+import Prelude hiding (take)
 import System.IO.Error (isUserError)
 import Test.Hspec
 
 spec :: Spec
 spec = do
   describe "take" do
-    let bp = take 'a' :: Unit Text IO IO
-        bp2 :: Unit Text IO IO
+    let bp = take 'a' :: Unit IdentityStateContext Text IO IO
+        bp2 :: Unit IdentityStateContext Text IO IO
         bp2 = take 'a' *> take 'b'
 
     describe "forward" do
@@ -50,39 +48,32 @@ spec = do
         x <- runBackward bp2 ()
         x `shouldBe` ((), "ab")
 
-  describe "takeWhile" do
-    let bp :: Iso IO IO ByteString [Word8]
-        bp = takeWhile (isDigit . w2c)
-        pretty = first (fmap w2c)
+  describe "takeNot" do
+    let bp :: Iso IdentityStateContext IO IO String Char
+        bp = takeNot 'A'
 
     describe "forward" do
-      it "matches some digits" do
-        x <- runForward bp "123 abc"
-        pretty x `shouldBe` ("123", " abc")
+      let f = runForward bp
 
-      it "matches all characters" do
-        x <- runForward bp "123"
-        pretty x `shouldBe` ("123", mempty)
+      it "takes non-matching element" do
+        x <- f "bc"
+        x `shouldBe` ('b', "c")
 
-      it "matches no digits" do
-        x <- runForward bp "abc"
-        x `shouldBe` (mempty, "abc")
-
-      it "empty" do
-        x <- runForward bp mempty
-        x `shouldBe` (mempty, mempty)
+      it "does not take matching element" do
+        f "Abc" `shouldThrow` isUserError
 
     describe "backward" do
-      it "prints some" do
-        x <- runBackward bp (c2w <$> "abc")
-        pretty x `shouldBe` ("abc", "abc")
+      let b = runBackward bp
 
-      it "prints none" do
-        x <- runBackward bp mempty
-        pretty x `shouldBe` (mempty, mempty)
+      it "prints non-matching" do
+        x <- b 'c'
+        x `shouldBe` ('c', "c")
+
+      it "fails matching" do
+        b 'A' `shouldThrow` isUserError
 
   describe "optionMaybe" do
-    let bp :: BiparserT (Vector Int) IO IO Bool (Maybe String, Maybe String)
+    let bp :: BiparserT IdentityStateContext (Vector Int) IO IO Bool (Maybe String, Maybe String)
         bp = (,) <$> optionMaybe (take'' 1 `upon` mapBool $> "one")
            <*> optionMaybe (take'' 2 `upon` mapBool $> "two")
         mapBool :: Bool -> Int

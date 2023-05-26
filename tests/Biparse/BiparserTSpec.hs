@@ -11,8 +11,8 @@ import System.IO.Error (isUserError)
 spec :: Spec
 spec = do
   describe "one" do
-    let bp = one :: Iso IO IO String Char
-        bp2 :: Iso IO IO String (Char,Char)
+    let bp = one :: Iso IdentityStateContext IO IO String Char
+        bp2 :: Iso IdentityStateContext IO IO String (Char,Char)
         bp2 = (,) <$> bp `upon` fst <*> bp `upon` snd
 
     describe "forward" do
@@ -37,7 +37,7 @@ spec = do
         x `shouldBe` (('a','b'),"ab")
 
   describe "try" do
-    let bp :: BiparserT (Seq Char) IO IO Char Char
+    let bp :: BiparserT IdentityStateContext (Seq Char) IO IO Char Char
         bp = try $ one <* take 'b'
 
     describe "forward" do
