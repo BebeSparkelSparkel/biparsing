@@ -1,25 +1,31 @@
 module Biparse.List
   ( replicateBiparserT
   , takeWhile
-  , splitElem
   , many
+  , manyIso
+  , some
+  , someIso
+  , splitElem
   ) where
 
 import Data.Bool (Bool)
-import Biparse.BiparserT (BiparserT, uponM, Iso, SubElement, SubState, StateContext, emptyForward, one, try, upon, comapM)
-import Control.Applicative (Alternative((<|>),empty), pure, (<*))
+import Biparse.BiparserT (BiparserT, uponM, Iso, SubElement, SubState, StateContext, emptyForward, one, try, upon, comapM, mono, IdentityStateContext)
+import Control.Applicative (Alternative((<|>),empty), pure, (<*), liftA2, (<*>), (*>))
 import Biparse.General (take, takeNot, Take)
-import Data.Functor ((<$>))
-import Control.Monad (Monad(return), MonadFail(fail), MonadPlus, unless)
+import Data.Functor ((<$>), fmap, (<&>))
+import Control.Monad (Monad(return), MonadFail(fail), MonadPlus, unless, (>>=), (<=<))
 import Data.Function ((.), const, ($))
 import Data.Int (Int)
-import Data.MonoTraversable (headMay, otoList, onull, lastMay)
+import Data.MonoTraversable (headMay, otoList, onull, lastMay, MonoFoldable)
 import Data.Monoid (Monoid(mempty), (<>))
-import Data.Sequences (IsSequence, tailMay, fromList, initMay, snoc)
+import Data.Sequences (IsSequence, tailMay, fromList, initMay, snoc, singleton)
 import GHC.Num ((-))
 import Text.Show (Show(show))
-import Data.Maybe (Maybe, maybe)
+import Data.Maybe (Maybe, maybe, fromMaybe)
+import Data.List.NonEmpty (NonEmpty, nonEmpty)
 
+import Debug.Trace
+import Prelude (undefined)
 
 replicateBiparserT :: forall c s m n u v.
   ( Monoid (SubState c s)
@@ -78,30 +84,52 @@ many x =
   <|> pure mempty
 
 -- | Iso version of 'many'
-many' :: forall c s m n a.
+manyIso :: forall c s m n a.
   Many c s m n
   => Iso c m n s a
   -> Iso c m n s [a]
-many' = many
+manyIso = many
+
+type Some c s m n =
+  ( Many c s m n
+  , MonadFail m
+  , MonadFail n
+  )
+-- | NonEmpty version of 'many'
+some :: forall c s m n u v.
+  Some c s m n
+  => BiparserT c s m n u v
+  -> BiparserT c s m n (NonEmpty u) (NonEmpty v)
+some x = do
+  ys <- many x `upon` otoList
+  maybe (fail "Expected to parse at least one but parsed none.") pure $ nonEmpty ys
+
+-- | Iso version of 'some'
+someIso :: forall c s m n a.
+  Some c s m n
+  => Iso c m n s a
+  -> Iso c m n s (NonEmpty a)
+someIso = some
 
 -- | Splits the substate on given element
--- DEV NOTE: I think this is a terrible impelmentation. It should not have to use init and last.
 splitElem :: forall c s m n.
   ( Take c s m n
   , Many c s m n
+  , Show (SubState c s)
   )
   => SubElement c s
   -> Iso c m n s [SubState c s]
-splitElem x =
-  do
-    xs <- comapM initAlt $ many' $ cs <* take x
-    l <- comapM lastAlt $ cs
-    return case xs `snoc` l of
-      [z] | onull z -> mempty
-      z -> z
-  <|> pure mempty
-  where
-  cs = fromList <$> many' (takeNot x) `upon` otoList
+splitElem x = correctEmpty splitter
+  where 
+  splitter :: Iso c m n s [SubState c s]
+  splitter = do
+    y <- fromList <$> manyIso (takeNot x) `uponM` fmap otoList . headAlt
+    take x *> ((y :) <$> splitter `uponM` tailAlt) <|> pure (singleton y)
+
+  correctEmpty = mono \case
+    [y] | onull y -> mempty
+    [] -> [mempty]
+    y -> y
 
 headAlt :: Alternative n => [a] -> n a
 headAlt = maybe empty pure . headMay

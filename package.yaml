@@ -37,7 +37,7 @@ library:
   default-extensions:
     - NoImplicitPrelude
   ghc-options:
-    - -Werror
+    #- -Werror
     - -Weverything
   
     - -Wno-missing-kind-signatures

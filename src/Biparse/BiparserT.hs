@@ -8,6 +8,7 @@ module Biparse.BiparserT
   , execBackward
   , Iso
   --, iso
+  , mono
   , Unit
   , unit
   , identity
@@ -27,7 +28,7 @@ module Biparse.BiparserT
   ) where
 
 import Data.Kind (Type)
-import Data.Functor (Functor(fmap), ($>))
+import Data.Functor (Functor(fmap), ($>), (<$>))
 import Data.Tuple (fst, snd)
 import Data.Eq (Eq((==)))
 import Control.Monad (Monad((>>=)), MonadFail(fail), MonadPlus, (>=>), return)
@@ -37,8 +38,7 @@ import Data.Function (flip, (.), const, ($), id, (&))
 import Control.Monad.Loops (iterateUntilM)
 import Control.Monad.Trans.State.Lazy (StateT(StateT, runStateT), get, put)
 import Control.Monad.Trans.Writer.Lazy (WriterT(WriterT, runWriterT), execWriterT, tell)
---import Data.Profunctor (Profunctor(dimap), (:->))
-import Data.Profunctor ((:->))
+import Data.Profunctor (Profunctor(dimap), (:->))
 
 import Data.Maybe (Maybe(Just,Nothing))
 import Data.MonoTraversable (Element, headMay)
@@ -61,6 +61,20 @@ runBackward = (runWriterT .) . backward
 execBackward :: forall c sw m n u v. Functor n => BiparserT c sw m n u v -> u -> n (SubState c sw)
 execBackward = (fmap snd .) . runBackward
 
+comap :: forall c sw m n u u' v. (u -> u') -> BiparserT c sw m n u' v -> BiparserT c sw m n u v
+comap f (BiparserT fw bw) = BiparserT fw (bw . f)
+
+comapM :: forall c sw m n u u' v. Monad n => (u -> n u') -> BiparserT c sw m n u' v -> BiparserT c sw m n u v
+comapM f (BiparserT fw bw) = BiparserT fw (\u -> WriterT $ f u >>= runWriterT . bw)
+
+infix 8 `upon`
+upon :: forall c sw m n u u' v. BiparserT c sw m n u' v -> (u -> u') -> BiparserT c sw m n u v
+upon = flip comap
+
+infix 8 `uponM`
+uponM :: forall c sw m n u u' v. Monad n => BiparserT c sw m n u' v -> (u -> n u') -> BiparserT c sw m n u v
+uponM = flip comapM
+
 -- | Easy way to create new simple Biparser with Profunctor dimap
 identity :: (Monad m, Monad n, a ~ SubState c a) => Iso c m n a a
 identity = BiparserT get (\u -> tell u $> u)
@@ -75,6 +89,15 @@ type Iso c m n a b = BiparserT c a m n b b
 --  -> (b -> a)
 --  -> Iso c m n a b
 --iso f g = dimap g f identity
+
+mono :: forall c s m n a.
+  ( Monad m
+  , Monad n
+  )
+  => (a -> a)
+  -> Iso c m n s a
+  -> Iso c m n s a
+mono f = dimap f f
 
 type Unit c sw m n = BiparserT c sw m n () ()
 unit :: forall c sw m n u. Unit c sw m n -> BiparserT c sw m n u ()
@@ -113,20 +136,6 @@ mapSW (BiparserT fw' bw') (BiparserT fw'' bw'') = BiparserT
 --BiparserT fw' bw' `mapSW'` BiparserT fw'' bw'' = BiparserT
 --  (StateT $ runStateT fw' >=> \(s,s') -> runStateT fw'' s >>= \(x, _) -> pure (x, s'))
 --  (\u -> WriterT $ runWriterT (bw'' u) >>= \(x,w) -> runWriterT (bw' w) >>= \(_,w') -> pure (x,w'))
-
-comap :: forall c sw m n u u' v. (u -> u') -> BiparserT c sw m n u' v -> BiparserT c sw m n u v
-comap f (BiparserT fw bw) = BiparserT fw (bw . f)
-
-comapM :: forall c sw m n u u' v. Monad n => (u -> n u') -> BiparserT c sw m n u' v -> BiparserT c sw m n u v
-comapM f (BiparserT fw bw) = BiparserT fw (\u -> WriterT $ f u >>= runWriterT . bw)
-
-infix 8 `upon`
-upon :: forall c sw m n u u' v. BiparserT c sw m n u' v -> (u -> u') -> BiparserT c sw m n u v
-upon = flip comap
-
-infix 8 `uponM`
-uponM :: forall c sw m n u u' v. Monad n => BiparserT c sw m n u' v -> (u -> n u') -> BiparserT c sw m n u v
-uponM = flip comapM
 
 -- | Use instead of 'empty' when only forward should fail but backward should continue
 emptyForward :: forall c sw m n u. (Monoid (SubState c sw), MonadPlus m, Applicative n) => BiparserT c sw m n u ()
@@ -175,8 +184,8 @@ instance (Monoid (SubState c sw), Monad m, Monad n) => Monad (BiparserT c sw m n
 instance (Monoid (SubState c sw), MonadFail m, MonadFail n) => MonadFail (BiparserT c sw m n u) where
   fail x = BiparserT (fail x) (const $ fail x)
 
---instance (Functor m, Functor n) => Profunctor (BiparserT c sw m n) where
---  dimap f g (BiparserT fw' bw') = BiparserT (g <$> fw') (fmap g . bw' . f)
+instance (Functor m, Functor n) => Profunctor (BiparserT c sw m n) where
+  dimap f g (BiparserT fw' bw') = BiparserT (g <$> fw') (fmap g . bw' . f)
 
 -- | Takes and Writes one element.
 one :: forall c sw m n.
