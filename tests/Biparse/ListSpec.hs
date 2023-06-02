@@ -14,16 +14,16 @@ import Control.Applicative hiding (many,some)
 import Data.List.NonEmpty (NonEmpty)
 import Biparse.List
 import Data.ByteString (ByteString)
-import Prelude hiding (take, takeWhile)
+import Prelude hiding (take)
 import Data.Word (Word8)
 import Data.Text (Text)
 import Data.Text qualified as T
 
 spec :: Spec
 spec = do
-  describe "takeWhile" do
+  describe "takeElementsWhile" do
     let bp :: Iso IdentityStateContext IO IO ByteString [Word8]
-        bp = takeWhile (isDigit . w2c)
+        bp = takeElementsWhile (isDigit . w2c)
         pretty = first (fmap w2c)
 
     describe "forward" do
@@ -53,9 +53,9 @@ spec = do
         pretty x `shouldBe` (mempty, mempty)
 
   describe "many" do
-    describe "with take''" do
+    describe "with takeUni" do
       let bp :: Iso IdentityStateContext IO IO Text [Char]
-          bp = many $ take'' 'a'
+          bp = many $ takeUni 'a'
 
       describe "forward" do
         let f = runForward bp
@@ -79,11 +79,11 @@ spec = do
           x <- b mempty
           x `shouldBe` (mempty, mempty)
 
-    describe "with take'''" do
+    describe "with takeTri" do
       let bp :: BiparserT IdentityStateContext [String] Maybe Maybe [Bool] [Int]
           bp = many
-            $   try (take''' "TRUE" True 1)
-            <|>      take''' "FALSE" False 0 
+            $   try (takeTri "TRUE" True 1)
+            <|>      takeTri "FALSE" False 0 
 
       describe "forward" do
         it "takes two" do
@@ -107,7 +107,7 @@ spec = do
 
   describe "some" do
     let bp :: Iso IdentityStateContext IO IO [Int] (NonEmpty Int)
-        bp = some (take'' 1)
+        bp = some (takeUni 1)
     
     describe "forward" do
       let f = runForward bp

@@ -25,6 +25,7 @@ default-extensions:
   - MultiParamTypeClasses
   - FunctionalDependencies
   - StandaloneKindSignatures
+  - DuplicateRecordFields
 
 library:
   source-dirs: src/
@@ -34,18 +35,21 @@ library:
     #- string-conversions
     - profunctors
     - monad-loops
+    - template-haskell
   default-extensions:
     - NoImplicitPrelude
   ghc-options:
-    #- -Werror
+    - -Werror
     - -Weverything
-  
+    - -ddump-splices
+
     - -Wno-missing-kind-signatures
     - -Wno-missing-safe-haskell-mode
     - -Wno-implicit-prelude
     - -Wno-safe
     - -Wno-unsafe
     - -Wno-missing-deriving-strategies
+    - -Wno-missing-local-signatures
 
 tests:
   spec:
@@ -56,6 +60,7 @@ tests:
       - hspec
       - hspec-discover
       - QuickCheck
+      - quickcheck-instances
       - text
       - bytestring
       - containers

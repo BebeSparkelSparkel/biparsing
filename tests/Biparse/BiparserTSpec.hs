@@ -46,7 +46,7 @@ spec = do
         x `shouldBe` ('a',"c")
       
       it "does not consume state in failed attempt" do
-        x <- runForward (bp <|> take'' 'c') "cde"
+        x <- runForward (bp <|> takeUni 'c') "cde"
         x `shouldBe` ('c', "de")
 
       it "fails if no alternate" do

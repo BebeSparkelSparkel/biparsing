@@ -74,8 +74,8 @@ spec = do
 
   describe "optionMaybe" do
     let bp :: BiparserT IdentityStateContext (Vector Int) IO IO Bool (Maybe String, Maybe String)
-        bp = (,) <$> optionMaybe (take'' 1 `upon` mapBool $> "one")
-           <*> optionMaybe (take'' 2 `upon` mapBool $> "two")
+        bp = (,) <$> optionMaybe (takeUni 1 `upon` mapBool $> "one")
+           <*> optionMaybe (takeUni 2 `upon` mapBool $> "two")
         mapBool :: Bool -> Int
         mapBool = \case True -> 1; False -> 2
 

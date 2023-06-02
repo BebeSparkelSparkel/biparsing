@@ -1,35 +1,56 @@
+{-# LANGUAGE NamedFieldPuns #-}
 module Biparse.Text.PositionContext
   ( LineColumn
   , Position(..)
+  , startPosition
   ) where
 
-import Data.MonoTraversable (Element)
+import Data.MonoTraversable (Element, ofor_, MonoFoldable)
 import Data.Char (Char)
 import Data.Int (Int)
 import GHC.Num ((+))
-import Data.Function (flip)
-import Biparse.BiparserT (StateContext(setStateContext,setSubState,getSubState), SubState)
+import Biparse.BiparserT (SubState, GetSubState(getSubState), UpdateStateWithElement(updateElementContext), UpdateStateWithSubState(updateSubStateContext))
+import Control.Monad.Trans.State.Lazy (execState, modify)
+import Data.Bifunctor (second)
+import Data.Function (flip, ($))
+import Data.Eq ((==))
 import Data.String (IsString(fromString))
 import Text.Show (Show)
 import Data.Function ((.))
 import Data.Eq (Eq)
 
+-- * Tracks line and column
+
 data LineColumn
 
 data Position text = Position
-  { row :: Int
+  { line :: Int
   , column :: Int
   , subState :: text
   } deriving (Show, Eq)
 
 type instance SubState LineColumn (Position text) = text
 
-instance Element text ~ Char => StateContext LineColumn (Position text) where
-  setStateContext s c ss = flip (setSubState @LineColumn) ss case c of
-    '\n' -> s {row = row s + 1, column = 1}
-    _ -> s {column = column s + 1}
-  setSubState s ss = s {subState = ss}
-  getSubState = subState
+instance GetSubState LineColumn (Position text) where
+  getSubState (Position {subState}) = subState
+
+instance Element text ~ Char => UpdateStateWithElement LineColumn (Position text) where
+  updateElementContext s@(Position {line,column}) c ss = case c of
+    '\n' -> s {line = line + 1, column = 1, subState = ss}
+    _ -> s {column = column + 1, subState = ss}
+
+instance (Element text ~ Char, MonoFoldable text) => UpdateStateWithSubState LineColumn (Position text) where
+  updateSubStateContext s ss ss' = if ns == 0
+    then s {column = column s + cs, subState = ss'}
+    else s {line = line s + ns, column = cs, subState = ss'}
+    where
+    (ns, cs) = flip execState (0, 0) $ ofor_ ss \case
+      '\n' -> modify \(l,_) -> (l + 1, 1)
+      _ -> modify $ second (+ 1)
+
+startPosition :: text -> Position text
+startPosition = Position 1 1
 
 instance IsString text => IsString (Position text) where
-  fromString = Position 1 1 . fromString
+  fromString = startPosition . fromString
+

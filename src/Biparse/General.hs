@@ -2,22 +2,34 @@
 module Biparse.General
   ( Take
   , take
-  , take'
-  , take''
-  , take'''
+  , takeUnit
+  , takeUni
+  , takeDi
+  , takeTri
   , takeNot
+  , takeWhile
   , optionMaybe
+  , stripPrefix
+  , count
+  , FromNatural(..)
   ) where
 
-import Biparse.BiparserT (BiparserT, upon, Iso, uponM, Unit, unit, one, try, SubState, SubElement, StateContext)
+import Data.Int (Int)
+import GHC.Enum (toEnum, fromEnum)
+import Numeric.Natural (Natural)
+import Control.Monad.Trans.State.Lazy (StateT(StateT), state)
+import Data.Bool (Bool)
+import Biparse.BiparserT (BiparserT, upon, Iso, uponM, Unit, unit, one, try, SubState, SubElement, ElementContext, SubStateContext, split, Const)
 import Control.Applicative (Applicative(pure), Alternative((<|>)))
 import Control.Monad (Monad(return), when, unless, MonadFail(fail), MonadPlus, guard)
 import Data.Eq (Eq((==)))
-import Data.Function ((.), ($), const)
+import Data.Function ((.), ($), const, flip)
 import Data.Functor (($>), (<$>), void)
-import Data.Maybe (Maybe(Just,Nothing))
+import Data.Maybe (Maybe(Just,Nothing), maybe)
 import Data.Monoid (Monoid, (<>))
-import Data.Sequences (IsSequence)
+import Data.Sequences (IsSequence, span, replicate)
+import Data.MonoTraversable.Unprefixed (length)
+import Data.Sequences qualified as MT
 import Text.Show (Show(show))
 
 type Take c s m n =
@@ -26,28 +38,43 @@ type Take c s m n =
   , IsSequence (SubState c s)
   , MonadFail m
   , MonadFail n
-  , StateContext c s
+  , ElementContext c s
   )
 
 -- | Assumes but disregards the writer context
 -- Should not be used with Alternative
-take :: forall c s m n u. Take c s m n => SubElement c s -> BiparserT c s m n u ()
-take = unit . take'
+take :: forall c s m n u. Take c s m n => SubElement c s -> Const c s m n u
+take = unit . takeUnit
 
 -- | Discards the match
 -- Should not be used with Alternative
-take' :: forall c s m n. Take c s m n => SubElement c s -> Unit c s m n
-take' x = void $ take'' x `upon` const x
+takeUnit :: forall c s m n. Take c s m n => SubElement c s -> Unit c s m n
+takeUnit x = void $ takeUni x `upon` const x
 
 -- | Returns the match
-take'' :: forall c s m n. Take c s m n => SubElement c s -> Iso c m n s (SubElement c s)
-take'' x = do
+takeUni :: forall c s m n se.
+  ( Take c s m n
+  , se ~ SubElement c s
+  )
+  => se
+  -> Iso c m n s se
+takeUni x = do
   y <- one
-  unless (x == y) $ fail $ "Expected a " <> show x <> " but received a " <> show y
+  unless (x == y) $ expectedFail x y
   return y
 
+takeDi :: forall c s m n u.
+  ( Take c s m n
+  , Eq u
+  , Alternative n
+  )
+  => SubElement c s
+  -> u
+  -> BiparserT c s m n u u
+takeDi x y = takeTri x y y
+
 -- | Allows 'SubElement c s'`, 'u', and 'v' to be fixed which works well with Alternative.
-take''' :: forall c s m n u v.
+takeTri :: forall c s m n u v.
   ( Take c s m n
   , Eq u
   , Alternative n
@@ -56,21 +83,38 @@ take''' :: forall c s m n u v.
   -> u
   -> v
   -> BiparserT c s m n u v
-take''' takeWrite toMatch toReturn = do
+takeTri takeWrite toMatch toReturn = do
   x <- one `uponM` ($> takeWrite) . guard . (== toMatch)
-  unless (x == takeWrite) $ fail $ "Expected a " <> show takeWrite <> " but received a " <> show x
+  unless (takeWrite == x) $ expectedFail takeWrite x
   return toReturn
 
-takeNot :: forall c s m n.
+expectedFail :: (MonadFail m, Show a, Show b) => a -> b -> m ()
+expectedFail x y = fail $ "Expected a " <> show x <> " but received a " <> show y
+
+takeNot :: forall c s m n se.
   ( Take c s m n
   , MonadPlus m
+  , se ~ SubElement c s
   )
-  => SubElement c s
-  -> Iso c m n s (SubElement c s)
+  => se
+  -> Iso c m n s se
 takeNot x = try do
   y <- one
   when (x == y) $ fail $ "Should not have found an " <> show y
   return y
+
+type TakeWhile c s m n = 
+  ( SubStateContext c s
+  , IsSequence (SubState c s)
+  , Monad m
+  , Monad n
+  )
+
+takeWhile :: forall c s m n.
+  TakeWhile c s m n
+  => (SubElement c s -> Bool)
+  -> Iso c m n s (SubState c s)
+takeWhile = split . state . span
 
 optionMaybe :: forall c s m n u v.
   ( Monoid (SubState c s)
@@ -80,4 +124,37 @@ optionMaybe :: forall c s m n u v.
   => BiparserT c s m n u v
   -> BiparserT c s m n u (Maybe v)
 optionMaybe x = Just <$> try x <|> pure Nothing
+
+stripPrefix :: forall c s m n ss u.
+  ( ss ~ SubState c s
+  , IsSequence ss
+  , Eq (SubElement c s)
+  , SubStateContext c s
+  , Show ss
+  , MonadFail m
+  , Monad n
+  )
+  => ss
+  -> Const c s m n u
+stripPrefix pre = unit $ void s `upon` const pre
+  where
+  s :: Iso c m n s ss
+  s = split $ StateT
+    $ maybe
+      (fail $ "Could not strip prefix: " <> show pre)
+      (pure . (pre,))
+    . MT.stripPrefix pre
+
+count :: forall c s m n se.
+  ( FromNatural (MT.Index (SubState c s))
+  , Eq se
+  , TakeWhile c s m n
+  , se ~ SubElement c s
+  )
+  => se
+  -> Iso c m n s Natural
+count x = toEnum . length <$> takeWhile (== x) `upon` flip replicate x . fromNatural
+
+class FromNatural a where fromNatural :: Natural -> a
+instance FromNatural Int where fromNatural = fromEnum
 
