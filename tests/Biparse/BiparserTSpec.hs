@@ -36,6 +36,51 @@ spec = do
         x <- runBackward bp2 ('a','b')
         x `shouldBe` (('a','b'),"ab")
 
+  describe "peek" do
+    describe "simple" do
+      let bp :: Iso IdentityStateContext IO IO String Char
+          bp = peek one
+
+      describe "forward" do
+        let f = runForward bp
+
+        it "none consumed" do
+          x <- f "abc"
+          x `shouldBe` ('a',"abc")
+
+      describe "backward" do
+        let b = runBackward bp
+
+        it "prints char" do
+          x <- b 'a'
+          x `shouldBe` ('a',"a")
+
+    describe "Alternative" do
+      let bp :: Iso IdentityStateContext IO IO String Char
+          bp = peek (takeUni 'x') <|> takeUni 'a'
+
+      describe "forward" do
+        let f = runForward bp
+
+        it "take first" do
+          x <- f "xa"
+          x `shouldBe` ('x',"xa")
+
+        it "take second" do
+          x <- f "ab"
+          x `shouldBe` ('a',"b")
+
+      describe "backward" do
+        let b = runBackward bp
+
+        it "prints first" do
+          x <- b 'x'
+          x `shouldBe` ('x',"x")
+
+        it "prints second" do
+          x <- b 'a'
+          x `shouldBe` ('a',"a")
+
   describe "try" do
     let bp :: BiparserT IdentityStateContext (Seq Char) IO IO Char Char
         bp = try $ one <* take 'b'

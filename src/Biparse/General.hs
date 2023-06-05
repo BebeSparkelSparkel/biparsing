@@ -12,23 +12,28 @@ module Biparse.General
   , stripPrefix
   , count
   , FromNatural(..)
+  , isNull
+  , memptyBack
   ) where
 
+import Data.Traversable (Traversable)
 import Data.Int (Int)
 import GHC.Enum (toEnum, fromEnum)
 import Numeric.Natural (Natural)
-import Control.Monad.Trans.State.Lazy (StateT(StateT), state)
+import Control.Monad.Trans.State.Lazy (StateT(StateT), state, get)
 import Data.Bool (Bool)
-import Biparse.BiparserT (BiparserT, upon, Iso, uponM, Unit, unit, one, try, SubState, SubElement, ElementContext, SubStateContext, split, Const)
-import Control.Applicative (Applicative(pure), Alternative((<|>)))
+import Biparse.BiparserT (BiparserT, upon, Iso, uponM, Unit, unit, one, try, SubState, SubElement, ElementContext, SubStateContext, split, Const, ConstU, mapBack, mapMs)
+import Control.Applicative (Applicative(pure), Alternative(empty,(<|>)))
 import Control.Monad (Monad(return), when, unless, MonadFail(fail), MonadPlus, guard)
 import Data.Eq (Eq((==)))
 import Data.Function ((.), ($), const, flip)
-import Data.Functor (($>), (<$>), void)
+import Data.Functor (Functor, ($>), (<$>), void)
+import Data.Functor.Identity (Identity)
 import Data.Maybe (Maybe(Just,Nothing), maybe)
-import Data.Monoid (Monoid, (<>))
+import Data.Monoid (Monoid(mempty), (<>))
 import Data.Sequences (IsSequence, span, replicate)
-import Data.MonoTraversable.Unprefixed (length)
+import Data.MonoTraversable.Unprefixed (length, null)
+import Data.MonoTraversable (MonoFoldable)
 import Data.Sequences qualified as MT
 import Text.Show (Show(show))
 
@@ -157,4 +162,24 @@ count x = toEnum . length <$> takeWhile (== x) `upon` flip replicate x . fromNat
 
 class FromNatural a where fromNatural :: Natural -> a
 instance FromNatural Int where fromNatural = fromEnum
+
+isNull :: forall c s m n u ss.
+  ( Monoid ss
+  , MonoFoldable ss
+  , SubStateContext c s
+  , Monad m
+  , Monad n
+  , ss ~ SubState c s
+  )
+  => ConstU c s m n u Bool
+isNull = null <$> split get `upon` const mempty
+
+-- | Causes backward to write nothing.
+memptyBack :: forall c s m n u v.
+  ( Monoid (SubState c s)
+  , Functor n
+  )
+  => BiparserT c s m n u v
+  -> BiparserT c s m n u v
+memptyBack = flip mapBack (const mempty)
 

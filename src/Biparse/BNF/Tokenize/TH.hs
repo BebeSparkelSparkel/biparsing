@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE TemplateHaskellQuotes #-}
 {-# LANGUAGE QuasiQuotes #-}
@@ -9,7 +10,8 @@ module Biparse.BNF.Tokenize.TH
   , constructorList
   ) where
 
-import Biparse.AlternativeAttributes (addAtt)
+import Control.Applicative (pure)
+import Biparse.AlternativeAttributes (a)
 import Biparse.BNF.Tokenize.Type (Token')
 import Biparse.General (takeDi, count)
 import Data.Char (Char)
@@ -22,7 +24,7 @@ import Data.Monoid (mempty)
 import Data.Proxy (Proxy(Proxy))
 import GHC.Generics (D1, C1, S1, U1, Meta(MetaCons), (:+:), Rep, Rec0, (:*:))
 import GHC.TypeLits (Symbol, KnownSymbol, symbolVal)
-import Language.Haskell.TH (ExpQ, TypeQ, mkName, conE, litE, charL, promotedT, conT, infixT, promotedNilT, Name, appT, conP, varP, varT)
+import Language.Haskell.TH (ExpQ, TypeQ, mkName, conE, litE, charL, promotedT, conT, infixT, promotedNilT, Name, appT, conP, varP, varT, KindQ)
 import Unsafe.Coerce (unsafeCoerce)
 
 -- | Resolves to @:: AlternativeAttributes '[t] isoMT@
@@ -30,16 +32,17 @@ take' :: forall text count. Char -> Token' text count -> ExpQ
 take'
   (litE . charL -> c)
   t
-  = [e| addAtt @($(tokenKind t)) (takeDi @($cT) @($textT) $c $(token t)) |]
+  -- = [e| A @($(tokenKind t) :: TokenT) (takeDi @($context) @($textT) $c $(token t)) |]
+  = [e| a @($(tokenKind t)) (takeDi @($context) $c $(token t)) |]
   where
-  cT = varT $ mkName "c" :: TypeQ
-  textT = varT $ mkName "text" :: TypeQ
+  context = varT $ mkName "c" :: TypeQ
+  -- textT = varT $ mkName "text" :: TypeQ
 
 count' :: forall text count. Char -> Token' text count -> ExpQ
 count'
   (litE . charL -> c)
   t
-  = [e| addAtt @($cnT K.Type) ($cnE <$> count $c `uponM` \case $pat -> pure x; _ -> empty) |]
+  = [e| a @($cnT K.Type) ($cnE <$> count $c `uponM` \case $pat -> pure x; _ -> empty) |]
   where
   cnT = promotedT cn
   cnE = conE cn
@@ -49,7 +52,7 @@ count'
 --addAtt :: ExpQ
 --addAtt = varE $ mkName $ "addAtt"
 
-tokenKind :: Token' text count -> TypeQ
+tokenKind :: Token' text count -> KindQ
 tokenKind = promotedT . conName
 
 token :: Token' text count -> ExpQ

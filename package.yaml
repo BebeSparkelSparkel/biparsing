@@ -4,6 +4,7 @@ version: 0.0.0.1
 dependencies:
   - base >=4.10 && < 5
   - transformers
+  - mono-traversable
 
 default-extensions:
   - BlockArguments
@@ -31,17 +32,18 @@ library:
   source-dirs: src/
   dependencies:
     - base >=4.10 && < 5
-    - mono-traversable
     #- string-conversions
     - profunctors
     - monad-loops
     - template-haskell
+    - monad-loops
+    - extra
+    - bifunctors
   default-extensions:
     - NoImplicitPrelude
   ghc-options:
-    - -Werror
+    #- -Werror
     - -Weverything
-    - -ddump-splices
 
     - -Wno-missing-kind-signatures
     - -Wno-missing-safe-haskell-mode

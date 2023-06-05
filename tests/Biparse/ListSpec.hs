@@ -1,23 +1,28 @@
 module Biparse.ListSpec where
 
+import Data.Maybe
+import Data.String
+import Biparse.BiparserT
+import Biparse.General
+import Biparse.List
+import Control.Applicative hiding (many,some)
+import Data.Bifunctor
+import Data.ByteString (ByteString)
+import Data.ByteString.Internal (w2c, c2w)
+import Data.Char
+import Data.Functor
+import Data.Functor.Identity
+import Data.List.NonEmpty (NonEmpty)
+import Data.MonoTraversable (headMay)
+import Data.Text (Text)
+import Data.Text qualified as T
+import Data.Word (Word8)
+import Prelude hiding (take)
 import System.IO.Error (isUserError)
 import System.Timeout
 import Test.Hspec
 import Test.Hspec.QuickCheck
 import Test.QuickCheck
-import Biparse.BiparserT
-import Biparse.General
-import Data.ByteString.Internal (w2c, c2w)
-import Data.Bifunctor
-import Data.Char
-import Control.Applicative hiding (many,some)
-import Data.List.NonEmpty (NonEmpty)
-import Biparse.List
-import Data.ByteString (ByteString)
-import Prelude hiding (take)
-import Data.Word (Word8)
-import Data.Text (Text)
-import Data.Text qualified as T
 
 spec :: Spec
 spec = do
@@ -59,7 +64,7 @@ spec = do
 
       describe "forward" do
         let f = runForward bp
-        
+
         it "takes none" do
           x <- f mempty
           x `shouldBe` (mempty, mempty)
@@ -83,7 +88,7 @@ spec = do
       let bp :: BiparserT IdentityStateContext [String] Maybe Maybe [Bool] [Int]
           bp = many
             $   try (takeTri "TRUE" True 1)
-            <|>      takeTri "FALSE" False 0 
+            <|>      takeTri "FALSE" False 0
 
       describe "forward" do
         it "takes two" do
@@ -108,7 +113,7 @@ spec = do
   describe "some" do
     let bp :: Iso IdentityStateContext IO IO [Int] (NonEmpty Int)
         bp = some (takeUni 1)
-    
+
     describe "forward" do
       let f = runForward bp
 
@@ -153,3 +158,81 @@ spec = do
       f' <- ef string
       f' `shouldNotBe` [mempty]
 
+  describe "whileM" do
+    let bp :: Iso IdentityStateContext IO IO Text [Char]
+        bp = whileM (peek (memptyBack one >>= \x -> pure $ x /= 'x')) one
+
+    describe "forward" do
+      let f = runForward bp
+
+      it "empty" do
+        x <- f mempty
+        x `shouldBe` (mempty,mempty)
+
+      it "takes all" do
+        x <- f "abc"
+        x `shouldBe` ("abc",mempty)
+
+      it "takes none" do
+        x <- f "x"
+        x `shouldBe` (mempty,"x")
+
+      it "takes till x" do
+        x <- f "abxc"
+        x `shouldBe` ("ab","xc")
+
+    describe "backward" do
+      let b = runBackward bp
+
+      it "empty" do
+        x <- b mempty
+        x `shouldBe` (mempty,mempty)
+
+      it "prints all" do
+        x <- b "abc"
+        x `shouldBe` ("abc","abc")
+
+      it "prints till x" do
+        x <- b "abxc"
+        x `shouldBe` ("ab","ab")
+
+  describe "whileId" do
+    -- THIS IS WACK
+    let o = one :: Iso IdentityStateContext Maybe Maybe Text Char
+        m2i x = Identity . fromMaybe (False,x)
+        bp :: Iso IdentityStateContext Identity Identity Text [Maybe Char]
+        bp = whileId
+          ( memptyBack $ mapMs' m2i m2i $ comap (fromMaybe '0') $ peek do
+            x <- o
+            pure $ x /= 'x'
+          )
+          (fmap pure $ mapMs (pure . fromJust) (pure . fromJust) $ (o `uponMay` '0') id)
+
+    describe "forward" do
+      let f = runForward bp
+
+      it "empty" do
+        f mempty `shouldBe` Identity (mempty,mempty)
+
+      it "takes all" do
+        f "abc" `shouldBe` Identity ("abc",mempty)
+
+      it "takes none" do
+        f "x" `shouldBe` Identity (mempty,"x")
+
+      it "takes till x" do
+        f "abxc" `shouldBe` Identity ("ab","xc")
+
+    describe "backward" do
+      let b = runBackward bp
+
+      it "empty" do
+        b mempty `shouldBe` Identity (mempty,mempty)
+
+      it "prints all" do
+        b "abc" `shouldBe` Identity ("abc","abc")
+
+      it "prints till x" do
+        b "abxc" `shouldBe` Identity ("ab","ab")
+
+instance {-# OVERLAPS #-} IsString [Maybe Char] where fromString = fmap pure

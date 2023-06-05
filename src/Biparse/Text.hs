@@ -1,30 +1,28 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 module Biparse.Text
-  ( MonoParse
-  , char
-  --, string
+  ( char
+  , string
   --, lines
   ) where
 
-import Biparse.BiparserT (BiparserT, upon, one, SubElement, SubState, ElementContext, Const)
-import Control.Applicative (Alternative)
-import Control.Monad (MonadPlus, unless, MonadFail(fail))
+import Biparse.BiparserT (BiparserT, upon, one, SubElement, SubState, ElementContext, Const, SubStateContext)
+import Control.Monad (unless, MonadFail(fail))
 import Data.Char (Char)
 import Data.Eq ((==))
 import Data.Function (($), const)
-import Data.MonoTraversable (Element, MonoPointed)
-import Data.Monoid (Monoid, (<>))
+import Data.Monoid ((<>))
 import Data.Sequences (IsSequence)
-import Text.Show (show)
+import Text.Show (Show(show))
 import Biparse.General (stripPrefix)
 
 type CharElement c text = SubElement c text ~ Char
 
 char :: forall c text m n u.
-  ( MonoParse text m n
-  , CharElement c text
+  ( CharElement c text
   , IsSequence (SubState c text)
   , ElementContext c text
+  , MonadFail m
+  , MonadFail n
   )
   => Char
   -> BiparserT c text m n u ()
@@ -32,13 +30,14 @@ char c = do
   c' <- one `upon` const c
   unless (c == c') $ fail $ "Did not find expected character " <> show c <> " and instead found " <> show c'
 
-string :: forall c text m n u.
-  ( CharElement c s
-  , IsSequence 
+string :: forall c text m n u ss.
+  ( CharElement c text
+  , IsSequence ss
   , Show ss
   , MonadFail m
-  , Monad n
-  , ss ~ SubState c s
+  , MonadFail n
+  , SubStateContext c text
+  , ss ~ SubState c text
   )
   => ss
   -> Const c text m n u

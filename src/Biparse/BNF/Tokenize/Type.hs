@@ -21,21 +21,21 @@ type TokenT = Token' Type Type
 
 data Token' text count
   = Less -- <
-  -- | Greater -- >
+  | Greater -- >
   | Name text
-  -- | Assignment -- ::=
-  -- | Alt -- |
-  -- | OP -- (
-  -- | CP -- )
+  | Assignment -- ::=
+  | Alt -- |
+  | OP -- (
+  | CP -- )
   -- | Count count -- Natural Number
-  -- | Star -- *
-  -- | OB -- [
-  -- | CB -- ]
+  | Star -- *
+  | OB -- [
+  | CB -- ]
   | Pound -- #
   | Comment text -- ; ...
   | Spaces count
-  -- | Tabs count
-  -- | Newlines count
-  -- | TEST count text
+  | Tabs count
+  | Newlines count
+  | DoubleQuote -- "
   deriving (Show, Eq, Ord, Data, Generic)
 

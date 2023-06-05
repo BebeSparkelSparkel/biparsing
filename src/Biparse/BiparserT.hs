@@ -12,18 +12,23 @@ module Biparse.BiparserT
   , unit
   , mono
   , Const
+  , ConstU
   , mkConst
   , identity
   , mapState
   --, mapState'
   , mapMs
+  , mapMs'
   , fix
   , fixWith
   , FixFail(..)
   , comap
   , comapM
+  , comapMay
   , upon
   , uponM
+  , uponMay
+  , mapBack
   , emptyForward
   , SubState
   , GetSubState(..)
@@ -35,28 +40,33 @@ module Biparse.BiparserT
   , IdentityStateContext
   , one
   , split
+  , peek
   , try
+  , optionalBack
   ) where
 
-import Control.Applicative (Applicative(pure,(<*>)), Alternative(empty, (<|>)), (*>))
-import Control.Monad (Monad((>>=)), MonadFail(fail), MonadPlus, (>=>), return)
+import Data.Coerce (coerce)
+import Data.Bifunctor.Flip (Flip(Flip))
+import Data.Traversable (Traversable)
+import Control.Applicative (Applicative(pure,(<*>)), Alternative(empty, (<|>)), (*>), (<*))
+import Control.Monad (Monad((>>=)), MonadFail(fail), MonadPlus, (>=>), return, sequence)
 import Control.Monad.Loops (iterateUntilM)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State.Lazy (StateT(StateT, runStateT), get, put, mapStateT)
 import Control.Monad.Trans.Writer.Lazy (WriterT(WriterT, runWriterT), execWriterT, tell, mapWriterT)
+import Data.Bool (bool)
 import Data.Either (Either, fromRight)
 import Data.Eq (Eq((==)))
 import Data.Function (flip, (.), const, ($), id, (&))
 import Data.Functor (Functor(fmap), ($>), (<$>))
 import Data.Functor.Identity (Identity(Identity, runIdentity))
 import Data.Kind (Type)
-import Data.Maybe (Maybe(Just,Nothing), fromMaybe)
+import Data.Maybe (Maybe(Just,Nothing), fromMaybe, maybe)
 import Data.MonoTraversable (Element, headMay)
 import Data.Monoid (Monoid(mempty), (<>))
 import Data.Profunctor (Profunctor(dimap), (:->))
 import Data.Sequences (IsSequence, tailMay, singleton)
-import Data.Tuple (fst, snd)
-import Data.Bool (bool)
+import Data.Tuple (fst, snd, swap)
 
 -- | Product type for simultainously constructing forward and backward running programs.
 data BiparserT context s m n u v = BiparserT
@@ -81,19 +91,66 @@ execBackward = (fmap snd .) . runBackward
 -- * Mapping Backward
 -- Used to converte @u@ to the correct type for the biparser.
 
-comap :: forall c s m n u u' v. (u -> u') -> BiparserT c s m n u' v -> BiparserT c s m n u v
+comap :: forall c s m n u u' v.
+  (u -> u')
+  -> BiparserT c s m n u' v
+  -> BiparserT c s m n u v
 comap f (BiparserT fw bw) = BiparserT fw (bw . f)
 
-comapM :: forall c s m n u u' v. Monad n => (u -> n u') -> BiparserT c s m n u' v -> BiparserT c s m n u v
+comapM :: forall c s m n u u' v.
+  Monad n =>
+  (u -> n u')
+  -> BiparserT c s m n u' v
+  -> BiparserT c s m n u v
 comapM f (BiparserT fw bw) = BiparserT fw (\u -> WriterT $ f u >>= runWriterT . bw)
 
+comapMay :: forall c s m n u u' v.
+  ( Monoid (SubState c s)
+  , Applicative n
+  )
+  => v
+  -> (u -> Maybe u')
+  -> BiparserT c s m n u' v
+  -> BiparserT c s m n u  v
+comapMay x f (BiparserT fw bw) = BiparserT fw $
+  maybe (pure x) bw . f
+
 infix 8 `upon`
-upon :: forall c s m n u u' v. BiparserT c s m n u' v -> (u -> u') -> BiparserT c s m n u v
+upon :: forall c s m n u u' v.
+  BiparserT c s m n u' v
+  -> (u -> u')
+  -> BiparserT c s m n u v
 upon = flip comap
 
 infix 8 `uponM`
-uponM :: forall c s m n u u' v. Monad n => BiparserT c s m n u' v -> (u -> n u') -> BiparserT c s m n u v
+uponM :: forall c s m n u u' v.
+  Monad n
+  => BiparserT c s m n u' v
+  -> (u -> n u') -> BiparserT c s m n u v
 uponM = flip comapM
+
+infix 8 `uponMay`
+uponMay :: forall c s m n u u' v.
+  ( Monoid (SubState c s)
+  , Applicative n
+  )
+  => BiparserT c s m n u' v
+  -> v
+  -> (u -> Maybe u')
+  -> BiparserT c s m n u  v
+uponMay x y z = comapMay y z x
+
+-- * Map Backwards Write
+
+infix 8 `mapBack`
+mapBack :: forall c s m n u v ss.
+  ( Functor n
+  , ss ~ SubState c s
+  )
+  => BiparserT c s m n u v
+  -> (ss -> ss)
+  -> BiparserT c s m n u v
+mapBack (BiparserT fw bw) f = BiparserT fw $ (mapWriterT $ fmap $ fmap f) . bw
 
 -- * Constrained Subtypes
 -- More constrained subtypes of BiparserT
@@ -136,9 +193,12 @@ mono :: forall c s m n a.
 mono f = dimap f f
 
 -- ** Constant
--- Discards @u@ and returns ()
 
+-- | Discards @u@ and returns ()
 type Const c s m n u = BiparserT c s m n u ()
+
+-- | Discards @u@
+type ConstU c s m n u v = BiparserT c s m n u v
 
 -- | If forward succeds return @v@
 -- If backward does not pass an equal @v@ then fail.
@@ -182,7 +242,8 @@ mapState (BiparserT fw' bw') (BiparserT fw'' bw'') = BiparserT
 -- Change the underlying monads.
 
 mapMs :: forall c s m m' n n' u v.
-  (
+  ( Traversable m
+  , Functor m'
   )
   => (forall a. m a -> m' a)
   -> (forall a. n a -> n' a)
@@ -191,6 +252,17 @@ mapMs :: forall c s m m' n n' u v.
 mapMs f g (BiparserT fw bw) = BiparserT
   (mapStateT f fw)
   (mapWriterT g . bw)
+
+mapMs' ::
+  ( Monoid (SubState c s)
+  )
+  => (forall s'. s' -> m (v,s') -> m' (v',s'))
+  -> (forall w. w -> n (v,w) -> n' (v',w))
+  -> BiparserT c s m n u v
+  -> BiparserT c s m' n' u v'
+mapMs' f g (BiparserT fw bw) = BiparserT
+  (StateT \s -> f s $ runStateT fw s)
+  (mapWriterT (g mempty) . bw)
 
 fix :: forall c s m m' n n' u v.
   ( FixFail m
@@ -205,7 +277,6 @@ fix :: forall c s m m' n n' u v.
 fix (BiparserT fw bw) = BiparserT
   (StateT \s -> pure $ (mempty, s) `fixFail` runStateT fw s)
   (\u -> WriterT . pure $ mempty `fixFail` runWriterT (bw u))
-  
 
 fixWith :: forall c s m n u v.
   ( FixFail m
@@ -344,6 +415,16 @@ split splitSubState = BiparserT fw bw
   bw :: ss -> WriterT ss n ss
   bw x = tell x $> x
 
+-- | Modifies forward so that the Biparser does not modify the outside state.
+peek :: forall c s m n u v.
+  ( Monad m
+  )
+  => BiparserT c s m n u v
+  -> BiparserT c s m n u v
+peek (BiparserT fw bw) = BiparserT
+  (get >>= \s -> fw <* put s)
+  bw
+
 -- | Allows trying a forward. If the forward fails the state is returned to the value it was before running.
 -- ????? Unsure what should be done with the writer mondad
 try :: MonadPlus m => BiparserT c s m n u v -> BiparserT c s m n u v
@@ -352,6 +433,16 @@ try (BiparserT fw bw) = BiparserT
     s <- get
     fw <|> put s *> empty
   bw
+
+optionalBack :: forall c s m n u u' v.
+  ( Monoid (SubState c s)
+  , Applicative n
+  )
+  => (u -> Maybe u')
+  -> v
+  -> BiparserT c s m n u' v
+  -> BiparserT c s m n u  v
+optionalBack f x (BiparserT fw bw) = BiparserT fw $ maybe (pure x) bw . f
 
 instance (Monoid (SubState c s), Monad m, Applicative n) => Applicative (BiparserT c s m n u) where
   pure v = BiparserT (pure v) (const $ pure v)
