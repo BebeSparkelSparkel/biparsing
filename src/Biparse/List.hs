@@ -12,30 +12,35 @@ module Biparse.List
   , whileM
   , whileM'
   , whileId
+  --, untilM
+  --, untilM'
+  , untilId
   , headAlt
   , tailAlt
   ) where
 
 import Control.Monad.Extra (ifM)
-import Data.Bool (Bool(False), not)
-import Biparse.BiparserT (BiparserT, uponM, Iso, SubElement, SubState, emptyForward, one, try, upon, mono, ElementContext, FixFail, fix, mapMs, optionalBack, mapBack, peek, uponMay)
+import Data.Bool (Bool(True,False))
+import Data.Bool qualified as Data.Bool
+import Biparse.BiparserT (BiparserT, uponM, Iso, SubElement, SubState, emptyForward, one, try, upon, mono, ElementContext, FixFail, fix, mapMs, optionalBack, mapBack, peek, uponMay, mapFW)
 import Data.Functor.Identity (Identity(runIdentity))
 import Control.Applicative (Applicative(pure), Alternative((<|>),empty), (*>), liftA2)
-import Biparse.General (take, takeNot, Take, memptyBack)
+import Biparse.General (take, takeNot, Take, memptyBack, not)
 import Data.Functor ((<$>), fmap)
 import Control.Monad (Monad(return), MonadFail(fail), MonadPlus, unless)
 import Data.Function ((.), const, ($))
 import Data.Int (Int)
-import Data.MonoTraversable (headMay)
+import Data.MonoTraversable (headMay, unsafeHead)
 import Data.MonoTraversable.Unprefixed (toList, null)
 import Data.Monoid (Monoid(mempty), (<>))
-import Data.Sequences (IsSequence, tailMay, fromList, singleton)
+import Data.Sequences (IsSequence, tailMay, fromList, singleton, unsafeTail)
 import GHC.Num ((-))
 import Text.Show (Show(show))
 import Data.Maybe (Maybe, maybe)
 import Data.List.NonEmpty (NonEmpty, nonEmpty)
 
 import Prelude (undefined)
+import Debug.Trace
 
 replicateBiparserT :: forall c s m n u v.
   ( Monoid (SubState c s)
@@ -180,14 +185,7 @@ whileM' p x = ifM (p `uponM` headAlt <|> pure False)
   (x `uponM` headAlt ^:^ whileM' p x `uponM` tailAlt)
   (pure mempty)
 
-infixr 5 ^:^
-(^:^) :: Applicative f => f a -> f [a] -> f [a]
-(^:^) = liftA2 (:)
-
-guarded :: Alternative f => (a -> Bool) -> a -> f a
-guarded f x = if f x then pure x else empty
-
--- | Should be able to use ghosts of departed prrofs to get rid of undefined
+-- | Should be able to use ghosts of departed prrofs to get rid of partial head tail
 whileId :: forall c s u v.
   ( Monoid (SubState c s)
   )
@@ -195,15 +193,43 @@ whileId :: forall c s u v.
   -> BiparserT c s Identity Identity u v
   -> BiparserT c s Identity Identity [u] [v]
 whileId p x = ifM (p `uponMay` False $ headMay)
-  ((x `uponMay` undefined) headMay ^:^ (whileId p x `uponMay` mempty) tailMay)
+  ( x `upon` unsafeHead ^:^ whileId p x `upon` unsafeTail)
   (pure mempty)
 
---whileId p x = fix $ whileM' (mms p) $ mms x
---  where
---  mms :: forall a b. BiparserT c s Identity Identity a b-> BiparserT c s Identity Maybe a b
---  mms = mapMs f f
---  f :: forall m a. Applicative m => Identity a -> m a
---  f = pure . runIdentity
+infixr 5 ^:^
+(^:^) :: Applicative f => f a -> f [a] -> f [a]
+(^:^) = liftA2 (:)
+
+--untilM :: forall c s m n u v.
+--  ( MonadPlus m
+--  , Monad n
+--  , Alternative n
+--  , Monoid (SubState c s)
+--  )
+--  => BiparserT c s m n u Bool
+--  -> BiparserT c s m n u v
+--  -> BiparserT c s m n [u] [v]
+--untilM = undefined
+--
+--untilM' :: forall c s m n u v.
+--  ( MonadPlus m
+--  , Monad n
+--  , Alternative n
+--  , Monoid (SubState c s)
+--  )
+--  => BiparserT c s m n u Bool
+--  -> BiparserT c s m n u v
+--  -> BiparserT c s m n [u] [v]
+--untilM' = undefined
+
+-- | Should be able to use ghosts of departed prrofs to get rid of undefined
+untilId :: forall c s u v.
+  ( Monoid (SubState c s)
+  )
+  => BiparserT c s Identity Identity u Bool
+  -> BiparserT c s Identity Identity u v
+  -> BiparserT c s Identity Identity [u] [v]
+untilId = whileId . mapFW Data.Bool.not
 
 headAlt :: forall n a. Alternative n => [a] -> n a
 headAlt = maybe empty pure . headMay
@@ -211,9 +237,3 @@ headAlt = maybe empty pure . headMay
 tailAlt :: forall n a. Alternative n => [a] -> n [a]
 tailAlt = maybe empty pure . tailMay
 
---initAlt :: Alternative n => [a] -> n [a]
---initAlt = maybe empty pure . initMay
---
---lastAlt :: Alternative n => [a] -> n a
---lastAlt = maybe empty pure . lastMay
---

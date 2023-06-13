@@ -11,23 +11,27 @@ module Biparse.General
   , optionMaybe
   , stripPrefix
   , count
+  , countSome
   , FromNatural(..)
+  , not
   , isNull
   , memptyBack
   ) where
 
+import Data.Ord ((>))
 import Data.Traversable (Traversable)
 import Data.Int (Int)
 import GHC.Enum (toEnum, fromEnum)
 import Numeric.Natural (Natural)
 import Control.Monad.Trans.State.Lazy (StateT(StateT), state, get)
 import Data.Bool (Bool)
+import Data.Bool qualified as Data.Bool
 import Biparse.BiparserT (BiparserT, upon, Iso, uponM, Unit, unit, one, try, SubState, SubElement, ElementContext, SubStateContext, split, Const, ConstU, mapBack, mapMs)
 import Control.Applicative (Applicative(pure), Alternative(empty,(<|>)))
 import Control.Monad (Monad(return), when, unless, MonadFail(fail), MonadPlus, guard)
 import Data.Eq (Eq((==)))
 import Data.Function ((.), ($), const, flip)
-import Data.Functor (Functor, ($>), (<$>), void)
+import Data.Functor (Functor(fmap), ($>), (<$>), void)
 import Data.Functor.Identity (Identity)
 import Data.Maybe (Maybe(Just,Nothing), maybe)
 import Data.Monoid (Monoid(mempty), (<>))
@@ -75,7 +79,7 @@ takeDi :: forall c s m n u.
   )
   => SubElement c s
   -> u
-  -> BiparserT c s m n u u
+  -> Iso c m n s u
 takeDi x y = takeTri x y y
 
 -- | Allows 'SubElement c s'`, 'u', and 'v' to be fixed which works well with Alternative.
@@ -150,6 +154,7 @@ stripPrefix pre = unit $ void s `upon` const pre
       (pure . (pre,))
     . MT.stripPrefix pre
 
+-- | Counts 0 or more elements
 count :: forall c s m n se.
   ( FromNatural (MT.Index (SubState c s))
   , Eq se
@@ -160,9 +165,25 @@ count :: forall c s m n se.
   -> Iso c m n s Natural
 count x = toEnum . length <$> takeWhile (== x) `upon` flip replicate x . fromNatural
 
+-- | Counts 1 or more elements
+countSome x = do
+  c <- count x
+  unless (c > 0) empty
+  return c
+
+
 class FromNatural a where fromNatural :: Natural -> a
 instance FromNatural Int where fromNatural = fromEnum
 
+not :: forall c s m n u.
+  ( Functor m
+  , Functor n
+  )
+  => BiparserT c s m n u Bool
+  -> BiparserT c s m n u Bool
+not = fmap Data.Bool.not
+
+-- | Returns true if the substate is empty.
 isNull :: forall c s m n u ss.
   ( Monoid ss
   , MonoFoldable ss

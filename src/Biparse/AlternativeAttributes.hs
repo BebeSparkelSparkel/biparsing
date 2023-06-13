@@ -10,17 +10,16 @@ module Biparse.AlternativeAttributes
   , A
   , a
   , (<|>>)
-  --, (<<|>>)
   , runAtt
   , totalAtt
   , emptyAtt
-  --, addAtt
   ) where
 
 import Data.Bool (Bool(True,False))
 import Data.Type.Bool (If)
 import Control.Applicative (Alternative((<|>),empty))
 import Data.Function (($))
+import Data.Diverse.TypeLevel (Complement)
 
 -- * Type Level Alternative Attributes
 -- Ensures that all tokens have an implementation. Does not ensure that all can be produced.
@@ -50,26 +49,9 @@ totalAtt (AA x) (A f) = AA $ f x
 emptyAtt :: Alternative f => AA '[] (f a)
 emptyAtt = AA empty
 
---addAtt :: forall k a. a -> AA '[k] a
---addAtt = AA
-
 infixr 9 <|>>
 (<|>>) :: forall {k} (a :: k) (as :: [k]) f b. Alternative f => A a (f b) -> AA as (f b) -> AA (a : as) (f b)
 A x <|>> AA y = AA $ x <|> y
 
---(<<|>>) :: forall as as' f a. Alternative f => AA as (f a) -> AA as' (f a) -> AA (as ++ as') (f a)
---AA x <<|>> AA y = AA $ x <|> y
-
 type HasAll required implemented = Complement required implemented ~ '[]
-
-type Complement :: [a] -> [a] -> [a]
-type family Complement xs ys where
-  Complement (x : xs) ys = If (HasElement x ys) (Complement xs ys) (x : Complement xs ys)
-  Complement '[] _ = '[]
-
-type HasElement :: a -> [a] -> Bool
-type family HasElement x ys where
-  HasElement x (x : _) = 'True
-  HasElement x (_ : ys) = HasElement x ys
-  HasElement _ '[] = 'False
 

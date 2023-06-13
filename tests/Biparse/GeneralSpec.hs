@@ -1,5 +1,6 @@
 module Biparse.GeneralSpec where
 
+import Data.Bool (bool)
 import Biparse.BiparserT
 import Biparse.General
 import Control.Applicative
@@ -12,14 +13,17 @@ import Data.Char
 import Data.Sequence (Seq)
 import Data.Text (Text)
 import Data.Vector (Vector)
-import Prelude hiding (take)
+import Prelude hiding (take, not)
 import System.IO.Error (isUserError)
 import Test.Hspec
+
+import Debug.Trace
 
 spec :: Spec
 spec = do
   describe "take" do
-    let bp = take 'a' :: Unit IdentityStateContext Text IO IO
+    let bp :: Unit IdentityStateContext Text IO IO
+        bp = take 'a'
         bp2 :: Unit IdentityStateContext Text IO IO
         bp2 = take 'a' *> take 'b'
 
@@ -47,6 +51,17 @@ spec = do
       it "print two" do
         x <- runBackward bp2 ()
         x `shouldBe` ((), "ab")
+
+  describe "takeDi" do
+    let bp :: Iso IdentityStateContext IO IO Text Int
+        bp = takeDi 'x' 1
+
+    describe "forward" do
+      let f = runForward bp
+
+      it "matches" $ f "xabc" >>= (`shouldBe` (1,"abc"))
+
+      it "no matche" $ f "abc" `shouldThrow` isUserError
 
   describe "takeNot" do
     let bp :: Iso IdentityStateContext IO IO String Char
@@ -104,4 +119,38 @@ spec = do
       it "prints second" do
         x <- runBackward bp False
         x `shouldBe` ((Nothing, Just "two"), [2])
+
+  describe "not" do
+    let bp :: BiparserT IdentityStateContext String IO IO Char Bool
+        bp = not $ (== 'x') <$> one
+
+    describe "forward" do
+      let f = runForward bp
+
+      it "true" $ f "ab" >>= (`shouldBe` (True,"b"))
+
+      it "false" $ f "xb" >>= (`shouldBe` (False,"b"))
+
+    describe "backward" do
+      let b = runBackward bp
+
+      it "true" $ b 'x' >>= (`shouldBe` (False,"x"))
+
+      it "false" $ b 'a' >>= (`shouldBe` (True,"a"))
+
+  describe "isNull" do
+    let bp :: ConstU IdentityStateContext String Identity Identity () Bool
+        bp = isNull
+
+    describe "forward" do
+      let f = runForward bp
+
+      it "true" $ f mempty `shouldBe` Identity (True,mempty)
+
+      it "false" $ f "a" `shouldBe` Identity (False,"a")
+
+    describe "backward" do
+      let b = runBackward bp
+
+      it "true" $ b () `shouldBe` Identity (True,mempty)
 

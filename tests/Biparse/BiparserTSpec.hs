@@ -1,9 +1,13 @@
 module Biparse.BiparserTSpec where
 
+import Control.Monad.Trans.State.Lazy
+import Data.Sequences (tailMay, index)
+import Data.MonoTraversable (headMay)
 import Test.Hspec
 import Biparse.BiparserT
 import Biparse.General
 import Data.Sequence (Seq)
+import Data.Sequence qualified as MT
 import Control.Applicative
 import Prelude hiding (take, takeWhile)
 import System.IO.Error (isUserError)
@@ -35,6 +39,29 @@ spec = do
       it "used twice" do
         x <- runBackward bp2 ('a','b')
         x `shouldBe` (('a','b'),"ab")
+
+  describe "split" do
+    let bp :: Iso IdentityStateContext IO IO String String
+        bp = split do
+          x <- get
+          y <- maybe empty (pure . \(f,s) -> f:s:[]) $
+            liftA2 (,) (headMay x) (index x 1)
+          put $ drop 2 x
+          return y
+
+    describe "forward" do
+      let f = runForward bp
+
+      it "succeeds" $ f "abc" >>= (`shouldBe` ("ab", "c"))
+
+      it "fails" $ f "a" `shouldThrow` isUserError
+
+    describe "backward" do
+      let b = runBackward bp
+
+      it "mempty" $ b mempty >>= (`shouldBe` (mempty,mempty))
+
+      it "prints all" $ b "abc" >>= (`shouldBe` ("abc","abc"))
 
   describe "peek" do
     describe "simple" do

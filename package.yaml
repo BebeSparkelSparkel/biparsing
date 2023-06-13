@@ -5,6 +5,7 @@ dependencies:
   - base >=4.10 && < 5
   - transformers
   - mono-traversable
+  - generic-deriving
 
 default-extensions:
   - BlockArguments
@@ -39,6 +40,8 @@ library:
     - monad-loops
     - extra
     - bifunctors
+    - data-diverse
+    - generic-functor
   default-extensions:
     - NoImplicitPrelude
   ghc-options:
@@ -67,6 +70,7 @@ tests:
       - bytestring
       - containers
       - vector
+      - generic-random
     default-extensions:
       - OverloadedStrings
       - OverloadedLists

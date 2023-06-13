@@ -22,6 +22,7 @@ module Biparse.BiparserT
   , fix
   , fixWith
   , FixFail(..)
+  , mapFW
   , comap
   , comapM
   , comapMay
@@ -87,6 +88,15 @@ runBackward = (runWriterT .) . backward
 
 execBackward :: forall c s m n u v. Functor n => BiparserT c s m n u v -> u -> n (SubState c s)
 execBackward = (fmap snd .) . runBackward
+
+-- * Mapping Forward
+
+mapFW :: forall c s m n u v.
+  Functor m
+  => (v -> v)
+  -> BiparserT c s m n u v
+  -> BiparserT c s m n u v
+mapFW f (BiparserT fw bw) = BiparserT (f <$> fw) bw
 
 -- * Mapping Backward
 -- Used to converte @u@ to the correct type for the biparser.
@@ -253,6 +263,7 @@ mapMs f g (BiparserT fw bw) = BiparserT
   (mapStateT f fw)
   (mapWriterT g . bw)
 
+{-# WARNING mapMs' "Exposes the internals of BiparserT an you will probably use it incorrectly." #-} 
 mapMs' ::
   ( Monoid (SubState c s)
   )
