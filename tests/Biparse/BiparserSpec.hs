@@ -1,16 +1,11 @@
-module Biparse.BiparserTSpec where
+module Biparse.BiparserSpec where
 
-import Control.Monad.Trans.State.Lazy
-import Data.Sequences (tailMay, index)
-import Data.MonoTraversable (headMay)
-import Test.Hspec
-import Biparse.BiparserT
-import Biparse.General
+import Biparse.Biparser (backward)
 import Data.Sequence (Seq)
 import Data.Sequence qualified as MT
-import Control.Applicative
-import Prelude hiding (take, takeWhile)
-import System.IO.Error (isUserError)
+
+-- functional tests that should be moved to General when implemented correctly
+import Biparse.Biparser (breakWhen')
 
 spec :: Spec
 spec = do
@@ -109,7 +104,7 @@ spec = do
           x `shouldBe` ('a',"a")
 
   describe "try" do
-    let bp :: BiparserT IdentityStateContext (Seq Char) IO IO Char Char
+    let bp :: Biparser IdentityStateContext (Seq Char) IO IO Char Char
         bp = try $ one <* take 'b'
 
     describe "forward" do
@@ -129,8 +124,65 @@ spec = do
         x <- runBackward bp 'a'
         x `shouldBe` ('a',"ab")
 
-      it "prints second if first fails (more of a test for the BiparserT Alternative instance and should proabaly moved there)" do
+      it "prints second if first fails (more of a test for the Biparser Alternative instance and should proabaly moved there)" do
         x <- runBackward (bp {backward = const empty} <|> bp) 'z'
         x `shouldBe` ('z',"zb")
       
+  describe "isNull" do
+    let bp :: ConstU IdentityStateContext String Identity Identity [()] Bool
+        bp = isNull
+
+    describe "forward" do
+      let f = runForward bp
+
+      it "true" $ f mempty `shouldBe` Identity (True,mempty)
+
+      it "false" $ f "a" `shouldBe` Identity (False,"a")
+
+    describe "backward" do
+      let b = runBackward bp
+
+      it "true" $ b mempty `shouldBe` Identity (True,mempty)
+
+      it "false" $ b [()] `shouldBe` Identity (False,mempty)
+
+  fb
+    "breakWhen'"
+    (breakWhen' $ stripPrefix "ab" :: Iso LineColumn IO IO (Position String) String)
+    (\f -> do
+      it "empty" do
+        f "" `shouldThrow` isUserError
+
+      it "break first" do
+        x <- f "abcd"
+        x `shouldBe` (mempty, Position 1 3 "cd")
+
+      it "break last" do
+        x <- f "cdab"
+        x `shouldBe` ("cd", Position 1 5 mempty)
+
+      it "break middle" do
+        x <- f "cdabef"
+        x `shouldBe` ("cd", Position 1 5 "ef")
+
+      it "no break" do
+        f "cdefg" `shouldThrow` isUserError
+    )
+    \b -> do
+      it "empty" do
+        x <- b mempty
+        x `shouldBe` (mempty,"ab")
+
+      it "append break" do
+        x <- b "cd"
+        x `shouldBe` ("cd", "cdab")
+
+      it "only break" do
+        x <- b "ab"
+        x `shouldBe` ("ab", "abab")
+
+      it "contains break" do
+        x <- b "cdab"
+        x `shouldBe` ("cdab", "cdabab")
+
 

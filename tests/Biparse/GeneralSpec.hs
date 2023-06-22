@@ -1,23 +1,9 @@
 module Biparse.GeneralSpec where
 
-import Data.Bool (bool)
-import Biparse.BiparserT
-import Biparse.General
-import Control.Applicative
-import Control.Monad.Trans.Except
-import Data.Bifunctor
-import Data.Functor
-import Data.Functor.Identity
+import Control.Monad.Except
 import Data.ByteString.Char8 (ByteString)
-import Data.Char
 import Data.Sequence (Seq)
-import Data.Text (Text)
 import Data.Vector (Vector)
-import Prelude hiding (take, not)
-import System.IO.Error (isUserError)
-import Test.Hspec
-
-import Debug.Trace
 
 spec :: Spec
 spec = do
@@ -87,8 +73,82 @@ spec = do
       it "fails matching" do
         b 'A' `shouldThrow` isUserError
 
+  fb
+    "takeWhile"
+    (takeWhile (/= 'x') :: Iso LineColumn IO IO (Position Text) Text)
+    (\f -> do
+      it "empty" do
+        x <- f ""
+        x `shouldBe` (mempty,"")
+
+      it "take none" do
+        x <- f "xab"
+        x `shouldBe` (mempty, "xab")
+
+      it "take 2" do
+        x <- f "abx"
+        x `shouldBe` ("ab", Position 1 3 "x")
+
+      it "take all" do
+        x <- f "abc"
+        x `shouldBe` ("abc", Position 1 4 mempty)
+    )
+    \b -> do
+      it "empty" do
+        x <- b mempty
+        x `shouldBe` (mempty,mempty)
+
+      it "no x" do
+        x <- b "abc"
+        x `shouldBe` ("abc", "abc")
+
+      it "has x" do
+        x <- b "axc"
+        x `shouldBe` ("axc", "axc")
+
+  fb
+    "breakWhen"
+    (breakWhen $ stripPrefix "ab" :: Iso LineColumn IO IO (Position (Seq Char)) (Seq Char))
+    (\f -> do
+      it "empty" do
+        x <- f ""
+        x `shouldBe` (mempty, "")
+
+      it "break first" do
+        x <- f "abcd"
+        x `shouldBe` (mempty, Position 1 3 "cd")
+
+      it "break last" do
+        x <- f "cdab"
+        x `shouldBe` ("cd", Position 1 5 mempty)
+
+      it "break middle" do
+        x <- f "cdabef"
+        x `shouldBe` ("cd", Position 1 5 "ef")
+
+      it "no break" do
+        x <- f "cdefg"
+        x `shouldBe` ("cdefg", Position 1 6 mempty)
+    )
+    \b -> do
+      it "empty" do
+        x <- b mempty
+        x `shouldBe` (mempty,"ab")
+
+      it "append break" do
+        x <- b "cd"
+        x `shouldBe` ("cd", "cdab")
+
+      it "only break" do
+        x <- b "ab"
+        x `shouldBe` ("ab", "abab")
+
+      it "contains break" do
+        x <- b "cdab"
+        x `shouldBe` ("cdab", "cdabab")
+
   describe "optionMaybe" do
-    let bp :: BiparserT IdentityStateContext (Vector Int) IO IO Bool (Maybe String, Maybe String)
+    let bp :: Biparser IdentityStateContext (Vector Int) IO IO Bool (Maybe String, Maybe String)
         bp = (,) <$> optionMaybe (takeUni 1 `upon` mapBool $> "one")
            <*> optionMaybe (takeUni 2 `upon` mapBool $> "two")
         mapBool :: Bool -> Int
@@ -121,7 +181,7 @@ spec = do
         x `shouldBe` ((Nothing, Just "two"), [2])
 
   describe "not" do
-    let bp :: BiparserT IdentityStateContext String IO IO Char Bool
+    let bp :: Biparser IdentityStateContext String IO IO Char Bool
         bp = not $ (== 'x') <$> one
 
     describe "forward" do
@@ -137,20 +197,4 @@ spec = do
       it "true" $ b 'x' >>= (`shouldBe` (False,"x"))
 
       it "false" $ b 'a' >>= (`shouldBe` (True,"a"))
-
-  describe "isNull" do
-    let bp :: ConstU IdentityStateContext String Identity Identity () Bool
-        bp = isNull
-
-    describe "forward" do
-      let f = runForward bp
-
-      it "true" $ f mempty `shouldBe` Identity (True,mempty)
-
-      it "false" $ f "a" `shouldBe` Identity (False,"a")
-
-    describe "backward" do
-      let b = runBackward bp
-
-      it "true" $ b () `shouldBe` Identity (True,mempty)
 

@@ -15,10 +15,6 @@ module Biparse.AlternativeAttributes
   , emptyAtt
   ) where
 
-import Data.Bool (Bool(True,False))
-import Data.Type.Bool (If)
-import Control.Applicative (Alternative((<|>),empty))
-import Data.Function (($))
 import Data.Diverse.TypeLevel (Complement)
 
 -- * Type Level Alternative Attributes

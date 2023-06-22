@@ -1,13 +1,6 @@
 module Biparse.Text.PositionContextSpec where
 
-import Test.QuickCheck.Instances.Text ()
-import Test.Hspec
-import Test.Hspec.QuickCheck
 import Biparse.Text.PositionContext
-import Biparse.General
-import Biparse.BiparserT
-import Data.Text (Text)
-import Prelude hiding (takeWhile)
 
 spec :: Spec
 spec = do

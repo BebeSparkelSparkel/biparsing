@@ -1,11 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 module Biparse.AlternativeAttributesSpec where
 
-import Control.Applicative
-import Test.Hspec
-import Biparse.BiparserT
 import Biparse.AlternativeAttributes
-import System.IO.Error (isUserError)
 
 spec :: Spec
 spec = do

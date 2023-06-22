@@ -2,10 +2,11 @@ name: biparsing
 version: 0.0.0.1
 
 dependencies:
-  - base >=4.10 && < 5
-  - transformers
+  - name: base
+    mixin:
+      - hiding (Prelude)
+  - mtl
   - mono-traversable
-  - generic-deriving
 
 default-extensions:
   - BlockArguments
@@ -32,18 +33,13 @@ default-extensions:
 library:
   source-dirs: src/
   dependencies:
-    - base >=4.10 && < 5
     #- string-conversions
     - profunctors
-    - monad-loops
-    - template-haskell
-    - monad-loops
     - extra
-    - bifunctors
     - data-diverse
-    - generic-functor
-  default-extensions:
-    - NoImplicitPrelude
+  other-modules:
+    - Prelude
+    #- Paths_biparsing
   ghc-options:
     #- -Werror
     - -Weverything
@@ -55,6 +51,8 @@ library:
     - -Wno-unsafe
     - -Wno-missing-deriving-strategies
     - -Wno-missing-local-signatures
+
+    - -Wno-unused-packages
 
 tests:
   spec:
@@ -71,6 +69,7 @@ tests:
       - containers
       - vector
       - generic-random
+      - generic-deriving
     default-extensions:
       - OverloadedStrings
       - OverloadedLists

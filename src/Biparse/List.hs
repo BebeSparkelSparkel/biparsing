@@ -3,44 +3,31 @@
 module Biparse.List
   ( replicateBiparserT
   , takeElementsWhile
+  , Many
   , many
   , manyId
   , manyIso
   , some
   , someIso
   , splitElem
+  , splitOn
   , whileM
   , whileM'
-  , whileId
+  --, whileId
   --, untilM
   --, untilM'
-  , untilId
+  --, untilId
   , headAlt
   , tailAlt
   ) where
 
-import Control.Monad.Extra (ifM)
-import Data.Bool (Bool(True,False))
-import Data.Bool qualified as Data.Bool
-import Biparse.BiparserT (BiparserT, uponM, Iso, SubElement, SubState, emptyForward, one, try, upon, mono, ElementContext, FixFail, fix, mapMs, optionalBack, mapBack, peek, uponMay, mapFW)
-import Data.Functor.Identity (Identity(runIdentity))
-import Control.Applicative (Applicative(pure), Alternative((<|>),empty), (*>), liftA2)
-import Biparse.General (take, takeNot, Take, memptyBack, not)
-import Data.Functor ((<$>), fmap)
-import Control.Monad (Monad(return), MonadFail(fail), MonadPlus, unless)
-import Data.Function ((.), const, ($))
-import Data.Int (Int)
-import Data.MonoTraversable (headMay, unsafeHead)
-import Data.MonoTraversable.Unprefixed (toList, null)
-import Data.Monoid (Monoid(mempty), (<>))
-import Data.Sequences (IsSequence, tailMay, fromList, singleton, unsafeTail)
-import GHC.Num ((-))
-import Text.Show (Show(show))
-import Data.Maybe (Maybe, maybe)
+import Biparse.Biparser (Biparser, uponM, Iso, SubElement, SubState, emptyForward, one, try, upon, mono, ElementContext, FixFail, fix, peek, Unit, UpdateStateWithSubState, isNull)
+import Biparse.General (take, takeNot, Take, memptyWrite, BreakWhen, breakWhen)
 import Data.List.NonEmpty (NonEmpty, nonEmpty)
 
-import Prelude (undefined)
 import Debug.Trace
+import GHC.Err
+
 
 replicateBiparserT :: forall c s m n u v.
   ( Monoid (SubState c s)
@@ -48,8 +35,8 @@ replicateBiparserT :: forall c s m n u v.
   , MonadFail n
   )
   => Int
-  -> BiparserT c s m n u v
-  -> BiparserT c s m n [u] [v]
+  -> Biparser c s m n u v
+  -> Biparser c s m n [u] [v]
 replicateBiparserT = \case
   0 -> const $ return $ mempty
   n -> \x -> do
@@ -63,13 +50,15 @@ replicateBiparserT = \case
     return
 
 -- | Takes
-takeElementsWhile :: forall c s m n.
-   ( IsSequence (SubState c s)
+takeElementsWhile :: forall c s m n ss.
+   ( IsSequence ss
    , MonadFail m
    , MonadPlus m
-   , Monad n
+   , MonadState s m
+   , MonadWriter ss n
    , Alternative n
    , ElementContext c s
+   , ss ~ SubState c s
    )
   => (SubElement c s -> Bool)
   -> Iso c m n s [SubElement c s]
@@ -91,8 +80,8 @@ type Many c s m n =
 -- DEV QUESTION: Is it possible to use Alternative(many)?
 many :: forall c s m n u v.
   Many c s m n
-  => BiparserT c s m n u v
-  -> BiparserT c s m n [u] [v]
+  => Biparser c s m n u v
+  -> Biparser c s m n [u] [v]
 
 many x =
   do
@@ -108,8 +97,8 @@ manyId :: forall c s m n u v.
   , Monad n
   , Alternative n
   )
-  => BiparserT c s m n u v
-  -> BiparserT c s Identity Identity [u] [v]
+  => Biparser c s m n u v
+  -> Biparser c s Identity Identity [u] [v]
 manyId = fix . many
 
 -- | Iso version of 'many'
@@ -127,8 +116,8 @@ type Some c s m n =
 -- | NonEmpty version of 'many'
 some :: forall c s m n u v.
   Some c s m n
-  => BiparserT c s m n u v
-  -> BiparserT c s m n (NonEmpty u) (NonEmpty v)
+  => Biparser c s m n u v
+  -> Biparser c s m n (NonEmpty u) (NonEmpty v)
 some x = do
   ys <- many x `upon` toList
   maybe (fail "Expected to parse at least one but parsed none.") pure $ nonEmpty ys
@@ -161,16 +150,32 @@ splitElem x = correctEmpty splitter
     [] -> [mempty]
     y -> y
 
-whileM :: forall c s m n u v.
-  ( MonadPlus m
-  , Monad n
-  , Alternative n
-  , Monoid (SubState c s)
+splitOn :: forall c s m n ss.
+  ( BreakWhen c s m n ss
+  , UpdateStateWithSubState c s
+  , Show ss
   )
-  => BiparserT c s m n u Bool
-  -> BiparserT c s m n u v
-  -> BiparserT c s m n [u] [v]
-whileM p = whileM' (peek $ memptyBack p)
+  => Unit c s m n
+  -> Iso c m n s [ss]
+splitOn x = do
+  heads <- so `uponM` initAlt 
+  undefined
+  where
+  so = ifM isNull
+    (pure mempty)
+    (breakWhen x `uponM` headAlt ^:^ so `uponM` tailAlt)
+
+whileM :: forall c s m n u v ss.
+  ( MonadPlus m
+  , MonadState s m
+  , MonadWriter ss n
+  , Alternative n
+  , ss ~ SubState c s
+  )
+  => Biparser c s m n u Bool
+  -> Biparser c s m n u v
+  -> Biparser c s m n [u] [v]
+whileM p = whileM' (peek $ memptyWrite p)
 
 whileM' :: forall c s m n u v.
   ( MonadPlus m
@@ -178,27 +183,23 @@ whileM' :: forall c s m n u v.
   , Alternative n
   , Monoid (SubState c s)
   )
-  => BiparserT c s m n u Bool
-  -> BiparserT c s m n u v
-  -> BiparserT c s m n [u] [v]
+  => Biparser c s m n u Bool
+  -> Biparser c s m n u v
+  -> Biparser c s m n [u] [v]
 whileM' p x = ifM (p `uponM` headAlt <|> pure False)
   (x `uponM` headAlt ^:^ whileM' p x `uponM` tailAlt)
   (pure mempty)
 
 -- | Should be able to use ghosts of departed prrofs to get rid of partial head tail
-whileId :: forall c s u v.
-  ( Monoid (SubState c s)
-  )
-  => BiparserT c s Identity Identity u Bool
-  -> BiparserT c s Identity Identity u v
-  -> BiparserT c s Identity Identity [u] [v]
-whileId p x = ifM (p `uponMay` False $ headMay)
-  ( x `upon` unsafeHead ^:^ whileId p x `upon` unsafeTail)
-  (pure mempty)
-
-infixr 5 ^:^
-(^:^) :: Applicative f => f a -> f [a] -> f [a]
-(^:^) = liftA2 (:)
+--whileId :: forall c s u v.
+--  ( Monoid (SubState c s)
+--  )
+--  => Biparser c s Identity Identity u Bool
+--  -> Biparser c s Identity Identity u v
+--  -> Biparser c s Identity Identity [u] [v]
+--whileId p x = ifM (p `uponMay` False $ headMay)
+--  ( x `upon` unsafeHead ^:^ whileId p x `upon` unsafeTail)
+--  (pure mempty)
 
 --untilM :: forall c s m n u v.
 --  ( MonadPlus m
@@ -206,9 +207,9 @@ infixr 5 ^:^
 --  , Alternative n
 --  , Monoid (SubState c s)
 --  )
---  => BiparserT c s m n u Bool
---  -> BiparserT c s m n u v
---  -> BiparserT c s m n [u] [v]
+--  => Biparser c s m n u Bool
+--  -> Biparser c s m n u v
+--  -> Biparser c s m n [u] [v]
 --untilM = undefined
 --
 --untilM' :: forall c s m n u v.
@@ -217,23 +218,26 @@ infixr 5 ^:^
 --  , Alternative n
 --  , Monoid (SubState c s)
 --  )
---  => BiparserT c s m n u Bool
---  -> BiparserT c s m n u v
---  -> BiparserT c s m n [u] [v]
+--  => Biparser c s m n u Bool
+--  -> Biparser c s m n u v
+--  -> Biparser c s m n [u] [v]
 --untilM' = undefined
 
 -- | Should be able to use ghosts of departed prrofs to get rid of undefined
-untilId :: forall c s u v.
-  ( Monoid (SubState c s)
-  )
-  => BiparserT c s Identity Identity u Bool
-  -> BiparserT c s Identity Identity u v
-  -> BiparserT c s Identity Identity [u] [v]
-untilId = whileId . mapFW Data.Bool.not
+--untilId :: forall c s u v.
+--  ( Monoid (SubState c s)
+--  )
+--  => Biparser c s Identity Identity u Bool
+--  -> Biparser c s Identity Identity u v
+--  -> Biparser c s Identity Identity [u] [v]
+--untilId = whileId . mapFW Data.Bool.not
 
-headAlt :: forall n a. Alternative n => [a] -> n a
+headAlt :: forall a n. (Alternative n, MonoFoldable a) => a -> n (Element a)
 headAlt = maybe empty pure . headMay
 
-tailAlt :: forall n a. Alternative n => [a] -> n [a]
+tailAlt :: forall a n. (Alternative n, IsSequence a) => a -> n a
 tailAlt = maybe empty pure . tailMay
+
+initAlt :: forall a n. (Alternative n, IsSequence a) => a -> n a
+initAlt = maybe empty pure . initMay
 

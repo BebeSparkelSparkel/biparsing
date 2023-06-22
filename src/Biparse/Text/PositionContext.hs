@@ -5,19 +5,7 @@ module Biparse.Text.PositionContext
   , startPosition
   ) where
 
-import Data.MonoTraversable (Element, ofor_, MonoFoldable)
-import Data.Char (Char)
-import Data.Int (Int)
-import GHC.Num ((+))
-import Biparse.BiparserT (SubState, GetSubState(getSubState), UpdateStateWithElement(updateElementContext), UpdateStateWithSubState(updateSubStateContext))
-import Control.Monad.Trans.State.Lazy (execState, modify)
-import Data.Bifunctor (second)
-import Data.Function (flip, ($))
-import Data.Eq ((==))
-import Data.String (IsString(fromString))
-import Text.Show (Show)
-import Data.Function ((.))
-import Data.Eq (Eq)
+import Biparse.Biparser (SubState, GetSubState(getSubState), UpdateStateWithElement(updateElementContext), UpdateStateWithSubState(updateSubStateContext))
 
 -- * Tracks line and column
 
@@ -44,7 +32,7 @@ instance (Element text ~ Char, MonoFoldable text) => UpdateStateWithSubState Lin
     then s {column = column s + cs, subState = ss'}
     else s {line = line s + ns, column = cs, subState = ss'}
     where
-    (ns, cs) = flip execState (0, 0) $ ofor_ ss \case
+    (ns, cs) = flip execState (0, 0) $ for_ ss \case
       '\n' -> modify \(l,_) -> (l + 1, 1)
       _ -> modify $ second (+ 1)
 

@@ -1,4 +1,3 @@
-{-# LANGUAGE NoImplicitPrelude #-}
 module Biparse.General
   ( Take
   , take
@@ -8,44 +7,31 @@ module Biparse.General
   , takeTri
   , takeNot
   , takeWhile
+  , BreakWhen
+  , breakWhen
+  , failBackward
   , optionMaybe
   , stripPrefix
   , count
   , countSome
   , FromNatural(..)
   , not
-  , isNull
-  , memptyBack
+  , memptyWrite
   ) where
 
-import Data.Ord ((>))
-import Data.Traversable (Traversable)
-import Data.Int (Int)
-import GHC.Enum (toEnum, fromEnum)
-import Numeric.Natural (Natural)
-import Control.Monad.Trans.State.Lazy (StateT(StateT), state, get)
-import Data.Bool (Bool)
-import Data.Bool qualified as Data.Bool
-import Biparse.BiparserT (BiparserT, upon, Iso, uponM, Unit, unit, one, try, SubState, SubElement, ElementContext, SubStateContext, split, Const, ConstU, mapBack, mapMs)
-import Control.Applicative (Applicative(pure), Alternative(empty,(<|>)))
-import Control.Monad (Monad(return), when, unless, MonadFail(fail), MonadPlus, guard)
-import Data.Eq (Eq((==)))
-import Data.Function ((.), ($), const, flip)
-import Data.Functor (Functor(fmap), ($>), (<$>), void)
-import Data.Functor.Identity (Identity)
-import Data.Maybe (Maybe(Just,Nothing), maybe)
-import Data.Monoid (Monoid(mempty), (<>))
-import Data.Sequences (IsSequence, span, replicate)
-import Data.MonoTraversable.Unprefixed (length, null)
-import Data.MonoTraversable (MonoFoldable)
-import Data.Sequences qualified as MT
-import Text.Show (Show(show))
+import Data.Bool qualified
+import Biparse.Biparser (Biparser, upon, Iso, uponM, Unit, unit, one, try, SubState, SubElement, ElementContext, SubStateContext, split, Const, ConstU, mapWrite, Unit, ignoreForward, comapM, isNull, mapMs, write)
+import Data.Sequences qualified
+
+import Debug.Trace
 
 type Take c s m n =
   ( Show (SubElement c s)
   , Eq (SubElement c s)
   , IsSequence (SubState c s)
+  , MonadState s m
   , MonadFail m
+  , MonadWriter (SubState c s) n
   , MonadFail n
   , ElementContext c s
   )
@@ -91,7 +77,7 @@ takeTri :: forall c s m n u v.
   => SubElement c s
   -> u
   -> v
-  -> BiparserT c s m n u v
+  -> Biparser c s m n u v
 takeTri takeWrite toMatch toReturn = do
   x <- one `uponM` ($> takeWrite) . guard . (== toMatch)
   unless (takeWrite == x) $ expectedFail takeWrite x
@@ -115,8 +101,8 @@ takeNot x = try do
 type TakeWhile c s m n = 
   ( SubStateContext c s
   , IsSequence (SubState c s)
-  , Monad m
-  , Monad n
+  , MonadState s m
+  , MonadWriter (SubState c s) n
   )
 
 takeWhile :: forall c s m n.
@@ -125,13 +111,76 @@ takeWhile :: forall c s m n.
   -> Iso c m n s (SubState c s)
 takeWhile = split . state . span
 
+type BreakWhen c s m n ss =
+  ( IsSequence ss
+  , MonadState s m
+  , MonadFail m
+  , MonadPlus m
+  , MonadWriter ss n
+  , Alternative n
+  , ElementContext c s
+  , ss ~ SubState c s
+  )
+
+-- | Breaks off the substate head when 'x' succeeds. Writes x after given 'ss'.
+-- DEV NOTE: Seems like there could be a more simplistic solution.
+breakWhen :: forall c s m n ss.
+  BreakWhen c s m n ss
+  => Unit c s m n
+  -> Iso c m n s ss
+breakWhen x
+  = bw <* (ignoreForward () $ unit x)
+  where
+  bw
+    =   mempty <$ (failBackward $ try $ unit x)
+    <|> do
+          y <- one `uponM` headAlt
+          cons y <$> bw `uponM` tailAlt
+    <|> pure mempty
+
+---- | Like 'breakWhen' but fails if 'x' does not succeed
+--breakWhen' :: forall c s m n ss.
+--  BreakWhen c s m n ss
+--  => Unit c s m n
+--  -> Iso c m n s ss
+--breakWhen' x
+--  = bw
+--  <|> ignoreForward  (write *> unit x)
+--  where
+--  bw
+--    =   mempty <$ (failBackward $ try $ unit x)
+--    <|> do
+--          y <- one `uponM` headAlt
+--          cons y <$> breakWhen' x `uponM` tailAlt
+
+headAlt :: (MonoFoldable a, Alternative m) => a -> m (Element a)
+headAlt = maybe empty pure . headMay
+
+tailAlt :: (IsSequence a, Alternative m) => a -> m a
+tailAlt = maybe empty pure . tailMay
+
+failForward :: forall c s m n u v.
+  Alternative m
+  => Biparser c s m n u v
+  -> Biparser c s m n u v
+failForward = mapMs (const empty) id
+
+failBackward :: forall c s m n u v.
+  ( Monad n
+  , Alternative n
+  )
+  => Biparser c s m n u v
+  -> Biparser c s m n u v
+failBackward = comapM $ const empty
+
 optionMaybe :: forall c s m n u v.
   ( Monoid (SubState c s)
   , MonadPlus m
+  , MonadState s m
   , Alternative n
   )
-  => BiparserT c s m n u v
-  -> BiparserT c s m n u (Maybe v)
+  => Biparser c s m n u v
+  -> Biparser c s m n u (Maybe v)
 optionMaybe x = Just <$> try x <|> pure Nothing
 
 stripPrefix :: forall c s m n ss u.
@@ -140,8 +189,9 @@ stripPrefix :: forall c s m n ss u.
   , Eq (SubElement c s)
   , SubStateContext c s
   , Show ss
+  , MonadState s m
   , MonadFail m
-  , Monad n
+  , MonadWriter ss n
   )
   => ss
   -> Const c s m n u
@@ -152,11 +202,11 @@ stripPrefix pre = unit $ void s `upon` const pre
     $ maybe
       (fail $ "Could not strip prefix: " <> show pre)
       (pure . (pre,))
-    . MT.stripPrefix pre
+    . Data.Sequences.stripPrefix pre
 
 -- | Counts 0 or more elements
 count :: forall c s m n se.
-  ( FromNatural (MT.Index (SubState c s))
+  ( FromNatural (Index (SubState c s))
   , Eq se
   , TakeWhile c s m n
   , se ~ SubElement c s
@@ -166,11 +216,24 @@ count :: forall c s m n se.
 count x = toEnum . length <$> takeWhile (== x) `upon` flip replicate x . fromNatural
 
 -- | Counts 1 or more elements
+countSome ::
+  ( FromNatural (Index ss)
+  , SubStateContext c s
+  , IsSequence ss
+  , MonadState s m
+  , MonadPlus m
+  , MonadWriter ss n
+  , Alternative n
+  , Eq se
+  , se ~ SubElement c s
+  , ss ~ SubState c s
+  )
+  => SubElement c s
+  -> Biparser c s m n Natural Natural
 countSome x = do
   c <- count x
   unless (c > 0) empty
   return c
-
 
 class FromNatural a where fromNatural :: Natural -> a
 instance FromNatural Int where fromNatural = fromEnum
@@ -179,28 +242,14 @@ not :: forall c s m n u.
   ( Functor m
   , Functor n
   )
-  => BiparserT c s m n u Bool
-  -> BiparserT c s m n u Bool
+  => Biparser c s m n u Bool
+  -> Biparser c s m n u Bool
 not = fmap Data.Bool.not
 
--- | Returns true if the substate is empty.
-isNull :: forall c s m n u ss.
-  ( Monoid ss
-  , MonoFoldable ss
-  , SubStateContext c s
-  , Monad m
-  , Monad n
-  , ss ~ SubState c s
-  )
-  => ConstU c s m n u Bool
-isNull = null <$> split get `upon` const mempty
-
 -- | Causes backward to write nothing.
-memptyBack :: forall c s m n u v.
-  ( Monoid (SubState c s)
-  , Functor n
-  )
-  => BiparserT c s m n u v
-  -> BiparserT c s m n u v
-memptyBack = flip mapBack (const mempty)
+memptyWrite :: forall c s m n u v ss.
+  MonadWriter ss n
+  => Biparser c s m n u v
+  -> Biparser c s m n u v
+memptyWrite = flip mapWrite (const mempty)
 
