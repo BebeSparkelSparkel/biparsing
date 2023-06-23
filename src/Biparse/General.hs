@@ -17,6 +17,9 @@ module Biparse.General
   , FromNatural(..)
   , not
   , memptyWrite
+  , rest
+  , failForward
+  , failBackward
   ) where
 
 import Data.Bool qualified
@@ -152,6 +155,16 @@ breakWhen x
 --    <|> do
 --          y <- one `uponM` headAlt
 --          cons y <$> breakWhen' x `uponM` tailAlt
+
+-- | Consumes rest/all of substate and writes given
+rest :: forall c s m n ss.
+  ( MonadState s m
+  , MonadWriter ss n
+  , SubStateContext c s
+  , ss ~ SubState c s
+  )
+  => Iso c m n s ss
+rest = split $ get <* put mempty
 
 headAlt :: (MonoFoldable a, Alternative m) => a -> m (Element a)
 headAlt = maybe empty pure . headMay

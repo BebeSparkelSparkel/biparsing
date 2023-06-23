@@ -37,6 +37,9 @@ library:
     - profunctors
     - extra
     - data-diverse
+
+# used for InitTails and should be removed when added to mono-traversable
+    - text
   other-modules:
     - Prelude
     #- Paths_biparsing

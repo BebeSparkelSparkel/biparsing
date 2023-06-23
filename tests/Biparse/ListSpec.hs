@@ -147,34 +147,43 @@ spec = do
     "splitOn"
     (splitOn $ stripPrefix "ab" :: Iso IdentityStateContext IO IO Text [Text])
     (\f -> do
-      xit "empty" $ limit do
+      it "empty" $ limit do
         x <- f mempty
         x `shouldBe` (mempty,mempty)
 
-      xit "match start" $ limit do
+      it "match start" $ limit do
         x <- f "abcd"
         x `shouldBe` (["", "cd"], mempty)
 
-      xit "match end" $ limit do
+      it "match start two" $ limit do
+        x <- f "abcdabef"
+        x `shouldBe` (["", "cd", "ef"], mempty)
+
+      it "match end" $ limit do
         x <- f "cab"
         x `shouldBe` (["c", ""], mempty)
 
-      xit "splits some" $ limit do
+      it "splits some" $ limit do
         x <- f "abcdababefab"
-        x `shouldBe` (["", "cd", "", "ef"], mempty)
+        x `shouldBe` (["", "cd", "", "ef", ""], mempty)
     )
     \b -> do
-      xit "empty" $ limit do
+      it "empty" $ limit do
         x <- b mempty
         x `shouldBe` (mempty, mempty)
 
-      xit "one" $ limit do
+      it "one" $ limit do
         x <- b ["cd"]
         x `shouldBe` (["cd"], "cd")
 
-      xit "two" $ limit do
+      it "two" $ limit do
         x <- b ["cd", "ef"]
         x `shouldBe` (["cd", "ef"], "cdabef")
+
+      it "some empty" $ limit do
+        let xs = ["", "cd", "", "ef", ""]
+        x <- b xs
+        x `shouldBe` (xs,"abcdababefab")
 
   describe "whileM" do
     let bp :: Iso IdentityStateContext IO IO Text [Char]

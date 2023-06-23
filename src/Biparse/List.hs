@@ -21,9 +21,10 @@ module Biparse.List
   , tailAlt
   ) where
 
-import Biparse.Biparser (Biparser, uponM, Iso, SubElement, SubState, emptyForward, one, try, upon, mono, ElementContext, FixFail, fix, peek, Unit, UpdateStateWithSubState, isNull)
-import Biparse.General (take, takeNot, Take, memptyWrite, BreakWhen, breakWhen)
+import Biparse.Biparser (Biparser, uponM, Iso, SubElement, SubState, emptyForward, one, try, upon, mono, ElementContext, FixFail, fix, peek, Unit, UpdateStateWithSubState, isNull, breakWhen')
+import Biparse.General (take, takeNot, Take, memptyWrite, BreakWhen, breakWhen, rest, failForward)
 import Data.List.NonEmpty (NonEmpty, nonEmpty)
+import Data.InitTails (InitTails)
 
 import Debug.Trace
 import GHC.Err
@@ -153,17 +154,21 @@ splitElem x = correctEmpty splitter
 splitOn :: forall c s m n ss.
   ( BreakWhen c s m n ss
   , UpdateStateWithSubState c s
-  , Show ss
+  , InitTails ss
   )
   => Unit c s m n
   -> Iso c m n s [ss]
-splitOn x = do
-  heads <- so `uponM` initAlt 
-  undefined
+splitOn x
+  =   ifM isNull (pure mempty)
+  $   do
+        hs <- so `uponM` initAlt 
+        l <- rest `uponM` lastAlt
+        return $ hs `snoc` l
+  <|> failForward (pure mempty)
   where
   so = ifM isNull
     (pure mempty)
-    (breakWhen x `uponM` headAlt ^:^ so `uponM` tailAlt)
+    (breakWhen' x `uponM` headAlt ^:^ (so <|> pure mempty) `uponM` tailAlt)
 
 whileM :: forall c s m n u v ss.
   ( MonadPlus m
@@ -234,6 +239,9 @@ whileM' p x = ifM (p `uponM` headAlt <|> pure False)
 
 headAlt :: forall a n. (Alternative n, MonoFoldable a) => a -> n (Element a)
 headAlt = maybe empty pure . headMay
+
+lastAlt :: forall a n. (Alternative n, MonoFoldable a) => a -> n (Element a)
+lastAlt = maybe empty pure . lastMay
 
 tailAlt :: forall a n. (Alternative n, IsSequence a) => a -> n a
 tailAlt = maybe empty pure . tailMay

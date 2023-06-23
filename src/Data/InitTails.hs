@@ -4,7 +4,6 @@ module Data.InitTails
   ( InitTails(..)
   ) where
 
-import Data.List qualified
 import Data.List (zip)
 import Data.Maybe (maybe)
 import Data.Semigroup ((<>))
@@ -14,6 +13,9 @@ import Data.Tuple (fst, snd)
 import Data.Sequences (IsSequence, initMay, tailMay, singleton)
 import Data.Monoid (mempty)
 import Data.Coerce (coerce)
+
+import Data.List qualified
+import Data.Text qualified
 
 class InitTails a where
   initTails :: a -> [(a,a)]
@@ -26,6 +28,10 @@ class InitTails a where
 instance InitTails [a] where
   inits = Data.List.inits
   tails = Data.List.tails
+
+instance InitTails Data.Text.Text where
+  inits = Data.Text.inits
+  tails = Data.Text.tails
 
 newtype DefaultInstance a = DefaultInstance {unDefaultInstance :: a}
 -- | DEV NOTE: A terrible implementation
