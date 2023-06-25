@@ -37,7 +37,11 @@ newtype DefaultInstance a = DefaultInstance {unDefaultInstance :: a}
 -- | DEV NOTE: A terrible implementation
 instance {-# OVERLAPPABLE #-} IsSequence a => InitTails (DefaultInstance a) where
   inits (DefaultInstance start) = coerce $ is start <> [start]
-    where is = maybe mempty (\y -> is y <> singleton y) . initMay
+    where
+    is :: a -> [a]
+    is = maybe mempty (\y -> is y <> singleton y) . initMay
   tails = coerce . ts . unDefaultInstance
-    where ts = maybe mempty (\x -> x : ts x) . tailMay 
+    where
+    ts :: a -> [a]
+    ts = maybe mempty (\x -> x : ts x) . tailMay 
 

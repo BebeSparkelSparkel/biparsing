@@ -2,6 +2,7 @@
 module Prelude
   ( module Control.Applicative
   , module Control.Monad
+  , module Control.Monad.Extra
   , module Control.Monad.State
   , module Control.Monad.State.Class
   , module Control.Monad.Writer
@@ -24,12 +25,11 @@ module Prelude
   , module Data.Semigroup
   , module Data.Sequences
   , module Data.String
+  , module Data.Tuple
   , module GHC.Enum
   , module GHC.Num
   , module Numeric.Natural
   , module Text.Show
-  , module Control.Monad.Extra
-  , module Data.Tuple
 
   , (|>)
   , (^:^)
@@ -40,9 +40,9 @@ module Prelude
 
 import Control.Applicative (Applicative((<*>),pure), (*>), (<*), liftA2, Alternative(empty,(<|>)))
 import Control.Monad (Monad((>>=),return), when, unless, MonadFail(fail), MonadPlus, guard, (=<<), (>=>))
+import Control.Monad.Extra (ifM)
 import Control.Monad.State (StateT(StateT,runStateT), execState)
 import Control.Monad.State.Class (MonadState(state,get,put), modify, gets)
-import Control.Monad.Extra (ifM)
 import Control.Monad.Writer (WriterT(WriterT,runWriterT))
 import Control.Monad.Writer.Class (MonadWriter(tell,pass))
 import Data.Bifunctor (second)
@@ -55,7 +55,6 @@ import Data.Functor (Functor(fmap), (<$), ($>), (<$>), void)
 import Data.Functor.Identity (Identity(Identity,runIdentity))
 import Data.Int (Int)
 import Data.Kind (Type)
-import Data.List (zip)
 import Data.Maybe (Maybe(Just,Nothing), maybe, fromMaybe)
 import Data.MonoTraversable (MonoFoldable, headMay, Element, lastMay)
 import Data.MonoTraversable.Unprefixed (for_, null, length, toList)
@@ -64,11 +63,11 @@ import Data.Ord ((>))
 import Data.Semigroup ((<>))
 import Data.Sequences (IsSequence, initMay, tailMay, singleton, cons, snoc, span, replicate, Index, fromList, initDef)
 import Data.String (String, IsString(fromString))
+import Data.Tuple (fst, snd)
 import GHC.Enum (toEnum, fromEnum)
 import GHC.Num ((+), (-))
 import Numeric.Natural (Natural)
 import Text.Show (Show(show))
-import Data.Tuple (fst, snd)
 
 (|>) :: Alternative f => f a -> a -> f a
 x |> y = x <|> pure y
@@ -88,3 +87,4 @@ infixl 4 <$$
 infixr 9 >>>
 (>>>) :: (a -> b) -> (b -> c) -> a -> c
 (>>>) = flip (.)
+

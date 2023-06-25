@@ -2,7 +2,7 @@ module Biparse.Biparser.StateWriter
   ( translate
   ) where
 
-import Biparse.Biparser (Biparser(Biparser), SubState)
+import Biparse.Biparser (Biparser(Biparser))
 
 
 -- | Discards unused s' state to avoid commingling m and n monads.

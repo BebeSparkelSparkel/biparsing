@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude #-}
+{-# LANGUAGE OverloadedStrings #-}
 module Biparse.Text
   ( char
   , string
@@ -6,17 +6,9 @@ module Biparse.Text
   ) where
 
 import Biparse.Biparser (Biparser, upon, one, SubElement, SubState, ElementContext, Const, SubStateContext, Iso)
-import Biparse.General (stripPrefix, Take)
-import Biparse.List (Many, splitElem)
-import Control.Monad (unless, MonadFail(fail))
-import Control.Monad.State.Class (MonadState)
-import Control.Monad.Writer.Class (MonadWriter)
-import Data.Char (Char)
-import Data.Eq ((==))
-import Data.Function (($), const)
-import Data.Monoid ((<>))
-import Data.Sequences (IsSequence)
-import Text.Show (Show(show))
+import Biparse.General (stripPrefix, take)
+import Biparse.List (splitOn)
+import Data.InitTails (InitTails)
 
 type CharElement c text = SubElement c text ~ Char
 
@@ -51,11 +43,21 @@ string :: forall c text m n u ss.
 string = stripPrefix
 
 lines :: forall c text m n ss.
-  ( Take c text m n
-  , Many c text m n
-  , CharElement c text
+  ( CharElement c text
+  , IsSequence ss
+  , MonadState text m
+  , IsString ss
+  , Show ss
+  , MonadPlus m
+  , MonadFail m
+  , MonadFail n
+  , MonadWriter ss n
+  , Alternative n
+  , SubStateContext c text
+  , ElementContext c text
+  , InitTails ss
   , ss ~ SubState c text
   )
   => Iso c m n text [ss]
-lines = splitElem '\n'
+lines = splitOn $ stripPrefix "\r\n" <|> take '\n'
 

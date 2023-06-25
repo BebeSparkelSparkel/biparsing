@@ -53,12 +53,9 @@ module Biparse.Biparser
   ) where
 
 import Biparse.FixFail (FixFail(fixFail))
-import Data.Profunctor (Profunctor(dimap), (:->))
+import Data.Profunctor (Profunctor(dimap))
 import Control.Monad.Extra (findM)
 import Data.InitTails (InitTails(initTails))
-import Data.Coerce (coerce)
-
-import GHC.Err (undefined)
 
 -- | Product type for simultainously constructing forward and backward running programs.
 data Biparser context s m n u v = Biparser
@@ -240,9 +237,8 @@ type ConstU c s m n u v = Biparser c s m n u v
 --  )
 --  (\u -> WriterT $ runWriterT (bw'' u) >>= \(x,w) -> runWriterT $ iterateUntilM (== mempty) bw' w $> x)
 
-switchContext :: forall c c' s m n.
-  Biparser c' s m n :-> Biparser c s m n
-switchContext = coerce
+--switchContext :: forall c c' s m n.  Biparser c' s m n :-> Biparser c s m n
+--switchContext = coerce
 
 -- * Monad Mapping
 -- Change the underlying monads.

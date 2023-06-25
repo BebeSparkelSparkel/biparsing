@@ -23,7 +23,7 @@ module Biparse.List
   ) where
 
 import Biparse.Biparser (Biparser, uponM, Iso, SubElement, SubState, emptyForward, one, try, upon, mono, ElementContext, FixFail, fix, peek, Unit, UpdateStateWithSubState, isNull, breakWhen', GetSubState)
-import Biparse.General (take, takeNot, Take, memptyWrite, BreakWhen, rest, failForward)
+import Biparse.General (take, takeNot, Take, memptyWrite, BreakWhen, rest)
 import Data.List.NonEmpty (NonEmpty, nonEmpty)
 import Data.InitTails (InitTails)
 

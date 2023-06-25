@@ -44,7 +44,7 @@ library:
     - Prelude
     #- Paths_biparsing
   ghc-options:
-    #- -Werror
+    - -Werror
     - -Weverything
 
     - -Wno-missing-kind-signatures
