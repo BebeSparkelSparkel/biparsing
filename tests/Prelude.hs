@@ -31,11 +31,8 @@ module Prelude
   , module Biparse.Text.PositionContext
   , module Biparse.Biparser
   , module Control.Monad.Writer
+  , module Biparse.Biparser.StateWriter
 
-  , Biparser
-  , Iso
-  , Unit
-  , ConstU
   , runForward
   , evalForward
   , runBackward
@@ -75,15 +72,13 @@ import Data.MonoTraversable (headMay)
 import Data.Tuple (fst, snd)
 import Biparse.Biparser hiding (Biparser, Iso, Unit, ConstU)
 import Control.Monad.Writer (WriterT(runWriterT))
+import Biparse.Biparser.StateWriter (Biparser, Iso, Unit, ConstU)
+
 
 import System.Timeout (timeout)
 import Biparse.Biparser qualified as B
 import Biparse.Biparser (backward, forward, SubState)
 
-type Biparser c s m n u v = B.Biparser c s (StateT s m) (WriterT (SubState c s) n) u v 
-type Iso c m n s v = Biparser c s m n v v
-type Unit c s m n = Biparser c s m n () ()
-type ConstU c s m n u v = Biparser c s m n u v
 
 runForward :: forall c s m n u v. Biparser c s m n u v -> s -> m (v, s)
 runForward = runStateT . forward
