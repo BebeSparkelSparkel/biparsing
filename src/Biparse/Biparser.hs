@@ -53,12 +53,12 @@ module Biparse.Biparser
   ) where
 
 import Biparse.FixFail (FixFail(fixFail))
-import Data.Profunctor (Profunctor(dimap))
-import Data.Coerce (coerce)
+import Data.Profunctor (Profunctor(dimap), (:->))
 import Control.Monad.Extra (findM)
 import Data.InitTails (InitTails(initTails))
+import Data.Coerce (coerce)
 
-import GHC.Err
+import GHC.Err (undefined)
 
 -- | Product type for simultainously constructing forward and backward running programs.
 data Biparser context s m n u v = Biparser
@@ -240,14 +240,18 @@ type ConstU c s m n u v = Biparser c s m n u v
 --  )
 --  (\u -> WriterT $ runWriterT (bw'' u) >>= \(x,w) -> runWriterT $ iterateUntilM (== mempty) bw' w $> x)
 
+switchContext :: forall c c' s m n.
+  Biparser c' s m n :-> Biparser c s m n
+switchContext = coerce
+
 -- * Monad Mapping
 -- Change the underlying monads.
 
-mapMs :: forall c s m m' n n' u v
+mapMs :: forall c s s' m m' n n' u v
    . (forall a. m a -> m' a)
   -> (forall a. n a -> n' a)
   -> Biparser c s m n u v
-  -> Biparser c s m' n' u v
+  -> Biparser c s' m' n' u v
 mapMs f g (Biparser fw bw) = Biparser (f fw) (g . bw)
 
 -- {-# WARNING mapMs' "Exposes the internals of Biparser an you will probably use it incorrectly." #-} 
@@ -290,19 +294,19 @@ fix (Biparser fw bw) = Biparser
 
 -- * Forward and Backward Divergence
 
--- -- | Discards unused s' state to avoid commingling m and n monads.
--- --mapState'
--- --  :: forall c s s' m n.
--- --   ( MonadFail m
--- --   , Monad n
--- --   )
--- --  =>  Iso c m n s s'
--- --  ->  Biparser c s' m n
--- --  :-> Biparser c s  m n
--- --Biparser fw' bw' `mapState'` Biparser fw'' bw'' = Biparser
--- --  (StateT $ runStateT fw' >=> \(s,s') -> runStateT fw'' s >>= \(x, _) -> pure (x, s'))
--- --  (\u -> WriterT $ runWriterT (bw'' u) >>= \(x,w) -> runWriterT (bw' w) >>= \(_,w') -> pure (x,w'))
 
+---- | Discards unused s' state to avoid commingling m and n monads.
+--mapState'
+--  :: forall c s s' m n.
+--   ( MonadFail m
+--   , Monad n
+--   )
+--  =>  Iso c m n s s'
+--  ->  Biparser c s' m n
+--  :-> Biparser c s  m n
+--mapState' (Biparser fw bw) (Biparser fw' bw') = Biparser
+--  (StateT $ runStateT fw >=> \(s,s') -> runStateT fw' s >>= \(x, _) -> pure (x, s'))
+--  (\u -> WriterT $ runWriterT (bw' u) >>= \(x,w) -> runWriterT (bw w) >>= \(_,w) -> pure (x,w))
 -- | Use instead of 'empty' when only forward should fail but backward should continue
 emptyForward :: forall c s m n u.
   ( MonadPlus m

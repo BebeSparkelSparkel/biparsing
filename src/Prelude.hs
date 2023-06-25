@@ -39,7 +39,7 @@ module Prelude
   ) where
 
 import Control.Applicative (Applicative((<*>),pure), (*>), (<*), liftA2, Alternative(empty,(<|>)))
-import Control.Monad (Monad((>>=),return), when, unless, MonadFail(fail), MonadPlus, guard, (=<<))
+import Control.Monad (Monad((>>=),return), when, unless, MonadFail(fail), MonadPlus, guard, (=<<), (>=>))
 import Control.Monad.State (StateT(StateT,runStateT), execState)
 import Control.Monad.State.Class (MonadState(state,get,put), modify, gets)
 import Control.Monad.Extra (ifM)

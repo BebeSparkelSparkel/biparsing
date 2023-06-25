@@ -1,6 +1,7 @@
 module Biparse.BiparserSpec where
 
 import Biparse.Biparser (backward)
+import Biparse.List (splitOn, many)
 import Data.Sequence (Seq)
 import Data.Sequence qualified as MT
 
@@ -184,5 +185,4 @@ spec = do
       it "contains break" do
         x <- b "cdab"
         x `shouldBe` ("cdab", "cdabab")
-
 

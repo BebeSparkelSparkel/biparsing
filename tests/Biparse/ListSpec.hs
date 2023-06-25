@@ -118,6 +118,43 @@ spec = do
         x <- b [1,1,1]
         x `shouldBe` ([1,1,1], [1,1,1])
 
+  fb
+    "all"
+    (all $ takeUni 'a' <|> takeUni 'b' :: Iso LineColumn IO IO (Position Text) [Char])
+    (\f -> do
+      it "empty" do
+        x <- f ""
+        x `shouldBe` (mempty, "")
+
+      it "one" do
+        x <- f "a"
+        x `shouldBe` ("a", Position 1 2 mempty)
+
+      it "two" do
+        x <- f "ba"
+        x `shouldBe` ("ba", Position 1 3 mempty)
+
+      it "fail" do
+        f "c" `shouldThrow` isUserError
+        f "abc" `shouldThrow` isUserError
+    )
+    \b -> do
+      it "empty" do
+        x <- b mempty
+        x `shouldBe` (mempty,mempty)
+
+      it "one" do
+        x <- b "a"
+        x `shouldBe` ("a", "a")
+
+      it "two" do
+        x <- b "ab"
+        x `shouldBe` ("ab", "ab")
+
+      it "fail" do
+        b "c" `shouldThrow` isUserError
+        b "abc" `shouldThrow` isUserError
+
   describe "splitElem" do
     let bp :: Iso IdentityStateContext IO IO Text [Text]
         bp = splitElem ':'
@@ -150,6 +187,10 @@ spec = do
       it "empty" $ limit do
         x <- f mempty
         x `shouldBe` (mempty,mempty)
+
+      it "no split" $ limit do
+        x <- f "cde"
+        x `shouldBe` (["cde"], mempty)
 
       it "match start" $ limit do
         x <- f "abcd"

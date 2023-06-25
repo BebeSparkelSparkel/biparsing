@@ -9,7 +9,6 @@ module Biparse.General
   , takeWhile
   , BreakWhen
   , breakWhen
-  , failBackward
   , optionMaybe
   , stripPrefix
   , count
@@ -23,10 +22,8 @@ module Biparse.General
   ) where
 
 import Data.Bool qualified
-import Biparse.Biparser (Biparser, upon, Iso, uponM, Unit, unit, one, try, SubState, SubElement, ElementContext, SubStateContext, split, Const, ConstU, mapWrite, Unit, ignoreForward, comapM, isNull, mapMs, write)
+import Biparse.Biparser (Biparser, upon, Iso, uponM, Unit, unit, one, try, SubState, SubElement, ElementContext, SubStateContext, split, Const, mapWrite, Unit, ignoreForward, comapM, mapMs)
 import Data.Sequences qualified
-
-import Debug.Trace
 
 type Take c s m n =
   ( Show (SubElement c s)

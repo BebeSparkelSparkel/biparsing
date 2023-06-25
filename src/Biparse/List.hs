@@ -9,6 +9,7 @@ module Biparse.List
   , manyIso
   , some
   , someIso
+  , all
   , splitElem
   , splitOn
   , whileM
@@ -21,13 +22,10 @@ module Biparse.List
   , tailAlt
   ) where
 
-import Biparse.Biparser (Biparser, uponM, Iso, SubElement, SubState, emptyForward, one, try, upon, mono, ElementContext, FixFail, fix, peek, Unit, UpdateStateWithSubState, isNull, breakWhen')
-import Biparse.General (take, takeNot, Take, memptyWrite, BreakWhen, breakWhen, rest, failForward)
+import Biparse.Biparser (Biparser, uponM, Iso, SubElement, SubState, emptyForward, one, try, upon, mono, ElementContext, FixFail, fix, peek, Unit, UpdateStateWithSubState, isNull, breakWhen', GetSubState)
+import Biparse.General (take, takeNot, Take, memptyWrite, BreakWhen, rest, failForward)
 import Data.List.NonEmpty (NonEmpty, nonEmpty)
 import Data.InitTails (InitTails)
-
-import Debug.Trace
-import GHC.Err
 
 
 replicateBiparserT :: forall c s m n u v.
@@ -83,7 +81,6 @@ many :: forall c s m n u v.
   Many c s m n
   => Biparser c s m n u v
   -> Biparser c s m n [u] [v]
-
 many x =
   do
     y <- x `uponM` headAlt
@@ -130,6 +127,22 @@ someIso :: forall c s m n a.
   -> Iso c m n s (NonEmpty a)
 someIso = some
 
+-- | Consume all state till null. Any fail causes all to fail.
+all :: forall c s m n u v ss.
+  ( Monoid ss
+  , MonoFoldable ss
+  , GetSubState c s
+  , MonadState s m
+  , Monad n
+  , Alternative n
+  , ss ~ SubState c s
+  )
+  => Biparser c s m n u v
+  -> Biparser c s m n [u] [v]
+all x = ifM isNull (pure mempty) do
+  y <- x `uponM` headAlt
+  (y :) <$> all x `uponM` tailAlt
+
 -- | Splits the substate on given element
 splitElem :: forall c s m n ss.
   ( Take c s m n
@@ -164,7 +177,7 @@ splitOn x
         hs <- so `uponM` initAlt 
         l <- rest `uponM` lastAlt
         return $ hs `snoc` l
-  <|> failForward (pure mempty)
+  <|> singleton <$> rest `upon` const mempty
   where
   so = ifM isNull
     (pure mempty)
