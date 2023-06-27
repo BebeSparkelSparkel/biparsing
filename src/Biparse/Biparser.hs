@@ -55,7 +55,6 @@ module Biparse.Biparser
 import Biparse.FixFail (FixFail(fixFail))
 import Data.Profunctor (Profunctor(dimap))
 import Control.Monad.Extra (findM)
-import Data.InitTails (InitTails(initTails))
 
 -- | Product type for simultainously constructing forward and backward running programs.
 data Biparser context s m n u v = Biparser
@@ -176,6 +175,7 @@ type Iso c m n a b = Biparser c a m n b b
 type Unit c s m n = Biparser c s m n () ()
 
 -- | Throws away @u@ and @v@
+--unit :: forall c s m n u. Unit c s m n -> Const c s m n u
 unit :: forall c s m n u. Unit c s m n -> Const c s m n u
 unit = comap $ const ()
 
@@ -503,8 +503,8 @@ breakWhen' :: forall c s m n ss.
   , Alternative m
   , MonadWriter ss n
   , SubStateContext c s
-  , InitTails ss
-  ,  ss ~ SubState c s
+  , IsSequence ss
+  , ss ~ SubState c s
   )
   => Unit c s m n
   -> Iso c m n s ss

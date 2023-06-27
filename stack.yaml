@@ -1,1 +1,8 @@
-resolver: lts-20.21
+resolver: lts-20.24
+
+extra-deps:
+  - github: BebeSparkelSparkel/mono-traversable
+    commit: eb7af708637e1688bb29cc82fc29ab88db17b424
+    subdirs:
+      - mono-traversable
+

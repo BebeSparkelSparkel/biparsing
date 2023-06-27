@@ -7,6 +7,8 @@ module Biparse.General
   , takeTri
   , takeNot
   , takeWhile
+  , dropWhile
+  , pad
   , BreakWhen
   , breakWhen
   , optionMaybe
@@ -22,7 +24,7 @@ module Biparse.General
   ) where
 
 import Data.Bool qualified
-import Biparse.Biparser (Biparser, upon, Iso, uponM, Unit, unit, one, try, SubState, SubElement, ElementContext, SubStateContext, split, Const, mapWrite, Unit, ignoreForward, comapM, mapMs)
+import Biparse.Biparser (Biparser, upon, Iso, uponM, Unit, unit, one, try, SubState, SubElement, ElementContext, SubStateContext, split, Const, mapWrite, Unit, ignoreForward, comapM, mapMs, comap)
 import Data.Sequences qualified
 
 type Take c s m n =
@@ -110,6 +112,33 @@ takeWhile :: forall c s m n.
   => (SubElement c s -> Bool)
   -> Iso c m n s (SubState c s)
 takeWhile = split . state . span
+
+dropWhile :: forall c s m n u.
+  TakeWhile c s m n
+  => (SubElement c s -> Bool)
+  -> Const c s m n u
+dropWhile = fmap (const ()) . comap (const mempty) . takeWhile
+
+-- | Consumes the pad 'c' charcaters forward. Prepends the pad 'c' caracters backwards to ensure there are 'n' charcaters written.
+pad :: forall c s m n u v ss i se.
+  ( MonadState s m
+  , MonadWriter ss n
+  , IsSequence ss
+  , SubStateContext c s
+  , Eq se
+  , Ord i
+  , Num i
+  , ss ~ SubState c s
+  , se ~ SubElement c s
+  , i ~ Index ss
+  )
+  => i
+  -> se
+  -> Biparser c s m n u v
+  -> Biparser c s m n u v
+pad n c x = do
+  dropWhile (== c)
+  mapWrite x \y -> let l = lengthIndex y in if l >= n then y else replicate (n - l) c <> y
 
 type BreakWhen c s m n ss =
   ( IsSequence ss

@@ -8,12 +8,14 @@ spec = do
 
   fb
     "translate mantains shared state Line and Column"
-    (( translate @IdentityStateContext
-     (splitOn $ stripPrefix "\r\n")
-    $ all
-      $   takeUni "abc"
-      <|> takeUni "def"
-    ) :: Iso LineColumn IO IO (Position String) [String]
+    ( translate
+      (splitOn $ stripPrefix "\r\n")
+    $ all 
+      ( comap runIdentity $ fmap Identity
+      $ takeUni "abc" <|> takeUni "def"
+      :: Iso IdentityStateContext IO IO [String] (Identity String)
+      )
+    :: Iso LineColumn IO IO (Position String) [Identity String]
     )
     (\f -> do
       it "empty" do

@@ -25,7 +25,6 @@ module Biparse.List
 import Biparse.Biparser (Biparser, uponM, Iso, SubElement, SubState, emptyForward, one, try, upon, mono, ElementContext, FixFail, fix, peek, Unit, UpdateStateWithSubState, isNull, breakWhen', GetSubState)
 import Biparse.General (take, takeNot, Take, memptyWrite, BreakWhen, rest)
 import Data.List.NonEmpty (NonEmpty, nonEmpty)
-import Data.InitTails (InitTails)
 
 
 replicateBiparserT :: forall c s m n u v.
@@ -167,7 +166,6 @@ splitElem x = correctEmpty splitter
 splitOn :: forall c s m n ss.
   ( BreakWhen c s m n ss
   , UpdateStateWithSubState c s
-  , InitTails ss
   )
   => Unit c s m n
   -> Iso c m n s [ss]

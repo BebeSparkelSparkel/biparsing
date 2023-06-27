@@ -4,6 +4,7 @@ import Control.Monad.Except
 import Data.ByteString.Char8 (ByteString)
 import Data.Sequence (Seq)
 import Data.Vector (Vector)
+import Biparse.Text.Numeric (intBaseTen)
 
 spec :: Spec
 spec = do
@@ -73,8 +74,7 @@ spec = do
       it "fails matching" do
         b 'A' `shouldThrow` isUserError
 
-  fb
-    "takeWhile"
+  fb "takeWhile"
     (takeWhile (/= 'x') :: Iso LineColumn IO IO (Position Text) Text)
     (\f -> do
       it "empty" do
@@ -106,8 +106,36 @@ spec = do
         x <- b "axc"
         x `shouldBe` ("axc", "axc")
 
-  fb
-    "breakWhen"
+  fb "pad"
+    (pad 4 'x' intBaseTen :: Iso LineColumn IO IO (Position Text) Int)
+    (\f -> do
+      it "no pad" do
+        f "1" >>= (`shouldBe` (1, Position 1 2 mempty))
+        f "123" >>= (`shouldBe` (123, Position 1 4 mempty))
+
+      it "with pad" do
+        f "x4" >>= (`shouldBe` (4, Position 1 3 mempty))
+        f "xxx456" >>= (`shouldBe` (456, Position 1 7 mempty))
+
+      it "empty fail" do
+        f "" `shouldThrow` isUserError
+
+      it "only pad" do
+        f "x" `shouldThrow` isUserError
+        f "xxx" `shouldThrow` isUserError
+    )
+    \b -> do
+      it "add pad" do
+        b 1 >>= (`shouldBe` (1, "xxx1"))
+        b 123 >>= (`shouldBe` (123, "x123"))
+
+      it "no pad exact" do
+        b 1234 >>= (`shouldBe` (1234, "1234"))
+
+      it "no pad over" do
+        b 12345 >>= (`shouldBe` (12345, "12345"))
+
+  fb "breakWhen"
     (breakWhen $ stripPrefix "ab" :: Iso LineColumn IO IO (Position (Seq Char)) (Seq Char))
     (\f -> do
       it "empty" do

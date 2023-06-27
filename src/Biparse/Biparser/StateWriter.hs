@@ -5,9 +5,12 @@ module Biparse.Biparser.StateWriter
   , Unit
   , Const
   , ConstU
+  , runForward
+  , evalForward
+  , runBackward
   ) where
 
-import Biparse.Biparser (SubState)
+import Biparse.Biparser (SubState, forward, backward)
 import Biparse.Biparser qualified as B
 
 type Biparser c s m n u v = B.Biparser c s (StateT s m) (WriterT (SubState c s) n) u v 
@@ -35,4 +38,15 @@ translate (B.Biparser fw bw) (B.Biparser fw' bw') = B.Biparser
     (x,w)  <- runWriterT (bw' u)
     (_,w') <- runWriterT (bw  w)
     pure (x,w')
+
+-- | * Helper run functions
+
+runForward :: forall c s m n u v. Biparser c s m n u v -> s -> m (v, s)
+runForward = runStateT . forward
+
+evalForward :: forall c s m n u v. Functor m => Biparser c s m n u v -> s -> m v
+evalForward = (fmap fst .) . runForward
+
+runBackward :: forall c s m n u v. Biparser c s m n u v -> u -> n (v, SubState c s)
+runBackward = (runWriterT .) . backward
 

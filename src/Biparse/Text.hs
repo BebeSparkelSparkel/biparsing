@@ -1,63 +1,62 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Biparse.Text
-  ( char
+  ( CharElement
+  , char
   , string
   , lines
   ) where
 
 import Biparse.Biparser (Biparser, upon, one, SubElement, SubState, ElementContext, Const, SubStateContext, Iso)
-import Biparse.General (stripPrefix, take)
+import Biparse.General (stripPrefix)
 import Biparse.List (splitOn)
-import Data.InitTails (InitTails)
 
-type CharElement c text = SubElement c text ~ Char
+type CharElement c s = SubElement c s ~ Char
 
-char :: forall c text m n u ss.
-  ( CharElement c text
-  , IsSequence ss
-  , ElementContext c text
-  , MonadState text m
+char :: forall c s m n u text.
+  ( CharElement c s
+  , IsSequence text
+  , ElementContext c s
+  , MonadState s m
   , MonadFail m
-  , MonadWriter ss n
+  , MonadWriter text n
   , MonadFail n
-  , ss ~ SubState c text
+  , text ~ SubState c s
   )
   => Char
-  -> Biparser c text m n u ()
+  -> Biparser c s m n u ()
 char c = do
   c' <- one `upon` const c
   unless (c == c') $ fail $ "Did not find expected character " <> show c <> " and instead found " <> show c'
 
-string :: forall c text m n u ss.
-  ( CharElement c text
-  , IsSequence ss
-  , Show ss
-  , MonadState text m
+string :: forall c s m n u text.
+  ( CharElement c s
+  , IsSequence text
+  , Show text
+  , MonadState s m
   , MonadFail m
-  , MonadWriter ss n
-  , SubStateContext c text
-  , ss ~ SubState c text
+  , MonadWriter text n
+  , SubStateContext c s
+  , text ~ SubState c s
   )
-  => ss
-  -> Const c text m n u
+  => text
+  -> Const c s m n u
 string = stripPrefix
 
-lines :: forall c text m n ss.
-  ( CharElement c text
-  , IsSequence ss
-  , MonadState text m
-  , IsString ss
-  , Show ss
+lines :: forall c s m n text.
+  ( CharElement c s
+  , IsSequence text
+  , MonadState s m
+  , IsString text
+  , Show text
   , MonadPlus m
   , MonadFail m
   , MonadFail n
-  , MonadWriter ss n
+  , MonadWriter text n
   , Alternative n
-  , SubStateContext c text
-  , ElementContext c text
-  , InitTails ss
-  , ss ~ SubState c text
+  , SubStateContext c s
+  , ElementContext c s
+  , text ~ SubState c s
   )
-  => Iso c m n text [ss]
-lines = splitOn $ stripPrefix "\r\n" <|> take '\n'
+  => Iso c m n s [text]
+lines = splitOn $ string "\r\n" <|> char '\n'
 

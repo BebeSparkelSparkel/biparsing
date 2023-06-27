@@ -3,10 +3,23 @@
 # For more information, please see the documentation at:
 #   https://docs.haskellstack.org/en/stable/lock_files
 
-packages: []
+packages:
+- completed:
+    name: mono-traversable
+    pantry-tree:
+      sha256: aeb3612368395addcbd53c53ad1d1043a21b497a329e35e721ebc6b5e5f60928
+      size: 763
+    sha256: 3b9239184a91aaea5895877375070a3d1683c40f2c9741294e595a0e219f21e0
+    size: 78610
+    subdir: mono-traversable
+    url: https://github.com/BebeSparkelSparkel/mono-traversable/archive/eb7af708637e1688bb29cc82fc29ab88db17b424.tar.gz
+    version: 1.0.15.3
+  original:
+    subdir: mono-traversable
+    url: https://github.com/BebeSparkelSparkel/mono-traversable/archive/eb7af708637e1688bb29cc82fc29ab88db17b424.tar.gz
 snapshots:
 - completed:
-    sha256: 401a0e813162ba62f04517f60c7d25e93a0f867f94a902421ebf07d1fb5a8c46
-    size: 650044
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/20/21.yaml
-  original: lts-20.21
+    sha256: e019cd29e3f7f9dbad500225829a3f7a50f73c674614f2f452e21bb8bf5d99ea
+    size: 650253
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/20/24.yaml
+  original: lts-20.24

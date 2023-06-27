@@ -33,16 +33,13 @@ module Prelude
   , module Control.Monad.Writer
   , module Biparse.Biparser.StateWriter
 
-  , runForward
-  , evalForward
-  , runBackward
   , fb
   , limit
   ) where
 
 import Biparse.Text.PositionContext (LineColumn, Position(Position))
 import Data.Sequences (drop, index)
-import Data.Functor.Identity (Identity(Identity))
+import Data.Functor.Identity (Identity(Identity, runIdentity))
 import Data.Maybe (Maybe(Just,Nothing), maybe)
 import Data.Int (Int)
 import Data.Monoid (mempty)
@@ -72,7 +69,7 @@ import Data.MonoTraversable (headMay)
 import Data.Tuple (fst, snd)
 import Biparse.Biparser hiding (Biparser, Iso, Unit, ConstU)
 import Control.Monad.Writer (WriterT(runWriterT))
-import Biparse.Biparser.StateWriter (Biparser, Iso, Unit, ConstU)
+import Biparse.Biparser.StateWriter (Biparser, Iso, Unit, ConstU, runForward, runBackward, evalForward)
 
 
 import System.Timeout (timeout)
@@ -80,16 +77,6 @@ import Biparse.Biparser qualified as B
 import Biparse.Biparser (backward, forward, SubState)
 
 
-runForward :: forall c s m n u v. Biparser c s m n u v -> s -> m (v, s)
-runForward = runStateT . forward
-
-evalForward :: forall c s m n u v. Functor m => Biparser c s m n u v -> s -> m v
-evalForward = (fmap fst .) . runForward
-
-runBackward :: forall c s m n u v. Biparser c s m n u v -> u -> n (v, SubState c s)
-runBackward = (runWriterT .) . backward
-
---fb :: Biparse c s m n u v -> ((s -> m (v,s)) ->
 fb :: forall c s m n u v.
   String
   -> Biparser c s m n u v

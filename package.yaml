@@ -37,6 +37,7 @@ library:
     - profunctors
     - extra
     - data-diverse
+    - safe
 
 # used for InitTails and should be removed when added to mono-traversable
     - text

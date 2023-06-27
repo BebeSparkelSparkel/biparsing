@@ -30,6 +30,7 @@ module Prelude
   , module GHC.Num
   , module Numeric.Natural
   , module Text.Show
+  , module Text.Read
 
   , (|>)
   , (^:^)
@@ -59,15 +60,16 @@ import Data.Maybe (Maybe(Just,Nothing), maybe, fromMaybe)
 import Data.MonoTraversable (MonoFoldable, headMay, Element, lastMay)
 import Data.MonoTraversable.Unprefixed (for_, null, length, toList)
 import Data.Monoid (Monoid(mempty))
-import Data.Ord ((>))
-import Data.Semigroup ((<>))
-import Data.Sequences (IsSequence, initMay, tailMay, singleton, cons, snoc, span, replicate, Index, fromList, initDef)
+import Data.Ord (Ord, (>), (>=))
+import Data.Semigroup (Semigroup, (<>))
+import Data.Sequences (IsSequence, initMay, tailMay, singleton, cons, snoc, span, replicate, Index, fromList, initDef, lengthIndex, initTails)
 import Data.String (String, IsString(fromString))
 import Data.Tuple (fst, snd)
 import GHC.Enum (toEnum, fromEnum)
-import GHC.Num ((+), (-))
+import GHC.Num (Num, (+), (-))
 import Numeric.Natural (Natural)
 import Text.Show (Show(show))
+import Text.Read (Read)
 
 (|>) :: Alternative f => f a -> a -> f a
 x |> y = x <|> pure y
