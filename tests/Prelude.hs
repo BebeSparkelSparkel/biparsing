@@ -32,11 +32,13 @@ module Prelude
   , module Biparse.Biparser
   , module Control.Monad.Writer
   , module Biparse.Biparser.StateWriter
+  , module GHC.Float
 
   , fb
   , limit
   ) where
 
+import GHC.Float (Double)
 import Biparse.Text.PositionContext (LineColumn, Position(Position))
 import Data.Sequences (drop, index)
 import Data.Functor.Identity (Identity(Identity, runIdentity))
@@ -70,7 +72,6 @@ import Data.Tuple (fst, snd)
 import Biparse.Biparser hiding (Biparser, Iso, Unit, ConstU)
 import Control.Monad.Writer (WriterT(runWriterT))
 import Biparse.Biparser.StateWriter (Biparser, Iso, Unit, ConstU, runForward, runBackward, evalForward)
-
 
 import System.Timeout (timeout)
 import Biparse.Biparser qualified as B

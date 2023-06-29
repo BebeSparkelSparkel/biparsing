@@ -7,6 +7,7 @@ module Biparse.Biparser
   --, runBackward
   --, execBackward
   , Iso
+  , IsoClass(iso)
   --, iso
   , Unit
   , unit
@@ -29,6 +30,7 @@ module Biparse.Biparser
   , mapWrite
   , emptyForward
   , ignoreForward
+  , ignoreBackward
   , SubState
   , GetSubState(..)
   , UpdateStateWithSubState(..)
@@ -159,6 +161,9 @@ identity = Biparser get (\u -> tell u $> u)
 
 -- | Iso when @u ~ v@
 type Iso c m n a b = Biparser c a m n b b
+
+class IsoClass c m n a b where iso :: Iso c m n a b
+
 --iso :: forall c m n a b.
 --  ( Monad m
 --  , Monad n
@@ -318,6 +323,12 @@ ignoreForward :: forall c s m n u v.
   -> Biparser c s m n u v
   -> Biparser c s m n u v
 ignoreForward x y = y {forward = pure x}
+
+ignoreBackward :: forall c s m n a.
+  Applicative n
+  => Iso c m n s a
+  -> Iso c m n s a
+ignoreBackward y = y {backward = pure}
 
 -- * SubState
 -- SubState allows for context outside of the parser and printer.

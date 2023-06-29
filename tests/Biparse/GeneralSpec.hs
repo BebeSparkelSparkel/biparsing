@@ -4,7 +4,7 @@ import Control.Monad.Except
 import Data.ByteString.Char8 (ByteString)
 import Data.Sequence (Seq)
 import Data.Vector (Vector)
-import Biparse.Text.Numeric (intBaseTen)
+import Biparse.Text.Numeric (naturalBaseTen)
 
 spec :: Spec
 spec = do
@@ -107,7 +107,7 @@ spec = do
         x `shouldBe` ("axc", "axc")
 
   fb "pad"
-    (pad 4 'x' intBaseTen :: Iso LineColumn IO IO (Position Text) Int)
+    (pad 4 'x' naturalBaseTen :: Iso LineColumn IO IO (Position Text) Int)
     (\f -> do
       it "no pad" do
         f "1" >>= (`shouldBe` (1, Position 1 2 mempty))
