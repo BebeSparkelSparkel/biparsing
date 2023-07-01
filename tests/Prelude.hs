@@ -20,6 +20,7 @@ module Prelude
   , module Data.Function
   , module Data.Maybe
   , module Data.Int
+  , module Data.Word
   , module Data.Functor
   , module Control.Applicative
   , module Data.Bifunctor
@@ -44,6 +45,7 @@ import Data.Sequences (drop, index)
 import Data.Functor.Identity (Identity(Identity, runIdentity))
 import Data.Maybe (Maybe(Just,Nothing), maybe)
 import Data.Int (Int)
+import Data.Word (Word)
 import Data.Monoid (mempty)
 import Data.Ord ((>))
 import Biparse.General
