@@ -7,15 +7,16 @@ module Biparse.Text.Numeric
 
 import Biparse.Biparser (Iso, IsoClass(iso), split, upon, SubState, SubStateContext, try, ignoreBackward, split, Biparser, ElementContext, comap)
 import Biparse.General (take)
-import Safe (readMay)
-import Data.Char (isDigit)
 import Biparse.Text (CharElement)
+import Data.Char (isDigit)
 import Data.Word (Word, Word8, Word16, Word32, Word64)
+import GHC.Float (Float, Double)
 import GHC.Num ((*))
+import Safe (readMay)
 
 
-instance NaturalConstraints c s m n Word => IsoClass c m n s Word where iso = naturalBaseTen
-instance NaturalConstraints c s m n Word8 => IsoClass c m n s Word8 where iso = naturalBaseTen
+instance NaturalConstraints c s m n Word   => IsoClass c m n s Word   where iso = naturalBaseTen
+instance NaturalConstraints c s m n Word8  => IsoClass c m n s Word8  where iso = naturalBaseTen
 instance NaturalConstraints c s m n Word16 => IsoClass c m n s Word16 where iso = naturalBaseTen
 instance NaturalConstraints c s m n Word32 => IsoClass c m n s Word32 where iso = naturalBaseTen
 instance NaturalConstraints c s m n Word64 => IsoClass c m n s Word64 where iso = naturalBaseTen
@@ -37,7 +38,7 @@ naturalBaseTen = do
   ds <- digitsBaseTen
   maybe (fail "Could not parse natural base 10.") pure $ readMay $ toList ds
 
-realBaseTen :: forall c s m n a ss.
+type RealConstrints c s m n a ss =
   ( NaturalConstraints c s m n a
   , MonadPlus m
   , ElementContext c s
@@ -45,7 +46,12 @@ realBaseTen :: forall c s m n a ss.
   , Alternative n
   , Num a
   , ss ~ SubState c s
-  ) => Iso c m n s a
+  )
+
+instance RealConstrints c s m n Float  ss => IsoClass c m n s Float  where iso = realBaseTen
+instance RealConstrints c s m n Double ss => IsoClass c m n s Double where iso = realBaseTen
+
+realBaseTen :: forall c s m n a ss. RealConstrints c s m n a ss => Iso c m n s a
 realBaseTen = do
   sign :: a <- comap (const 1) $ ignoreBackward $ (-1) <$ try (take '-') <|> pure 1 :: Biparser c s m n a a
   ws <- digitsBaseTen :: Biparser c s m n a ss
@@ -54,7 +60,6 @@ realBaseTen = do
     <|> pure mempty
     :: Biparser c s m n a ss
   maybe (fail "Could not parse real base 10.") (pure . (* sign)) $ readMay $ toList $ ws <> ds
-
 
 digitsBaseTen :: forall c m n s u ss.
   ( CharElement c s
@@ -66,3 +71,4 @@ digitsBaseTen :: forall c m n s u ss.
   , ss ~ SubState c s
   ) => Biparser c s m n u ss
 digitsBaseTen = split (state $ span isDigit) `upon` fromList . show
+
