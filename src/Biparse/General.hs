@@ -1,5 +1,6 @@
 module Biparse.General
-  ( Take
+  ( identity
+  , Take
   , take
   , takeUnit
   , takeUni
@@ -26,6 +27,18 @@ module Biparse.General
 import Data.Bool qualified
 import Biparse.Biparser (Biparser, upon, Iso, uponM, Unit, unit, one, try, SubState, SubElement, ElementContext, SubStateContext, split, Const, mapWrite, Unit, ignoreForward, comapM, mapMs, comap)
 import Data.Sequences qualified
+
+identity :: forall c s m n ss.
+  ( MonadState s m
+  , MonadWriter ss n
+  , SubStateContext c s
+  , ss ~ SubState c s
+  )
+  => Iso c m n s ss
+identity = split do
+  x <- get
+  put mempty
+  return x
 
 type Take c s m n =
   ( Show (SubElement c s)

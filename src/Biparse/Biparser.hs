@@ -15,7 +15,6 @@ module Biparse.Biparser
   , Const
   , ConstU
   --, mkConst
-  , identity
   , mapMs
   , fix
   --, fixWith
@@ -151,13 +150,6 @@ mapWrite (Biparser fw bw) f = Biparser fw $
 -- * Constrained Subtypes
 -- More constrained subtypes of Biparser
 
--- | Easy way to create new simple Biparser with Profunctor dimap
-identity :: forall c m n a.
-  ( MonadState a m
-  , MonadWriter a n
-  )
-  => Iso c m n a a
-identity = Biparser get (\u -> tell u $> u)
 
 -- | Iso when @u ~ v@
 type Iso c m n a b = Biparser c a m n b b
