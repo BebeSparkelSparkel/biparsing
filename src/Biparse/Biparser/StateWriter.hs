@@ -1,16 +1,17 @@
 module Biparse.Biparser.StateWriter
-  ( translate
-  , Biparser
+  ( Biparser
   , Iso
   , Unit
   , Const
   , ConstU
+  , translate
+  , zoom
   , runForward
   , evalForward
   , runBackward
   ) where
 
-import Biparse.Biparser (SubState, forward, backward)
+import Biparse.Biparser (SubState, forward, backward, GetSubState(getSubState), ReplaceSubState(replaceSubState))
 import Biparse.Biparser qualified as B
 
 type Biparser c s m n u v = B.Biparser c s (StateT s m) (WriterT (SubState c s) n) u v 
@@ -33,6 +34,30 @@ translate (B.Biparser fw bw) (B.Biparser fw' bw') = B.Biparser
     (s',s'') <- runStateT fw s
     (x, _) <- runStateT fw' s'
     pure (x,s'')
+  )
+  \u -> WriterT do
+    (x,w)  <- runWriterT (bw' u)
+    (_,w') <- runWriterT (bw  w)
+    pure (x,w')
+
+-- | Discards unused s' state to avoid commingling m and n monads.
+zoom  :: forall c s s' m n u v ss ss'.
+  ( Monad m
+  , Monad n
+  , ReplaceSubState s' ss s
+  , ReplaceSubState s ss' s'
+  , GetSubState c s
+  , ss' ~ SubState c s'
+  , ss ~ SubState c s
+  )
+  => Iso c m n s ss'
+  -> Biparser c s' m n u v
+  -> Biparser c s m n u v
+zoom (B.Biparser fw bw) (B.Biparser fw' bw') = B.Biparser
+  (StateT \s -> do
+    (ss,s') <- runStateT fw s
+    (x,_) <- runStateT fw' $ replaceSubState s ss
+    pure (x,s')
   )
   \u -> WriterT do
     (x,w)  <- runWriterT (bw' u)

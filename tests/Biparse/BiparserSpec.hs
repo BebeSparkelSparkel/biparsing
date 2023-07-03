@@ -11,30 +11,63 @@ import Biparse.Biparser (breakWhen')
 spec :: Spec
 spec = do
   describe "one" do
-    let bp = one :: Iso IdentityStateContext IO IO String Char
-        bp2 :: Iso IdentityStateContext IO IO String (Char,Char)
-        bp2 = (,) <$> bp `upon` fst <*> bp `upon` snd
+    describe "IdentityStateContext" do
+      let bp = one :: Iso IdentityStateContext IO IO String Char
+          bp2 :: Iso IdentityStateContext IO IO String (Char,Char)
+          bp2 = (,) <$> bp `upon` fst <*> bp `upon` snd
 
-    describe "forward" do
-      it "one use" do
-        x <- runForward bp "abc"
-        x `shouldBe` ('a',"bc")
+      describe "forward" do
+        it "one use" do
+          x <- runForward bp "abc"
+          x `shouldBe` ('a',"bc")
 
-      it "used twice" do
-        x <- runForward bp2 "abc"
-        x `shouldBe` (('a','b'),"c")
-        
-      it "none to take" do
-        runForward bp mempty `shouldThrow` isUserError
+        it "used twice" do
+          x <- runForward bp2 "abc"
+          x `shouldBe` (('a','b'),"c")
+          
+        it "none to take" do
+          runForward bp mempty `shouldThrow` isUserError
 
-    describe "backward" do
-      it "typical use" do
-        x <- runBackward bp 'a'
-        x `shouldBe` ('a',"a")
+      describe "backward" do
+        it "typical use" do
+          x <- runBackward bp 'a'
+          x `shouldBe` ('a',"a")
 
-      it "used twice" do
-        x <- runBackward bp2 ('a','b')
-        x `shouldBe` (('a','b'),"ab")
+        it "used twice" do
+          x <- runBackward bp2 ('a','b')
+          x `shouldBe` (('a','b'),"ab")
+
+    fb "LineColumn"
+      (one :: Iso LineColumn IO IO (Position Text) Char)
+      (\f -> do
+        it "empty" do
+          f "" `shouldThrow` isUserError
+
+        it "one" do
+          x <- f "abc"
+          x `shouldBe` ('a', Position 1 2 "bc")
+
+      )
+      \b -> do
+        it "write char" do
+          x <- b 'd'
+          x `shouldBe` ('d', "d")
+
+    fb "LineColumn [Text]"
+      (one :: Iso LineColumn IO IO (Position [Text]) Text)
+      (\f -> do
+        it "empty" do
+          f [] `shouldThrow` isUserError
+
+        it "one" do
+          x <- f ["abc","def"]
+          x `shouldBe` ("abc", Position 2 1 ["def"])
+
+      )
+      \b -> do
+        it "print string" do
+          x <- b "abc"
+          x `shouldBe` ("abc", ["abc"])
 
   describe "split" do
     let bp :: Iso IdentityStateContext IO IO String String

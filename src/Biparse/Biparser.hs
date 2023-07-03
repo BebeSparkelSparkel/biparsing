@@ -42,6 +42,7 @@ module Biparse.Biparser
   , SubElement
   , UpdateStateWithElement(..)
   , ElementContext
+  , ReplaceSubState(..)
   , IdentityStateContext
   , one
   , split
@@ -373,6 +374,9 @@ class UpdateStateWithElement context state where
   updateElementContext :: state -> SubElement context state -> SubState context state -> state
 
 type ElementContext context state = (GetSubState context state, UpdateStateWithElement context state)
+
+
+class ReplaceSubState s ss s' | s ss -> s' where replaceSubState :: s -> ss -> s'
 
 -- ** Identity Context
 -- Use as the context if @state ~ SubState IdentityStateContext state@ basically if there is no context outside the 

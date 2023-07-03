@@ -2,6 +2,7 @@ module Biparse.Biparser.StateWriterSpec where
 
 import Biparse.Biparser.StateWriter 
 import Biparse.List (splitOn, all)
+import Biparse.Text.Numeric (naturalBaseTen)
 
 spec :: Spec
 spec = do
@@ -26,22 +27,12 @@ spec = do
         x <- f "abc"
         x `shouldBe` (["abc"], Position 1 4 mempty)
 
-      --it "one" do
-      --  x <- f "abc\r\n"
-      --  x `shouldBe` (["abc"], Position 2 1 mempty)
-
       it "two" do
         x <- f "abc\r\ndef"
         x `shouldBe` (["abc","def"], Position 2 4 mempty)
-      --it "two" do
-      --  x <- f "abc\r\ndef\r\n"
-      --  x `shouldBe` (["abc","def"], Position 3 1 mempty)
 
       it "match none and fail" do
         f "ghi\r\n" `shouldThrow` isUserError
-      --it "match none and consume all" do
-      --  x <- f "ghi\r\n"
-      --  x `shouldBe` (mempty, Position 2 1 mempty)
     )
     \b -> do
       it "empty" do
@@ -59,7 +50,27 @@ spec = do
 
       it "fail" do
         b ["ghi"] `shouldThrow` isUserError
-      --it "fail" do
-      --  x <- b ["ghi"] -- `shouldThrow` isUserError
-      --  x `shouldBe` (mempty,mempty)
+
+  fb "zoom"
+    (zoom
+      one
+      (naturalBaseTen :: Iso LineColumn IO IO (Position Text) Word)
+    :: Iso LineColumn IO IO (Position [Text]) Word)
+    (\f -> do
+      it "empty" do
+        f [] `shouldThrow` isUserError
+
+      describe "zooms and parses Word" do
+        it "no tail" do
+          x <- f ["123"]
+          x `shouldBe` (123, Position 2 1 [])
+
+        it "with tail" do
+          x <- f ["123","abc"]
+          x `shouldBe` (123, Position 2 1 ["abc"])
+    )
+    \b -> do
+      it "prints Word" do
+        x <- b 456
+        x `shouldBe` (456, ["456"])
 

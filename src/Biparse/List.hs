@@ -26,7 +26,6 @@ import Biparse.Biparser (Biparser, uponM, Iso, SubElement, SubState, emptyForwar
 import Biparse.General (take, takeNot, Take, memptyWrite, BreakWhen, rest)
 import Data.List.NonEmpty (NonEmpty, nonEmpty)
 
-
 replicateBiparserT :: forall c s m n u v.
   ( Monoid (SubState c s)
   , Monad m

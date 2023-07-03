@@ -55,7 +55,7 @@ spec = do
         x `shouldBe` ("ab\n\n\ncd", Position 4 3 ":e")
 
       prop "never zero" \t -> do
-        (_, Position l c _) <- f $ startPosition t
+        (_, Position l c _) <- f $ startLineColumn t
         l `shouldSatisfy` (> 0)
         c `shouldSatisfy` (> 0)
 
