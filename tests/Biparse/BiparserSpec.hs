@@ -53,8 +53,10 @@ spec = do
           x <- b 'd'
           x `shouldBe` ('d', "d")
 
+    let one' :: forall text. Iso LinesOnly IO IO (Position [text]) text
+        one' = one
     fb "LineColumn [Text]"
-      (one :: Iso LineColumn IO IO (Position [Text]) Text)
+      (one' @Text)
       (\f -> do
         it "empty" do
           f [] `shouldThrow` isUserError

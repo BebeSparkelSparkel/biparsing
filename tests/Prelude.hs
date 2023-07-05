@@ -40,7 +40,7 @@ module Prelude
   ) where
 
 import GHC.Float (Double)
-import Biparse.Text.PositionContext (LineColumn, Position(Position))
+import Biparse.Text.PositionContext (LineColumn, LinesOnly, Position(Position))
 import Data.Sequences (drop, index)
 import Data.Functor.Identity (Identity(Identity, runIdentity))
 import Data.Maybe (Maybe(Just,Nothing), maybe)

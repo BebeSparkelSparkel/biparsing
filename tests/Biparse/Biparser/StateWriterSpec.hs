@@ -6,10 +6,9 @@ import Biparse.Text.Numeric (naturalBaseTen)
 
 spec :: Spec
 spec = do
-
   fb
-    "translate mantains shared state Line and Column"
-    ( translate
+    "translate' mantains shared state Line and Column"
+    ( translate'
       (splitOn $ stripPrefix "\r\n")
     $ all 
       ( comap runIdentity $ fmap Identity
@@ -52,10 +51,10 @@ spec = do
         b ["ghi"] `shouldThrow` isUserError
 
   fb "zoom"
-    (zoom
-      one
-      (naturalBaseTen :: Iso LineColumn IO IO (Position Text) Word)
-    :: Iso LineColumn IO IO (Position [Text]) Word)
+    (zoom @LinesOnly @LinesOnly @(Position [Text]) @(Position Text)
+      (one :: Iso LinesOnly IO IO (Position [Text]) Text)
+      (naturalBaseTen :: Iso LinesOnly IO IO (Position Text) Word)
+    :: Iso LinesOnly IO IO (Position [Text]) Word)
     (\f -> do
       it "empty" do
         f [] `shouldThrow` isUserError
