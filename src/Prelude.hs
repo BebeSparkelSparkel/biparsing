@@ -31,6 +31,7 @@ module Prelude
   , module Numeric.Natural
   , module Text.Show
   , module Text.Read
+  , module Data.Coerce
 
   , (|>)
   , (^:^)
@@ -39,6 +40,7 @@ module Prelude
   , (>>>)
   ) where
 
+import Data.Coerce (Coercible, coerce)
 import Control.Applicative (Applicative((<*>),pure), (*>), (<*), liftA2, Alternative(empty,(<|>)))
 import Control.Monad (Monad((>>=),return), when, unless, MonadFail(fail), MonadPlus, guard, (=<<), (>=>))
 import Control.Monad.Extra (ifM)

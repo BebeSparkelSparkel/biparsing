@@ -7,8 +7,8 @@ import Biparse.Text.Numeric (naturalBaseTen)
 spec :: Spec
 spec = do
   fb
-    "translate' mantains shared state Line and Column"
-    ( translate'
+    "translate mantains shared state Line and Column"
+    ( translate
       (splitOn $ stripPrefix "\r\n")
     $ all 
       ( comap runIdentity $ fmap Identity

@@ -8,6 +8,7 @@ spec = do
     (naturalBaseTen :: Iso LineColumn IO IO (Position Text) Word)
     (\f -> do
       it "success" do
+        f "0"    >>= (`shouldBe` (0,   Position 1 2 mempty))
         f "1"    >>= (`shouldBe` (1,   Position 1 2 mempty))
         f "123"  >>= (`shouldBe` (123, Position 1 4 mempty))
         f "123x" >>= (`shouldBe` (123, Position 1 4 "x"))

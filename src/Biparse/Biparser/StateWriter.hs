@@ -6,7 +6,6 @@ module Biparse.Biparser.StateWriter
   , ConstU
   , IsoClass
   , translate
-  , translate'
   , zoom
   , runForward
   , evalForward
@@ -15,8 +14,6 @@ module Biparse.Biparser.StateWriter
 
 import Biparse.Biparser (SubState, forward, backward, ReplaceSubState(replaceSubState))
 import Biparse.Biparser qualified as B
-
-import GHC.Err (undefined)
 
 type Biparser c s m n u v = B.Biparser c s (StateT s m) (WriterT (SubState c s) n) u v 
 type Iso c m n s v = Biparser c s m n v v
@@ -27,18 +24,7 @@ type ConstU c s m n u v = Biparser c s m n u v
 type IsoClass c m n a b = B.IsoClass c (StateT a m) (WriterT (SubState c a) n) a b
 
 -- | Discards unused s' state to avoid commingling m and n monads.
-translate :: forall c s s' m n ss' u v.
-   ( MonadFail m
-   , Monad n
-   , ss' ~ SubState c s'
-   )
-  => Iso c m n s ss'
-  -> Biparser c s' m n u   v
-  -> Biparser c s  m n u   v
-translate = undefined
-
--- | Discards unused s' state to avoid commingling m and n monads.
-translate' :: forall c' c s s' m n ss' u v.
+translate :: forall c' c s s' m n ss' u v.
    ( MonadFail m
    , Monad n
    , ss' ~ SubState c' s'
@@ -46,7 +32,7 @@ translate' :: forall c' c s s' m n ss' u v.
   => Biparser c  s  m n ss' s'
   -> Biparser c' s' m n u   v
   -> Biparser c  s  m n u   v
-translate' (B.Biparser fw bw) (B.Biparser fw' bw') = B.Biparser
+translate (B.Biparser fw bw) (B.Biparser fw' bw') = B.Biparser
   (StateT \s -> do
     (s',s'') <- runStateT fw s
     (x, _) <- runStateT fw' s'
@@ -57,9 +43,8 @@ translate' (B.Biparser fw bw) (B.Biparser fw' bw') = B.Biparser
     (_,w') <- runWriterT (bw  w)
     pure (x,w')
 
-
 -- | Discards unused s' state to avoid commingling m and n monads.
-zoom  :: forall c' c s s' m n u v ss ss'.
+zoom  :: forall c' c s s' m n u v ss'.
   ( Monad m
   , Monad n
   , ReplaceSubState s ss' s'
@@ -79,7 +64,7 @@ zoom (B.Biparser fw bw) (B.Biparser fw' bw') = B.Biparser
     (_,w') <- runWriterT (bw  w)
     pure (x,w')
 
--- | * Helper run functions
+-- * Helper run functions
 
 runForward :: forall c s m n u v. Biparser c s m n u v -> s -> m (v, s)
 runForward = runStateT . forward

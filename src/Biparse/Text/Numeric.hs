@@ -19,7 +19,6 @@ import GHC.Float (Float, Double)
 import GHC.Num ((*))
 import Safe (readMay)
 
-
 instance NaturalConstraints c s m n Word   => IsoClass c m n s Word   where iso = naturalBaseTen
 instance NaturalConstraints c s m n Word8  => IsoClass c m n s Word8  where iso = naturalBaseTen
 instance NaturalConstraints c s m n Word16 => IsoClass c m n s Word16 where iso = naturalBaseTen
@@ -40,8 +39,8 @@ type NaturalConstraints c s m n a =
 
 naturalBaseTen :: forall c s m n a. NaturalConstraints c s m n a => Iso c m n s a
 naturalBaseTen = do
-  ds <- digitsBaseTen
-  maybe (fail "Could not parse natural base 10.") pure $ readMay $ toList ds
+  ds <- toList <$> digitsBaseTen
+  maybe (fail $ "Could not parse " <> ds <> " to natural base 10.") pure $ readMay ds
 
 instance NaturalConstraints c s m n Int   => IsoClass c m n s Int   where iso = naturalBaseTen
 instance NaturalConstraints c s m n Int8  => IsoClass c m n s Int8  where iso = naturalBaseTen
