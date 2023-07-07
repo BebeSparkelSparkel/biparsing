@@ -13,6 +13,7 @@ module Biparse.General
   , BreakWhen
   , breakWhen
   , optionMaybe
+  , optional
   , stripPrefix
   , count
   , countSome
@@ -234,6 +235,17 @@ optionMaybe :: forall c s m n u v.
   => Biparser c s m n u v
   -> Biparser c s m n u (Maybe v)
 optionMaybe x = Just <$> try x <|> pure Nothing
+
+optional :: forall c s m n u v.
+  ( MonadPlus m
+  , MonadState s m
+  , Monad n
+  , Alternative n
+  , Monoid (SubState c s)
+  )
+  => Biparser c s m n u v
+  -> Biparser c s m n (Maybe u) (Maybe v)
+optional x = Just <$> try x `uponM` maybe empty pure <|> pure Nothing
 
 stripPrefix :: forall c s m n ss u.
   ( ss ~ SubState c s
