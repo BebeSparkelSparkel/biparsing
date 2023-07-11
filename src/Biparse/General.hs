@@ -47,6 +47,7 @@ type Take c s m n =
   , IsSequence (SubState c s)
   , MonadState s m
   , MonadFail m
+  , MonadPlus m
   , MonadWriter (SubState c s) n
   , MonadFail n
   , ElementContext c s
@@ -69,7 +70,7 @@ takeUni :: forall c s m n se.
   )
   => se
   -> Iso c m n s se
-takeUni x = do
+takeUni x = try do
   y <- one
   unless (x == y) $ expectedFail x y
   return y
@@ -94,7 +95,7 @@ takeTri :: forall c s m n u v.
   -> u
   -> v
   -> Biparser c s m n u v
-takeTri takeWrite toMatch toReturn = do
+takeTri takeWrite toMatch toReturn = try do
   x <- one `uponM` ($> takeWrite) . guard . (== toMatch)
   unless (takeWrite == x) $ expectedFail takeWrite x
   return toReturn
@@ -104,7 +105,6 @@ expectedFail x y = fail $ "Expected a " <> show x <> " but received a " <> show 
 
 takeNot :: forall c s m n se.
   ( Take c s m n
-  , MonadPlus m
   , se ~ SubElement c s
   )
   => se

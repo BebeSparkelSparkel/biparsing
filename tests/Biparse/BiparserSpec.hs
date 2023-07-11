@@ -1,151 +1,144 @@
 module Biparse.BiparserSpec where
 
-import Biparse.Biparser (backward)
-import Biparse.List (splitOn, many)
-import Data.Sequence (Seq)
-import Data.Sequence qualified as MT
-
--- functional tests that should be moved to General when implemented correctly
-import Biparse.Biparser (breakWhen')
-
 spec :: Spec
 spec = do
   describe "one" do
     describe "IdentityStateContext" do
-      let bp = one :: Iso IdentityStateContext IO IO String Char
-          bp2 :: Iso IdentityStateContext IO IO String (Char,Char)
-          bp2 = (,) <$> bp `upon` fst <*> bp `upon` snd
+      fb "id"
+        (one :: Iso IdentityStateContext IO IO String Char)
+        (\f -> do
+          it "one use" do
+            x <- f "abc"
+            x `shouldBe` ('a',"bc")
 
-      describe "forward" do
-        it "one use" do
-          x <- runForward bp "abc"
-          x `shouldBe` ('a',"bc")
+          it "none to take" do
+            f mempty `shouldThrow` isUserError
+        )
+        \b -> do
+          it "typical use" $ b 'a' >>= (`shouldBe` ('a',"a"))
 
-        it "used twice" do
-          x <- runForward bp2 "abc"
-          x `shouldBe` (('a','b'),"c")
-          
-        it "none to take" do
-          runForward bp mempty `shouldThrow` isUserError
-
-      describe "backward" do
-        it "typical use" do
-          x <- runBackward bp 'a'
-          x `shouldBe` ('a',"a")
-
-        it "used twice" do
-          x <- runBackward bp2 ('a','b')
-          x `shouldBe` (('a','b'),"ab")
+      fb "tuple"
+        ((,) <$> one `upon` fst <*> one `upon` snd :: Iso IdentityStateContext IO IO String (Char,Char))
+        (\f -> do
+          it "used twice" do
+            x <- f "abc"
+            x `shouldBe` (('a','b'),"c")
+        )
+        \b -> do
+          it "used twice" $ b ('a','b') >>= (`shouldBe` (('a','b'),"ab"))
 
     fb "LineColumn"
-      (one :: Iso LineColumn IO IO (Position Text) Char)
+      (one :: Iso LineColumn FM IO (Position Text) Char)
       (\f -> do
         it "empty" do
-          f "" `shouldThrow` isUserError
+          f "" `shouldSatisfy` errorPosition 1 1
 
         it "one" do
-          x <- f "abc"
-          x `shouldBe` ('a', Position 1 2 "bc")
+          f "abc" `shouldBe` Right ('a', Position 1 2 "bc")
 
       )
       \b -> do
-        it "write char" do
-          x <- b 'd'
-          x `shouldBe` ('d', "d")
+        it "write char" $ b 'd' >>= (`shouldBe` ('d', "d"))
 
-    let one' :: forall text. Iso LinesOnly IO IO (Position [text]) text
-        one' = one
     fb "LineColumn [Text]"
-      (one' @Text)
+      (one :: Iso LinesOnly FM IO (Position [Text]) Text)
       (\f -> do
-        it "empty" do
-          f [] `shouldThrow` isUserError
+        it "empty" $ f [] `shouldSatisfy` errorPosition 1 1
 
-        it "one" do
-          x <- f ["abc","def"]
-          x `shouldBe` ("abc", Position 2 1 ["def"])
-
+        it "one" $ f ["abc","def"] `shouldBe` Right ("abc", Position 2 1 ["def"])
       )
       \b -> do
-        it "print string" do
-          x <- b "abc"
-          x `shouldBe` ("abc", ["abc"])
+        it "print string" $ b "abc" >>= (`shouldBe` ("abc", ["abc"]))
 
   describe "split" do
-    let bp :: Iso IdentityStateContext IO IO String String
-        bp = split do
+    let takeTwo :: forall c m s.
+          ( String ~ SubState c s
+          , MonadPlus m
+          , SubStateContext c s
+          ) => Iso c m IO s String
+        takeTwo = split do
           x <- get
           y <- maybe empty (pure . \(f,s) -> f:s:[]) $
             liftA2 (,) (headMay x) (index x 1)
           put $ drop 2 x
           return y
 
-    describe "forward" do
-      let f = runForward bp
+    fb "IdentityStateContext"
+      (takeTwo @IdentityStateContext @IO @String)
+      (\f -> do
+        it "succeeds" $ f "abc" >>= (`shouldBe` ("ab", "c"))
 
-      it "succeeds" $ f "abc" >>= (`shouldBe` ("ab", "c"))
+        it "fails" $ f "a" `shouldThrow` isUserError
+      )
+      \b -> do
+        it "mempty" $ b mempty >>= (`shouldBe` (mempty,mempty))
 
-      it "fails" $ f "a" `shouldThrow` isUserError
+        it "prints all" $ b "abc" >>= (`shouldBe` ("abc","abc"))
 
-    describe "backward" do
-      let b = runBackward bp
+    fb "LineColumn"
+      (takeTwo @LineColumn @(Either (Position String)) @(Position String))
+      (\f -> do
+        it "succeeds" $ f "abc" `shouldBe` Right ("ab", Position 1 3 "c")
 
-      it "mempty" $ b mempty >>= (`shouldBe` (mempty,mempty))
+        it "fails" $ limit $ f "a" `shouldSatisfy` errorPosition 1 1
+      )
+      \b -> do
+        it "mempty" $ b mempty >>= (`shouldBe` (mempty,mempty))
 
-      it "prints all" $ b "abc" >>= (`shouldBe` ("abc","abc"))
+        it "prints all" $ b "abc" >>= (`shouldBe` ("abc","abc"))
 
   describe "peek" do
-    describe "simple" do
-      let bp :: Iso IdentityStateContext IO IO String Char
-          bp = peek one
-
-      describe "forward" do
-        let f = runForward bp
-
+    fb "simple"
+      (peek one :: Iso IdentityStateContext IO IO String Char)
+      (\f -> do
         it "none consumed" do
           x <- f "abc"
           x `shouldBe` ('a',"abc")
-
-      describe "backward" do
-        let b = runBackward bp
-
-        it "prints char" do
-          x <- b 'a'
-          x `shouldBe` ('a',"a")
+      )
+      \b -> do
+        it "prints char" $ b 'a' >>= (`shouldBe` ('a',"a"))
 
     describe "Alternative" do
-      let bp :: Iso IdentityStateContext IO IO String Char
-          bp = peek (takeUni 'x') <|> takeUni 'a'
+      fb "IdentityStateContext"
+        (peek (takeUni 'x') <|> takeUni 'a' :: Iso IdentityStateContext IO IO String Char)
+        (\f -> do
+          it "take first" do
+            x <- f "xa"
+            x `shouldBe` ('x',"xa")
 
-      describe "forward" do
-        let f = runForward bp
+          it "take second" do
+            x <- f "ab"
+            x `shouldBe` ('a',"b")
 
-        it "take first" do
-          x <- f "xa"
-          x `shouldBe` ('x',"xa")
+          it "no match" $ f "b" `shouldThrow` isUserError
+        )
+        \b -> do
+          it "prints first" $ b 'x' >>= (`shouldBe` ('x',"x"))
 
-        it "take second" do
-          x <- f "ab"
-          x `shouldBe` ('a',"b")
+          it "prints second" $ b 'a' >>= (`shouldBe` ('a',"a"))
 
-      describe "backward" do
-        let b = runBackward bp
+      fb "LineColumn"
+        (peek (takeUni 'x') <|> takeUni 'a' :: Iso LineColumn FM IO (Position String) Char)
+        (\f -> do
+          it "take first" $ f "xa" `shouldBe` Right ('x', Position 1 1 "xa")
 
-        it "prints first" do
-          x <- b 'x'
-          x `shouldBe` ('x',"x")
+          it "take second" $ f "ab" `shouldBe` Right ('a', Position 1 2 "b")
 
-        it "prints second" do
-          x <- b 'a'
-          x `shouldBe` ('a',"a")
+          it "no match" $ f "b" `shouldSatisfy` errorPosition 1 1
+        )
+        \b -> do
+          it "prints first" $ b 'x' >>= (`shouldBe` ('x',"x"))
+
+          it "prints second" $ b 'a' >>= (`shouldBe` ('a',"a"))
 
   describe "try" do
-    let bp :: Biparser IdentityStateContext (Seq Char) IO IO Char Char
-        bp = try $ one <* take 'b'
+    let bp = (try $ one <* take 'b' :: Biparser IdentityStateContext (Seq Char) IO IO Char Char)
+        f = runForward bp
+        b = runBackward bp
 
     describe "forward" do
       it "success" do
-        x <- runForward bp "abc"
+        x <- f "abc"
         x `shouldBe` ('a',"c")
       
       it "does not consume state in failed attempt" do
@@ -153,71 +146,92 @@ spec = do
         x `shouldBe` ('c', "de")
 
       it "fails if no alternate" do
-        runForward bp mempty `shouldThrow` isUserError
+        f mempty `shouldThrow` isUserError
 
     describe "backward" do
-      it "prints correctly" do
-        x <- runBackward bp 'a'
-        x `shouldBe` ('a',"ab")
+        it "prints correctly" $ b 'a' >>= (`shouldBe` ('a',"ab"))
 
-      it "prints second if first fails (more of a test for the Biparser Alternative instance and should proabaly moved there)" do
-        x <- runBackward (bp {backward = const empty} <|> bp) 'z'
-        x `shouldBe` ('z',"zb")
+        it "prints second if first fails (more of a test for the Biparser Alternative instance and should proabaly moved there)" do
+          x <- runBackward (bp {backward = const empty} <|> bp) 'z'
+          x `shouldBe` ('z',"zb")
       
   describe "isNull" do
-    let bp :: ConstU IdentityStateContext String Identity Identity [()] Bool
-        bp = isNull
+    fb "IdentityStateContext"
+      (isNull :: ConstU IdentityStateContext String Identity Identity [()] Bool)
+      (\f -> do
+        it "true" $ f mempty `shouldBe` Identity (True,mempty)
 
-    describe "forward" do
-      let f = runForward bp
+        it "false" $ f "a" `shouldBe` Identity (False,"a")
+      )
+      \b -> do
+        it "true" $ b mempty `shouldBe` Identity (True,mempty)
 
-      it "true" $ f mempty `shouldBe` Identity (True,mempty)
+        it "false" $ b [()] `shouldBe` Identity (False,mempty)
 
-      it "false" $ f "a" `shouldBe` Identity (False,"a")
+    fb "LineColumn"
+      (isNull :: ConstU LineColumn (Position String) Identity Identity [()] Bool)
+      (\f -> do
+        it "true" $ f "" `shouldBe` Identity (True,"")
 
-    describe "backward" do
-      let b = runBackward bp
+        it "false" $ f "a" `shouldBe` Identity (False,"a")
+      )
+      \b -> do
+        it "true" $ b mempty `shouldBe` Identity (True,mempty)
 
-      it "true" $ b mempty `shouldBe` Identity (True,mempty)
+        it "false" $ b [()] `shouldBe` Identity (False,mempty)
 
-      it "false" $ b [()] `shouldBe` Identity (False,mempty)
+  describe "breakWhen'" do
+    fb "LineColumn"
+      (breakWhen' $ stripPrefix "ab" :: Iso LineColumn FM IO (Position String) String)
+      (\f -> do
+        it "empty" $ limit $
+          f "" `shouldSatisfy` errorPosition 1 1
 
-  fb
-    "breakWhen'"
-    (breakWhen' $ stripPrefix "ab" :: Iso LineColumn IO IO (Position String) String)
-    (\f -> do
-      it "empty" do
-        f "" `shouldThrow` isUserError
+        it "break first" $ limit $
+          f "abcd" `shouldBe` Right (mempty, Position 1 3 "cd")
 
-      it "break first" do
-        x <- f "abcd"
-        x `shouldBe` (mempty, Position 1 3 "cd")
+        it "break last" $ limit $
+          f "cdab" `shouldBe` Right ("cd", Position 1 5 mempty)
 
-      it "break last" do
-        x <- f "cdab"
-        x `shouldBe` ("cd", Position 1 5 mempty)
+        it "break middle" $ limit $
+          f "cdabef" `shouldBe` Right ("cd", Position 1 5 "ef")
 
-      it "break middle" do
-        x <- f "cdabef"
-        x `shouldBe` ("cd", Position 1 5 "ef")
+        it "no break" $ limit $
+          f "cdefg" `shouldSatisfy` errorPosition 1 1
+      )
+      \b -> do
+        it "empty" $ b mempty >>= (`shouldBe` (mempty,"ab"))
 
-      it "no break" do
-        f "cdefg" `shouldThrow` isUserError
-    )
-    \b -> do
-      it "empty" do
-        x <- b mempty
-        x `shouldBe` (mempty,"ab")
+        it "append break" $ b "cd" >>= (`shouldBe` ("cd", "cdab"))
 
-      it "append break" do
-        x <- b "cd"
-        x `shouldBe` ("cd", "cdab")
+        it "only break" $ b "ab" >>= (`shouldBe` ("ab", "abab"))
 
-      it "only break" do
-        x <- b "ab"
-        x `shouldBe` ("ab", "abab")
+        it "contains break" $ b "cdab" >>= (`shouldBe` ("cdab", "cdabab"))
 
-      it "contains break" do
-        x <- b "cdab"
-        x `shouldBe` ("cdab", "cdabab")
+    fb "IdentityStateContext"
+      (breakWhen' $ stripPrefix "ab" :: Iso IdentityStateContext IO IO String String)
+      (\f -> do
+        it "empty" $ limit $
+          f "" `shouldThrow` isUserError
+
+        it "break first" $ limit $
+          f "abcd" >>= (`shouldBe` (mempty, "cd"))
+
+        it "break last" $ limit $
+          f "cdab" >>= (`shouldBe` ("cd", mempty))
+
+        it "break middle" $ limit $
+          f "cdabef" >>= (`shouldBe` ("cd", "ef"))
+
+        it "no break" $ limit $
+          f "cdefg" `shouldThrow` isUserError
+      )
+      \b -> do
+        it "empty" $ b mempty >>= (`shouldBe` (mempty,"ab"))
+
+        it "append break" $ b "cd" >>= (`shouldBe` ("cd", "cdab"))
+
+        it "only break" $ b "ab" >>= (`shouldBe` ("ab", "abab"))
+
+        it "contains break" $ b "cdab" >>= (`shouldBe` ("cdab", "cdabab"))
 

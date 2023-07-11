@@ -1,4 +1,6 @@
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-deprecations #-}
 module Biparse.Text.PositionContext
   ( LineColumn
   , LinesOnly
@@ -6,9 +8,12 @@ module Biparse.Text.PositionContext
   , startLineColumn
   ) where
 
+import Control.Monad.StateError (StateErrorT(StateErrorT), WrapError(Error,SubError,wrapError))
 import Biparse.Biparser (SubState, GetSubState(getSubState), UpdateStateWithElement(updateElementContext), UpdateStateWithSubState(updateSubStateContext), ReplaceSubState(replaceSubState))
 import GHC.Exts (IsList(Item))
 import GHC.Exts qualified as GE
+
+import Control.Monad.Trans.Error qualified as E
 
 -- * Tracks line and column position
 
@@ -63,17 +68,21 @@ instance IsList text => IsList (Position text) where
   fromList = startLineColumn . GE.fromList
   toList = GE.toList . subState
 
--- $ Tracks column position
---data Column
---
---data ColumnPosition text = ColumnPosition
---  { column :: Int
---  , subState :: text
---  } deriving (Show, Eq)
---
---startColumn :: text -> ColumnPosition text
---startColumn = ColumnPosition 1
---
---instance IsString text => IsString (ColumnPosition text) where
---  fromString = startColumn . fromString
+instance MonadError (Error c (Position text)) m => MonadFail (StateErrorT c (Position text) m) where
+  fail x = StateErrorT do
+    s <- get
+    throwError $ wrapError @c (x,s)
 
+deriving instance
+  ( MonadError (String, Position text) m
+  )
+  => MonadError (String, Position text) (StateErrorT c (Position text) m)
+
+instance WrapError c (Position text) where
+  type Error    c (Position text) = Position String
+  type SubError c (Position text) = String
+  wrapError (e,p) = p {subState = e}
+
+instance E.Error (Position String) where
+  noMsg = fromString ""
+  strMsg = fromString

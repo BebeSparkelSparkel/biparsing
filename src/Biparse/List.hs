@@ -1,5 +1,4 @@
 {-# LANGUAGE PolyKinds #-}
-
 module Biparse.List
   ( replicateBiparserT
   , takeElementsWhile

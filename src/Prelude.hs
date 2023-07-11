@@ -3,7 +3,6 @@ module Prelude
   ( module Control.Applicative
   , module Control.Monad
   , module Control.Monad.Extra
-  , module Control.Monad.State
   , module Control.Monad.State.Class
   , module Control.Monad.Writer
   , module Control.Monad.Writer.Class
@@ -32,6 +31,8 @@ module Prelude
   , module Text.Show
   , module Text.Read
   , module Data.Coerce
+  , module Control.Monad.State
+  , module Control.Monad.Except
 
   , (|>)
   , (^:^)
@@ -40,11 +41,11 @@ module Prelude
   , (>>>)
   ) where
 
+import Control.Monad.Except (MonadError(throwError))
 import Data.Coerce (Coercible, coerce)
 import Control.Applicative (Applicative((<*>),pure), (*>), (<*), liftA2, Alternative(empty,(<|>)))
 import Control.Monad (Monad((>>=),return), when, unless, MonadFail(fail), MonadPlus, guard, (=<<), (>=>))
 import Control.Monad.Extra (ifM)
-import Control.Monad.State (StateT(StateT,runStateT), execState)
 import Control.Monad.State.Class (MonadState(state,get,put), modify, gets)
 import Control.Monad.Writer (WriterT(WriterT,runWriterT))
 import Control.Monad.Writer.Class (MonadWriter(tell,pass))
@@ -72,6 +73,7 @@ import GHC.Num (Num, (+), (-))
 import Numeric.Natural (Natural)
 import Text.Show (Show(show))
 import Text.Read (Read)
+import Control.Monad.State (StateT(StateT,runStateT), execState)
 
 (|>) :: Alternative f => f a -> a -> f a
 x |> y = x <|> pure y

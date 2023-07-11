@@ -6,21 +6,18 @@ spec :: Spec
 spec = do
   describe "UpdateStateWithElement" do
     describe "simple" do
-      let bp :: Iso LineColumn IO IO (Position String) Char
+      let bp :: IsoLocal String Char
           bp = one
 
       describe "forward" do
         it "increments column" do
-          x <- runForward bp "ab"
-          x `shouldBe` ('a', Position 1 2 "b")
+          runForward bp "ab" `shouldBe` Right ('a', Position 1 2 "b")
 
         it "increments row" do
-          x <- runForward bp "\nb"
-          x `shouldBe` ('\n', Position 2 1 "b")
+          runForward bp "\nb" `shouldBe` Right ('\n', Position 2 1 "b")
 
         it "resets colum on newline" do
-          x <- runForward (bp >> bp) "a\nb"
-          x `shouldBe` ('\n', Position 2 1 "b")
+          runForward (bp >> bp) "a\nb" `shouldBe` Right ('\n', Position 2 1 "b")
 
       describe "backward" do
         it "prints a character" do
@@ -32,37 +29,42 @@ spec = do
           x `shouldBe` ('\n', "\n")
 
   describe "UpdateStateWithSubState" do
-    let bp :: Iso LineColumn IO IO (Position Text) Text
+    let bp :: IsoLocal Text Text
         bp = takeWhile (/= ':')
 
     describe "forward" do
       let f = runForward bp
 
       it "no splitter" do
-        x <- f "abc"
-        x `shouldBe` ("abc", Position 1 4 mempty)
+        f "abc" `shouldBe` Right ("abc", Position 1 4 mempty)
 
       it "no newline consumed" do
-        x <- f "ab:de"
-        x `shouldBe` ("ab", Position 1 3 ":de")
+        f "ab:de" `shouldBe` Right ("ab", Position 1 3 ":de")
 
       it "newline column 1" do
-        x <- f "a\n:b"
-        x `shouldBe` ("a\n", Position 2 1 ":b")
+        f "a\n:b" `shouldBe` Right ("a\n", Position 2 1 ":b")
 
       it "newline column 3" do
-        x <- f "ab\n\n\ncd:e"
-        x `shouldBe` ("ab\n\n\ncd", Position 4 3 ":e")
+        f "ab\n\n\ncd:e" `shouldBe` Right ("ab\n\n\ncd", Position 4 3 ":e")
 
       prop "never zero" \t -> do
-        (_, Position l c _) <- f $ startLineColumn t
+        let Right (_, Position l c _) = f $ startLineColumn t
         l `shouldSatisfy` (> 0)
         c `shouldSatisfy` (> 0)
 
     describe "backward" do
       let b = runBackward bp
 
-      prop "writes all" \t -> do
-        x <- b t
-        x `shouldBe` (t, t)
+      prop "writes all" \t -> b t >>= (`shouldBe` (t, t))
+
+  describe "add position to error" do
+    let bp :: Const LineColumn (Position Text) FM IO ()
+        bp = take 'a' *> take 'b'
+        f :: Position Text -> FM ((), Position Text)
+        f = runForward bp
+
+    it "empty" do
+      f "" `shouldSatisfy` errorPosition 1 1
+
+type IsoLocal text a = Iso LineColumn FM IO (Position text) a
 

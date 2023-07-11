@@ -1,155 +1,111 @@
+{-# OPTIONS_GHC -Wno-orphans #-}
 module Biparse.ListSpec where
 
 import Biparse.List
-import Data.ByteString (ByteString)
 import Data.ByteString.Internal (w2c, c2w)
 import Data.List.NonEmpty (NonEmpty)
-import Data.Text (Text)
 import Data.Text qualified as T
-import Data.Word (Word8)
-import Data.Bool qualified as Data.Bool
 
 spec :: Spec
 spec = do
-  describe "takeElementsWhile" do
-    let bp :: Iso IdentityStateContext IO IO ByteString [Word8]
-        bp = takeElementsWhile (isDigit . w2c)
-        pretty = first (fmap w2c)
-
-    describe "forward" do
+  fb "takeElementsWhile"
+    (fmap w2c <$> takeElementsWhile (isDigit . w2c) `upon` fmap c2w :: Iso IdentityStateContext IO IO ByteString String)
+    (\f -> do
       it "matches some digits" do
-        x <- runForward bp "123 abc"
-        pretty x `shouldBe` ("123", " abc")
+        f "123 abc" >>= (`shouldBe` ("123", " abc"))
 
       it "matches all characters" do
-        x <- runForward bp "123"
-        pretty x `shouldBe` ("123", mempty)
+        f "123" >>= (`shouldBe` ("123", mempty))
 
       it "matches no digits" do
-        x <- runForward bp "abc"
-        x `shouldBe` (mempty, "abc")
+        f "abc" >>= (`shouldBe` (mempty, "abc"))
 
       it "empty" do
-        x <- runForward bp mempty
-        x `shouldBe` (mempty, mempty)
+        f mempty >>= (`shouldBe` (mempty, mempty))
+    )
+    \b -> do
+      it "prints some" $ b "abc" >>= (`shouldBe` ("abc", "abc"))
 
-    describe "backward" do
-      it "prints some" do
-        x <- runBackward bp (c2w <$> "abc")
-        pretty x `shouldBe` ("abc", "abc")
-
-      it "prints none" do
-        x <- runBackward bp mempty
-        pretty x `shouldBe` (mempty, mempty)
+      it "prints none" $ b mempty >>= (`shouldBe` (mempty, mempty))
 
   describe "many" do
-    describe "with takeUni" do
-      let bp :: Iso IdentityStateContext IO IO Text [Char]
-          bp = many $ takeUni 'a'
-
-      describe "forward" do
-        let f = runForward bp
-
+    fb "with takeUni"
+      (many $ takeUni 'a' :: Iso IdentityStateContext IO IO Text [Char])
+      (\f -> do
         it "takes none" do
-          x <- f mempty
-          x `shouldBe` (mempty, mempty)
+          f mempty >>= (`shouldBe` (mempty, mempty))
 
         it "takes 2" do
-          x <- f "aabc"
-          x `shouldBe` (['a','a'], "bc")
+          f "aabc" >>= (`shouldBe` (['a','a'], "bc"))
+      )
+      \b -> do
+        it "prints all" $ b ['a','a'] >>= (`shouldBe` ("aa", "aa"))
 
-      describe "backward" do
-        let b = runBackward bp
+        it "prints none" $ b mempty >>= (`shouldBe` (mempty, mempty))
 
-        it "prints all" do
-          x <- b ['a','a']
-          x `shouldBe` ("aa", "aa")
-
-        it "prints none" do
-          x <- b mempty
-          x `shouldBe` (mempty, mempty)
-
-    describe "with takeTri" do
-      let bp :: Biparser IdentityStateContext [String] Maybe Maybe [Bool] [Int]
-          bp = many
-            $   try (takeTri "TRUE" True 1)
-            <|>      takeTri "FALSE" False 0
-
-      describe "forward" do
+    fb "with takeTri"
+      (   many
+      $   try (takeTri "TRUE" True 1)
+      <|>      takeTri "FALSE" False 0
+      :: Biparser IdentityStateContext [String] Maybe Maybe [Bool] [Int])
+      (\f -> do
         it "takes two" do
-          runForward bp ["TRUE","FALSE","UNDEFINED"]
+          f ["TRUE","FALSE","UNDEFINED"]
             `shouldBe` Just ([1,0],["UNDEFINED"])
 
         it "takes none" do
-          runForward bp ["UNDEFINED"]
+          f ["UNDEFINED"]
             `shouldBe` Just (mempty, ["UNDEFINED"])
-          runForward bp mempty
+          f mempty
             `shouldBe` Just (mempty, mempty)
-
-      describe "backward" do
+      )
+      \b -> do
         it "prints all" do
-          runBackward bp [False, True]
+          b [False, True]
             `shouldBe` Just ([0,1], ["FALSE", "TRUE"])
 
         it "prints none" do
-          runBackward bp mempty
+          b mempty
             `shouldBe` Just (mempty, mempty)
 
-  describe "some" do
-    let bp :: Iso IdentityStateContext IO IO [Int] (NonEmpty Int)
-        bp = some (takeUni 1)
-
-    describe "forward" do
-      let f = runForward bp
-
+  fb "some"
+    (some (takeUni 1) :: Iso IdentityStateContext IO IO [Int] (NonEmpty Int))
+    (\f -> do
       it "fails on none" do
         f mempty `shouldThrow` isUserError
         f [2] `shouldThrow` isUserError
 
       it "takes some" do
-        f [1] >>= (`shouldBe` ([1], mempty))
-        f [1,2] >>= (`shouldBe` ([1], [2]))
+        f [1]     >>= (`shouldBe` ([1],   mempty))
+        f [1,2]   >>= (`shouldBe` ([1],   [2]))
         f [1,1,2] >>= (`shouldBe` ([1,1], [2]))
-
-    describe "backward" do
-      let b = runBackward bp
-
-      it "prints all" do
-        x <- b [1,1,1]
-        x `shouldBe` ([1,1,1], [1,1,1])
+    )
+    \b -> do
+      it "prints all" $ b [1,1,1] >>= (`shouldBe` ([1,1,1], [1,1,1]))
 
   fb
     "all"
-    (all $ takeUni 'a' <|> takeUni 'b' :: Iso LineColumn IO IO (Position Text) [Char])
+    (all $ takeUni 'a' <|> takeUni 'b' :: Iso LineColumn FM IO (Position Text) [Char])
     (\f -> do
       it "empty" do
-        x <- f ""
-        x `shouldBe` (mempty, "")
+        f "" `shouldBe` Right (mempty, "")
 
       it "one" do
-        x <- f "a"
-        x `shouldBe` ("a", Position 1 2 mempty)
+        f "a" `shouldBe` Right ("a", Position 1 2 mempty)
 
       it "two" do
-        x <- f "ba"
-        x `shouldBe` ("ba", Position 1 3 mempty)
+        f "ba" `shouldBe` Right ("ba", Position 1 3 mempty)
 
       it "fail" do
-        f "c" `shouldThrow` isUserError
-        f "abc" `shouldThrow` isUserError
+        f "c"   `shouldSatisfy` errorPosition 1 1
+        f "abc" `shouldSatisfy` errorPosition 1 3
     )
     \b -> do
-      it "empty" do
-        x <- b mempty
-        x `shouldBe` (mempty,mempty)
+      it "empty" $ b mempty >>= (`shouldBe` (mempty,mempty))
 
-      it "one" do
-        x <- b "a"
-        x `shouldBe` ("a", "a")
+      it "one" $ b "a" >>= (`shouldBe` ("a", "a"))
 
-      it "two" do
-        x <- b "ab"
-        x `shouldBe` ("ab", "ab")
+      it "two" $ b "ab" >>= (`shouldBe` ("ab", "ab"))
 
       it "fail" do
         b "c" `shouldThrow` isUserError
@@ -162,8 +118,7 @@ spec = do
         b = runBackward bp
         t name f' b' = describe name do
           it "forward" $ limit do
-            x <- f f'
-            x `shouldBe` (b', mempty)
+            f f' >>= (`shouldBe` (b', mempty))
           it "backward" $ limit do
             y <- b b'
             y `shouldBe` (b', f')
@@ -177,92 +132,63 @@ spec = do
 
     let ef = evalForward bp
     prop "forward should never return [\"\"]" $ forAll (T.pack <$> listOf (elements "ab:")) \string -> do
-      f' <- ef string
-      f' `shouldNotBe` [mempty]
+      ef string >>= (`shouldNotBe` [mempty])
 
   fb
     "splitOn"
     (splitOn $ stripPrefix "ab" :: Iso IdentityStateContext IO IO Text [Text])
     (\f -> do
       it "empty" $ limit do
-        x <- f mempty
-        x `shouldBe` (mempty,mempty)
+        f mempty >>= (`shouldBe` (mempty,mempty))
 
       it "no split" $ limit do
-        x <- f "cde"
-        x `shouldBe` (["cde"], mempty)
+        f "cde" >>= (`shouldBe` (["cde"], mempty))
 
       it "match start" $ limit do
-        x <- f "abcd"
-        x `shouldBe` (["", "cd"], mempty)
+        f "abcd" >>= (`shouldBe` (["", "cd"], mempty))
 
       it "match start two" $ limit do
-        x <- f "abcdabef"
-        x `shouldBe` (["", "cd", "ef"], mempty)
+        f "abcdabef" >>= (`shouldBe` (["", "cd", "ef"], mempty))
 
       it "match end" $ limit do
-        x <- f "cab"
-        x `shouldBe` (["c", ""], mempty)
+        f "cab" >>= (`shouldBe` (["c", ""], mempty))
 
       it "splits some" $ limit do
-        x <- f "abcdababefab"
-        x `shouldBe` (["", "cd", "", "ef", ""], mempty)
+        f "abcdababefab" >>= (`shouldBe` (["", "cd", "", "ef", ""], mempty))
     )
     \b -> do
-      it "empty" $ limit do
-        x <- b mempty
-        x `shouldBe` (mempty, mempty)
+      it "empty" $ limit $ b mempty >>= (`shouldBe` (mempty, mempty))
 
-      it "one" $ limit do
-        x <- b ["cd"]
-        x `shouldBe` (["cd"], "cd")
+      it "one" $ limit $ b ["cd"] >>= (`shouldBe` (["cd"], "cd"))
 
-      it "two" $ limit do
-        x <- b ["cd", "ef"]
-        x `shouldBe` (["cd", "ef"], "cdabef")
+      it "two" $ limit $ b ["cd", "ef"] >>= (`shouldBe` (["cd", "ef"], "cdabef"))
 
       it "some empty" $ limit do
-        let xs = ["", "cd", "", "ef", ""]
+        let xs = ["", "cd", "", "ef", ""] :: [Text]
         x <- b xs
         x `shouldBe` (xs,"abcdababefab")
 
-  describe "whileM" do
-    let bp :: Iso IdentityStateContext IO IO Text [Char]
-        bp = whileM (peek (memptyWrite one >>= \x -> pure $ x /= 'x')) one
-
-    describe "forward" do
-      let f = runForward bp
-
+  fb "whileM"
+    (whileM (peek (memptyWrite one >>= \x -> pure $ x /= 'x')) one :: Iso IdentityStateContext IO IO Text [Char])
+    (\f -> do
       it "empty" do
-        x <- f mempty
-        x `shouldBe` (mempty,mempty)
+        f mempty >>= (`shouldBe` (mempty,mempty))
 
       it "takes all" do
-        x <- f "abc"
-        x `shouldBe` ("abc",mempty)
+        f "abc" >>= (`shouldBe` ("abc",mempty))
 
       it "takes none" do
-        x <- f "x"
-        x `shouldBe` (mempty,"x")
+        f "x" >>= (`shouldBe` (mempty,"x"))
 
       it "takes till x" do
-        x <- f "abxc"
-        x `shouldBe` ("ab","xc")
+        f "abxc" >>= (`shouldBe` ("ab","xc"))
+    )
+    \b -> do
+      it "empty" $ b mempty >>= (`shouldBe` (mempty,mempty))
 
-    describe "backward" do
-      let b = runBackward bp
+      it "prints all" $ b "abc" >>= (`shouldBe` ("abc","abc"))
 
-      it "empty" do
-        x <- b mempty
-        x `shouldBe` (mempty,mempty)
-
-      it "prints all" do
-        x <- b "abc"
-        x `shouldBe` ("abc","abc")
-
-      it "prints till x" do
-        x <- b "abxc"
-        x `shouldBe` ("ab","ab")
+      it "prints till x" $ b "abxc" >>= (`shouldBe` ("ab","ab"))
 
   --describe "whileId" do
   --  describe "THIS IS WACK" do

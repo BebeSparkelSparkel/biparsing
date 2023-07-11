@@ -1,128 +1,146 @@
 module Biparse.GeneralSpec where
 
-import Control.Monad.Except
-import Data.ByteString.Char8 (ByteString)
-import Data.Sequence (Seq)
-import Data.Vector (Vector)
 import Biparse.Text.Numeric (naturalBaseTen)
 
 spec :: Spec
-spec = do
+spec = focus do
   describe "take" do
-    let bp :: Unit IdentityStateContext Text IO IO
-        bp = take 'a'
-        bp2 :: Unit IdentityStateContext Text IO IO
-        bp2 = take 'a' *> take 'b'
+    describe "IdentityStateContext" do
+      fb "uni"
+        (take 'a' :: Unit IdentityStateContext Text IO IO)
+        (\f -> do
+          it "take matching" $ f "abc" >>= (`shouldBe` ((), "bc"))
 
-    describe "forward" do
-      it "take matching" do
-        x <- runForward bp "abc"
-        x `shouldBe` ((), "bc")
+          describe "fail" do
+            it "non-matching" $ f "bc" `shouldThrow` isUserError
+          
+            it "empty" $ f mempty `shouldThrow` isUserError
+        )
+        \b -> do
+          it "print one" $ b () >>= (`shouldBe` ((), "a"))
 
-      it "take two matching" do
-        x <- runForward bp2 "abc"
-        x `shouldBe` ((), "c")
+      fb "di"
+        (take 'a' *> take 'b' :: Unit IdentityStateContext Text IO IO)
+        (\f -> do
+          it "take two matching" $ f "abc" >>= (`shouldBe` ((), "c"))
+        )
+        \b -> do
+          it "print two" $ b () >>= (`shouldBe` ((), "ab"))
 
-      describe "fail" do
-        it "non-matching" do
-          runForward bp "bc" `shouldThrow` isUserError
-      
-        it "empty" do
-          runForward bp mempty `shouldThrow` isUserError
+    describe "LineColumn" do
+      fb "uni"
+        (take 'a' :: Unit LineColumn (Position Text) FM Maybe)
+        (\f -> do
+          it "take matching" $ f "abc" `shouldBe` Right ((), Position 1 2 "bc")
 
-    describe "backward" do
-      it "print one" do
-        x <- runBackward bp ()
-        x `shouldBe` ((), "a")
+          describe "fail" do
+            it "non-matching" $ f "bc" `shouldSatisfy` errorPosition 1 1
+          
+            it "empty" $ f "" `shouldSatisfy` errorPosition 1 1
+        )
+        \b -> do
+          it "print one" $ b () `shouldBe` Just ((), "a")
 
-      it "print two" do
-        x <- runBackward bp2 ()
-        x `shouldBe` ((), "ab")
+      fb "di"
+        (take 'a' *> take 'b' :: Unit LineColumn (Position Text) FM Maybe)
+        (\f -> do
+          it "take two matching" $ f "abc" `shouldBe` Right ((), Position 1 3 "c")
+        )
+        \b -> do
+          it "print two" $ b () `shouldBe` Just ((), "ab")
+
+  fb "takeUni"
+   (takeUni 'a' :: Iso LineColumn FM Maybe (Position Text) Char)
+   (\f -> do
+     it "fail positon is correct" $ f "bc" `shouldSatisfy` errorPosition 1 1
+   )
+   \_ -> pure ()
 
   describe "takeDi" do
-    let bp :: Iso IdentityStateContext IO IO Text Int
-        bp = takeDi 'x' 1
+    fb "IdentityStateContext"
+      (takeDi 'x' 1 :: Iso IdentityStateContext IO IO Text Int)
+      (\f -> do
+        it "matches" $ f "xabc" >>= (`shouldBe` (1,"abc"))
 
-    describe "forward" do
-      let f = runForward bp
+        it "no matche" $ f "abc" `shouldThrow` isUserError
+      )
+      \_ -> pure ()
 
-      it "matches" $ f "xabc" >>= (`shouldBe` (1,"abc"))
+    fb "LineColumn"
+      (takeDi 'x' 1 :: Iso LineColumn FM Maybe (Position Text) Int)
+      (\f -> do
+        it "matches" $ f "xabc" `shouldBe` Right (1, Position 1 2 "abc")
 
-      it "no matche" $ f "abc" `shouldThrow` isUserError
+        it "no matche" $ f "abc" `shouldSatisfy` errorPosition 1 1
+      )
+      \_ -> pure ()
 
   describe "takeNot" do
-    let bp :: Iso IdentityStateContext IO IO String Char
-        bp = takeNot 'A'
+    fb "IdentityStateContext"
+      (takeNot 'A' :: Iso IdentityStateContext IO IO String Char)
+      (\f -> do
+        it "takes non-matching element" $ f "bc" >>= (`shouldBe` ('b', "c"))
 
-    describe "forward" do
-      let f = runForward bp
+        it "does not take matching element" $ f "Abc" `shouldThrow` isUserError
+      )
+      \b -> do
+        it "prints non-matching" $ b 'c' >>= (`shouldBe` ('c', "c"))
 
-      it "takes non-matching element" do
-        x <- f "bc"
-        x `shouldBe` ('b', "c")
+        it "fails matching" do
+          b 'A' `shouldThrow` isUserError
 
-      it "does not take matching element" do
-        f "Abc" `shouldThrow` isUserError
+    fb "LineColumn"
+      (takeNot 'A' :: Iso LineColumn FM Maybe (Position String) Char)
+      (\f -> do
+        it "takes non-matching element" $ f "bc" `shouldBe` Right ('b', Position 1 2 "c")
 
-    describe "backward" do
-      let b = runBackward bp
+        it "does not take matching element" $ f "Abc" `shouldSatisfy` errorPosition 1 1
+      )
+      \b -> do
+        it "prints non-matching" $ b 'c' `shouldBe` Just ('c', "c")
 
-      it "prints non-matching" do
-        x <- b 'c'
-        x `shouldBe` ('c', "c")
-
-      it "fails matching" do
-        b 'A' `shouldThrow` isUserError
+        it "fails matching" do
+          b 'A' `shouldBe` Nothing
 
   fb "takeWhile"
-    (takeWhile (/= 'x') :: Iso LineColumn IO IO (Position Text) Text)
+    (takeWhile (/= 'x') :: Iso LineColumn FM IO (Position Text) Text)
     (\f -> do
       it "empty" do
-        x <- f ""
-        x `shouldBe` (mempty,"")
+        f "" `shouldBe` Right (mempty,"")
 
       it "take none" do
-        x <- f "xab"
-        x `shouldBe` (mempty, "xab")
+        f "xab" `shouldBe` Right (mempty, "xab")
 
       it "take 2" do
-        x <- f "abx"
-        x `shouldBe` ("ab", Position 1 3 "x")
+        f "abx" `shouldBe` Right ("ab", Position 1 3 "x")
 
       it "take all" do
-        x <- f "abc"
-        x `shouldBe` ("abc", Position 1 4 mempty)
+        f "abc" `shouldBe` Right ("abc", Position 1 4 mempty)
     )
     \b -> do
-      it "empty" do
-        x <- b mempty
-        x `shouldBe` (mempty,mempty)
+      it "empty" $ b mempty >>= (`shouldBe` (mempty,mempty))
 
-      it "no x" do
-        x <- b "abc"
-        x `shouldBe` ("abc", "abc")
+      it "no x" $ b "abc" >>= (`shouldBe` ("abc", "abc"))
 
-      it "has x" do
-        x <- b "axc"
-        x `shouldBe` ("axc", "axc")
+      it "has x" $ b "axc" >>= (`shouldBe` ("axc", "axc"))
 
   fb "pad"
-    (pad 4 'x' naturalBaseTen :: Iso LineColumn IO IO (Position Text) Int)
+    (pad 4 'x' naturalBaseTen :: Iso LineColumn FM IO (Position Text) Int)
     (\f -> do
       it "no pad" do
-        f "1" >>= (`shouldBe` (1, Position 1 2 mempty))
-        f "123" >>= (`shouldBe` (123, Position 1 4 mempty))
+        f "1" `shouldBe` Right (1, Position 1 2 mempty)
+        f "123" `shouldBe` Right (123, Position 1 4 mempty)
 
       it "with pad" do
-        f "x4" >>= (`shouldBe` (4, Position 1 3 mempty))
-        f "xxx456" >>= (`shouldBe` (456, Position 1 7 mempty))
+        f "x4" `shouldBe` Right (4, Position 1 3 mempty)
+        f "xxx456" `shouldBe` Right (456, Position 1 7 mempty)
 
       it "empty fail" do
-        f "" `shouldThrow` isUserError
+        f "" `shouldSatisfy` errorPosition 1 1
 
       it "only pad" do
-        f "x" `shouldThrow` isUserError
-        f "xxx" `shouldThrow` isUserError
+        f "x" `shouldSatisfy` errorPosition 1 2
+        f "xxx" `shouldSatisfy` errorPosition 1 4
     )
     \b -> do
       it "add pad" do
@@ -136,92 +154,89 @@ spec = do
         b 12345 >>= (`shouldBe` (12345, "12345"))
 
   fb "breakWhen"
-    (breakWhen $ stripPrefix "ab" :: Iso LineColumn IO IO (Position (Seq Char)) (Seq Char))
+    (breakWhen $ stripPrefix "ab" :: Iso LineColumn FM IO (Position (Seq Char)) (Seq Char))
     (\f -> do
       it "empty" do
-        x <- f ""
-        x `shouldBe` (mempty, "")
+        f "" `shouldBe` Right (mempty, "")
 
       it "break first" do
-        x <- f "abcd"
-        x `shouldBe` (mempty, Position 1 3 "cd")
+        f "abcd" `shouldBe` Right (mempty, Position 1 3 "cd")
 
       it "break last" do
-        x <- f "cdab"
-        x `shouldBe` ("cd", Position 1 5 mempty)
+        f "cdab" `shouldBe` Right ("cd", Position 1 5 mempty)
 
       it "break middle" do
-        x <- f "cdabef"
-        x `shouldBe` ("cd", Position 1 5 "ef")
+        f "cdabef" `shouldBe` Right ("cd", Position 1 5 "ef")
 
       it "no break" do
-        x <- f "cdefg"
-        x `shouldBe` ("cdefg", Position 1 6 mempty)
+        f "cdefg" `shouldBe` Right ("cdefg", Position 1 6 mempty)
     )
     \b -> do
-      it "empty" do
-        x <- b mempty
-        x `shouldBe` (mempty,"ab")
+      it "empty" $ b mempty >>= (`shouldBe` (mempty,"ab"))
 
-      it "append break" do
-        x <- b "cd"
-        x `shouldBe` ("cd", "cdab")
+      it "append break" $ b "cd" >>= (`shouldBe` ("cd", "cdab"))
 
-      it "only break" do
-        x <- b "ab"
-        x `shouldBe` ("ab", "abab")
+      it "only break" $ b "ab" >>= (`shouldBe` ("ab", "abab"))
 
-      it "contains break" do
-        x <- b "cdab"
-        x `shouldBe` ("cdab", "cdabab")
+      it "contains break" $ b "cdab" >>= (`shouldBe` ("cdab", "cdabab"))
 
-  describe "optionMaybe" do
-    let bp :: Biparser IdentityStateContext (Vector Int) IO IO Bool (Maybe String, Maybe String)
-        bp = (,) <$> optionMaybe (takeUni 1 `upon` mapBool $> "one")
-           <*> optionMaybe (takeUni 2 `upon` mapBool $> "two")
-        mapBool :: Bool -> Int
-        mapBool = \case True -> 1; False -> 2
-
-    describe "forward" do
+  let mapBool :: Bool -> Int
+      mapBool = \case True -> 1; False -> 2
+  fb "optionMaybe"
+    ((,) <$> optionMaybe (takeUni 1 `upon` mapBool $> "one")
+         <*> optionMaybe (takeUni 2 `upon` mapBool $> "two")
+    :: Biparser IdentityStateContext (Vector Int) IO IO Bool (Maybe String, Maybe String))
+    (\f -> do
       it "matches both" do
-        x <- runForward bp [1, 2]
-        x `shouldBe` ((Just "one", Just "two"), mempty)
+        f [1, 2] >>= (`shouldBe` ((Just "one", Just "two"), mempty))
 
       it "matches first" do
-        x <- runForward bp [1, 3]
-        x `shouldBe` ((Just "one", Nothing), [3])
+        f [1, 3] >>= (`shouldBe` ((Just "one", Nothing), [3]))
 
       it "matches second" do
-        x <- runForward bp [2, 3]
-        x `shouldBe` ((Nothing, Just "two"), [3])
+        f [2, 3] >>= (`shouldBe` ((Nothing, Just "two"), [3]))
 
       it "matches none" do
-        x <- runForward bp mempty
-        x `shouldBe` ((Nothing, Nothing), mempty)
+        f mempty >>= (`shouldBe` ((Nothing, Nothing), mempty))
+    )
+    \b -> do
+      it "prints first" $ b True >>= (`shouldBe` ((Just "one", Nothing), [1]))
 
-    describe "backward" do
-      it "prints first" do
-        x <- runBackward bp True
-        x `shouldBe` ((Just "one", Nothing), [1])
+      it "prints second" $ b False >>= (`shouldBe` ((Nothing, Just "two"), [2]))
 
-      it "prints second" do
-        x <- runBackward bp False
-        x `shouldBe` ((Nothing, Just "two"), [2])
+  describe "stripPrefix" do
+    fb "IdentityStateContext"
+      (stripPrefix "abc" :: Unit IdentityStateContext Text IO IO)
+      (\f -> do
+        it "match" $ f "abcdef" >>= (`shouldBe` ((), "def"))
 
-  describe "not" do
-    let bp :: Biparser IdentityStateContext String IO IO Char Bool
-        bp = not $ (== 'x') <$> one
+        it "no match" $ f "def" `shouldThrow` isUserError
 
-    describe "forward" do
-      let f = runForward bp
+        it "empty" $ f "" `shouldThrow` isUserError
+      )
+      \b -> do
+        it "prints prefix" $ b () >>= (`shouldBe` ((), "abc"))
+    
+    fb "LineColumn"
+      (stripPrefix "abc" :: Unit LineColumn (Position Text) FM IO)
+      (\f -> do
+        it "match" $ f "abcdef" `shouldBe` Right ((), Position 1 4 "def")
 
+        it "no match" $ f "def" `shouldSatisfy` errorPosition 1 1
+
+        it "empty" $ f "" `shouldSatisfy` errorPosition 1 1
+      )
+      \b -> do
+        it "prints prefix" $ b () >>= (`shouldBe` ((), "abc"))
+
+  fb "not"
+    (not $ (== 'x') <$> one :: Biparser IdentityStateContext String IO IO Char Bool)
+    (\f -> do
       it "true" $ f "ab" >>= (`shouldBe` (True,"b"))
 
       it "false" $ f "xb" >>= (`shouldBe` (False,"b"))
-
-    describe "backward" do
-      let b = runBackward bp
-
+    )
+    \b -> do
       it "true" $ b 'x' >>= (`shouldBe` (False,"x"))
 
       it "false" $ b 'a' >>= (`shouldBe` (True,"a"))
