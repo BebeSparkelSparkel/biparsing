@@ -7,14 +7,16 @@ module Biparse.Biparser.StateWriter
   , IsoClass
   --, translate
   , zoom
+  , Forward
   , runForward
   , evalForward
   , runBackward
   ) where
 
-import Control.Monad.StateError (StateErrorT, runSET, stateErrorT)
+import Control.Monad.StateError (StateErrorT, runSET, stateErrorT, WrapError(SubError,Error,wrapError))
 import Biparse.Biparser (SubState, forward, backward, ReplaceSubState(replaceSubState))
 import Biparse.Biparser qualified as B
+import Control.Monad.Except (catchError, throwError)
 
 type Biparser c s m n u v = B.Biparser c s (StateErrorT c s m) (WriterT (SubState c s) n) u v 
 type Iso c m n s v = Biparser c s m n v v
@@ -68,12 +70,26 @@ zoom (B.Biparser fw bw) (B.Biparser fw' bw') = B.Biparser
 
 -- * Helper run functions
 
-runForward :: forall c s m n u v. Biparser c s m n u v -> s -> m (v, s)
-runForward = runSET . forward
+type Forward c s m =
+  ( WrapError c s m
+  , MonadError (SubError c s m) (StateErrorT c s m)
+  , Monad m
+  , SubError c s m ~ Error c s m
+  )
+
+runForward :: forall c s m n u v.
+  Forward c s m
+  => Biparser c s m n u v
+  -> s
+  -> m (v, s)
+runForward = runSET . flip catchError h . forward
+  where
+  h = \e -> do
+    s :: s <- get
+    throwError $ wrapError @c @_ @m (e,s)
 
 evalForward :: forall c s m n u v.
-  ( Functor m
-  )
+  Forward c s m
   => Biparser c s m n u v
   -> s
   -> m v

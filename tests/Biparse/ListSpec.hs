@@ -9,7 +9,7 @@ import Data.Text qualified as T
 spec :: Spec
 spec = do
   fb "takeElementsWhile"
-    (fmap w2c <$> takeElementsWhile (isDigit . w2c) `upon` fmap c2w :: Iso IdentityStateContext IO IO ByteString String)
+    (fmap w2c <$> takeElementsWhile (isDigit . w2c) `upon` fmap c2w :: Iso IdentityState IO IO ByteString String)
     (\f -> do
       it "matches some digits" do
         f "123 abc" >>= (`shouldBe` ("123", " abc"))
@@ -30,7 +30,7 @@ spec = do
 
   describe "many" do
     fb "with takeUni"
-      (many $ takeUni 'a' :: Iso IdentityStateContext IO IO Text [Char])
+      (many $ takeUni 'a' :: Iso IdentityState IO IO Text [Char])
       (\f -> do
         it "takes none" do
           f mempty >>= (`shouldBe` (mempty, mempty))
@@ -47,7 +47,7 @@ spec = do
       (   many
       $   try (takeTri "TRUE" True 1)
       <|>      takeTri "FALSE" False 0
-      :: Biparser IdentityStateContext [String] Maybe Maybe [Bool] [Int])
+      :: Biparser IdentityState [String] Maybe Maybe [Bool] [Int])
       (\f -> do
         it "takes two" do
           f ["TRUE","FALSE","UNDEFINED"]
@@ -69,7 +69,7 @@ spec = do
             `shouldBe` Just (mempty, mempty)
 
   fb "some"
-    (some (takeUni 1) :: Iso IdentityStateContext IO IO [Int] (NonEmpty Int))
+    (some (takeUni 1) :: Iso IdentityState IO IO [Int] (NonEmpty Int))
     (\f -> do
       it "fails on none" do
         f mempty `shouldThrow` isUserError
@@ -90,15 +90,14 @@ spec = do
       it "empty" do
         f "" `shouldBe` Right (mempty, "")
 
-      it "one" do
-        f "a" `shouldBe` Right ("a", Position 1 2 mempty)
+      it "one" $ f "a" `shouldBe` Right ("a", Position 1 2 mempty)
 
-      it "two" do
-        f "ba" `shouldBe` Right ("ba", Position 1 3 mempty)
+      it "two" $ f "ba" `shouldBe` Right ("ba", Position 1 3 mempty)
 
-      it "fail" do
-        f "c"   `shouldSatisfy` errorPosition 1 1
-        f "abc" `shouldSatisfy` errorPosition 1 3
+      describe "fail" do
+        it "no matches" $ f "c"   `shouldSatisfy` errorPosition 1 1
+
+        it "some matches" $ f "abc" `shouldSatisfy` errorPosition 1 3
     )
     \b -> do
       it "empty" $ b mempty >>= (`shouldBe` (mempty,mempty))
@@ -112,7 +111,7 @@ spec = do
         b "abc" `shouldThrow` isUserError
 
   describe "splitElem" do
-    let bp :: Iso IdentityStateContext IO IO Text [Text]
+    let bp :: Iso IdentityState IO IO Text [Text]
         bp = splitElem ':'
         f = runForward bp
         b = runBackward bp
@@ -136,7 +135,7 @@ spec = do
 
   fb
     "splitOn"
-    (splitOn $ stripPrefix "ab" :: Iso IdentityStateContext IO IO Text [Text])
+    (splitOn $ stripPrefix "ab" :: Iso IdentityState IO IO Text [Text])
     (\f -> do
       it "empty" $ limit do
         f mempty >>= (`shouldBe` (mempty,mempty))
@@ -169,7 +168,7 @@ spec = do
         x `shouldBe` (xs,"abcdababefab")
 
   fb "whileM"
-    (whileM (peek (memptyWrite one >>= \x -> pure $ x /= 'x')) one :: Iso IdentityStateContext IO IO Text [Char])
+    (whileM (peek (memptyWrite one >>= \x -> pure $ x /= 'x')) one :: Iso IdentityState IO IO Text [Char])
     (\f -> do
       it "empty" do
         f mempty >>= (`shouldBe` (mempty,mempty))
@@ -192,9 +191,9 @@ spec = do
 
   --describe "whileId" do
   --  describe "THIS IS WACK" do
-  --    let o = one :: Iso IdentityStateContext Maybe Maybe Text Char
+  --    let o = one :: Iso IdentityState Maybe Maybe Text Char
   --        m2i x = Identity . fromMaybe (False,x)
-  --        bp :: Iso IdentityStateContext Identity Identity Text [Maybe Char]
+  --        bp :: Iso IdentityState Identity Identity Text [Maybe Char]
   --        bp = whileId
   --          ( memptyWrite $ mapMs' m2i m2i $ comap (fromMaybe '0') $ peek do
   --            x <- o
@@ -230,9 +229,9 @@ spec = do
   --        b "abxc" `shouldBe` Identity ("ab","ab")
 
   --describe "untilId" do
-  --  let bp :: Iso IdentityStateContext Identity Identity String [String]
+  --  let bp :: Iso IdentityState Identity Identity String [String]
   --      bp = untilId isNull bp'
-  --      bp' :: Iso IdentityStateContext Identity Identity String String
+  --      bp' :: Iso IdentityState Identity Identity String String
   --      bp' = split do
   --        x <- get
   --        maybe undefined (\(y,z) -> y <$ put z) $

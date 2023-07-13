@@ -28,7 +28,7 @@ module Prelude
   , module Control.Monad.State
   , module Data.MonoTraversable
   , module Data.Tuple
-  , module Biparse.Text.PositionContext
+  , module Biparse.Text.Context.LineColumn
   , module Biparse.Biparser
   , module Control.Monad.Writer
   , module Biparse.Biparser.StateWriter
@@ -39,6 +39,7 @@ module Prelude
   , module Data.Sequence
   , module Data.Vector
   , module Data.Kind
+  , module Biparse.Context.IdentityState
 
   , fb
   , errorPosition
@@ -46,11 +47,12 @@ module Prelude
   , FM
   ) where
 
+import Biparse.Context.IdentityState (IdentityState)
 import Data.Sequence (Seq)
 import Data.Vector (Vector)
 import Data.ByteString (ByteString)
 import GHC.Float (Double)
-import Biparse.Text.PositionContext (LineColumn, LinesOnly, Position(Position,line,column))
+import Biparse.Text.Context.LineColumn (LineColumn, LinesOnly, Position(Position,line,column), ErrorPosition(ErrorPosition))
 import Data.Sequences (drop, index)
 import Data.Functor.Identity (Identity(Identity, runIdentity))
 import Data.Maybe (Maybe(Just,Nothing), maybe)
@@ -82,7 +84,7 @@ import Data.MonoTraversable (headMay)
 import Data.Tuple (fst, snd)
 import Biparse.Biparser hiding (Biparser, Iso, Unit, Const, ConstU)
 import Control.Monad.Writer (WriterT(runWriterT))
-import Biparse.Biparser.StateWriter (Biparser, Iso, Unit, Const, ConstU, runForward, runBackward, evalForward)
+import Biparse.Biparser.StateWriter (Biparser, Iso, Unit, Const, ConstU, runForward, runBackward, evalForward, Forward)
 import Data.Either (Either(Left,Right), fromRight)
 import System.IO.Error (isUserError)
 import Data.Kind (Type)
@@ -90,7 +92,7 @@ import Data.Kind (Type)
 import System.Timeout (timeout)
 
 fb :: forall c s m n u v.
-  (
+  ( Forward c s m
   )
   => String
   -> Biparser c s m n u v
@@ -101,14 +103,14 @@ fb describeLabel bp fws bws = describe describeLabel do
   describe "forward" $ fws $ runForward bp
   describe "backward" $ bws $ runBackward bp
 
-errorPosition :: Int -> Int -> Either (Position a) b -> Bool
+errorPosition :: Int -> Int -> FM b -> Bool
 errorPosition l c = \case
-  Left (Position {line,column}) -> l == line && c == column
+  Left (ErrorPosition l' c' _) -> l == l' && c == c'
   _ -> False
 
 
 limit :: IO a -> IO a
 limit = (>>= maybe (fail "Timeout") pure) . timeout 500
 
-type FM = Either (Position String)
+type FM = Either ErrorPosition
 

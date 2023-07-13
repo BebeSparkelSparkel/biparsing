@@ -3,11 +3,11 @@ module Biparse.GeneralSpec where
 import Biparse.Text.Numeric (naturalBaseTen)
 
 spec :: Spec
-spec = focus do
+spec = do
   describe "take" do
-    describe "IdentityStateContext" do
+    describe "IdentityState" do
       fb "uni"
-        (take 'a' :: Unit IdentityStateContext Text IO IO)
+        (take 'a' :: Unit IdentityState Text IO IO)
         (\f -> do
           it "take matching" $ f "abc" >>= (`shouldBe` ((), "bc"))
 
@@ -20,7 +20,7 @@ spec = focus do
           it "print one" $ b () >>= (`shouldBe` ((), "a"))
 
       fb "di"
-        (take 'a' *> take 'b' :: Unit IdentityStateContext Text IO IO)
+        (take 'a' *> take 'b' :: Unit IdentityState Text IO IO)
         (\f -> do
           it "take two matching" $ f "abc" >>= (`shouldBe` ((), "c"))
         )
@@ -57,8 +57,8 @@ spec = focus do
    \_ -> pure ()
 
   describe "takeDi" do
-    fb "IdentityStateContext"
-      (takeDi 'x' 1 :: Iso IdentityStateContext IO IO Text Int)
+    fb "IdentityState"
+      (takeDi 'x' 1 :: Iso IdentityState IO IO Text Int)
       (\f -> do
         it "matches" $ f "xabc" >>= (`shouldBe` (1,"abc"))
 
@@ -76,8 +76,8 @@ spec = focus do
       \_ -> pure ()
 
   describe "takeNot" do
-    fb "IdentityStateContext"
-      (takeNot 'A' :: Iso IdentityStateContext IO IO String Char)
+    fb "IdentityState"
+      (takeNot 'A' :: Iso IdentityState IO IO String Char)
       (\f -> do
         it "takes non-matching element" $ f "bc" >>= (`shouldBe` ('b', "c"))
 
@@ -185,7 +185,7 @@ spec = focus do
   fb "optionMaybe"
     ((,) <$> optionMaybe (takeUni 1 `upon` mapBool $> "one")
          <*> optionMaybe (takeUni 2 `upon` mapBool $> "two")
-    :: Biparser IdentityStateContext (Vector Int) IO IO Bool (Maybe String, Maybe String))
+    :: Biparser IdentityState (Vector Int) IO IO Bool (Maybe String, Maybe String))
     (\f -> do
       it "matches both" do
         f [1, 2] >>= (`shouldBe` ((Just "one", Just "two"), mempty))
@@ -205,8 +205,8 @@ spec = focus do
       it "prints second" $ b False >>= (`shouldBe` ((Nothing, Just "two"), [2]))
 
   describe "stripPrefix" do
-    fb "IdentityStateContext"
-      (stripPrefix "abc" :: Unit IdentityStateContext Text IO IO)
+    fb "IdentityState"
+      (stripPrefix "abc" :: Unit IdentityState Text IO IO)
       (\f -> do
         it "match" $ f "abcdef" >>= (`shouldBe` ((), "def"))
 
@@ -230,7 +230,7 @@ spec = focus do
         it "prints prefix" $ b () >>= (`shouldBe` ((), "abc"))
 
   fb "not"
-    (not $ (== 'x') <$> one :: Biparser IdentityStateContext String IO IO Char Bool)
+    (not $ (== 'x') <$> one :: Biparser IdentityState String IO IO Char Bool)
     (\f -> do
       it "true" $ f "ab" >>= (`shouldBe` (True,"b"))
 

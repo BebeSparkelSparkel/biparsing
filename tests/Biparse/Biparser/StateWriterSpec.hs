@@ -15,7 +15,7 @@ spec = do
   --  $ all 
   --    ( comap runIdentity $ fmap Identity
   --    $ takeUni "abc" <|> takeUni "def"
-  --    :: Iso IdentityStateContext (Except String) IO [String] (Identity String))
+  --    :: Iso IdentityState (Except String) IO [String] (Identity String))
   --  :: Iso LineColumn FM IO (Position String) [Identity String])
   --  (\f -> do
   --    it "empty" do

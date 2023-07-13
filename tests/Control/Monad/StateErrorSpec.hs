@@ -6,5 +6,5 @@ spec :: Spec
 spec = do
   describe "Alternative" do
     it "empty" $ limit $
-      runSET (empty :: StateErrorT LineColumn (Position Text) FM ()) "abc" `shouldBe` Left ""
+      runSET (empty :: StateErrorT LineColumn (Position Text) FM ()) "abc" `shouldSatisfy` errorPosition 1 1
 

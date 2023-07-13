@@ -7,6 +7,7 @@ dependencies:
       - hiding (Prelude)
   - mtl
   - mono-traversable
+  - transformers
 
 default-extensions:
   - BlockArguments
@@ -29,6 +30,9 @@ default-extensions:
   - FunctionalDependencies
   - StandaloneKindSignatures
   - DuplicateRecordFields
+  - GeneralizedNewtypeDeriving
+  - StandaloneDeriving
+  - QuantifiedConstraints
 
 library:
   source-dirs: src/
@@ -45,7 +49,7 @@ library:
     - Prelude
     #- Paths_biparsing
   ghc-options:
-    - -Werror
+    #- -Werror
     - -Weverything
 
     - -Wno-missing-kind-signatures
@@ -77,4 +81,20 @@ tests:
     default-extensions:
       - OverloadedStrings
       - OverloadedLists
+      - NamedFieldPuns
+    ghc-options:
+      - -Werror
+      - -Weverything
 
+      - -Wno-missing-kind-signatures
+      - -Wno-missing-safe-haskell-mode
+      - -Wno-implicit-prelude
+      - -Wno-safe
+      - -Wno-unsafe
+      - -Wno-missing-deriving-strategies
+      - -Wno-missing-local-signatures
+      - -Wno-missing-import-lists
+      - -Wno-missing-export-lists
+      - -Wno-incomplete-uni-patterns
+
+      - -Wno-unused-packages

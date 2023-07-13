@@ -3,9 +3,9 @@ module Biparse.BiparserSpec where
 spec :: Spec
 spec = do
   describe "one" do
-    describe "IdentityStateContext" do
+    describe "IdentityState" do
       fb "id"
-        (one :: Iso IdentityStateContext IO IO String Char)
+        (one :: Iso IdentityState IO IO String Char)
         (\f -> do
           it "one use" do
             x <- f "abc"
@@ -18,7 +18,7 @@ spec = do
           it "typical use" $ b 'a' >>= (`shouldBe` ('a',"a"))
 
       fb "tuple"
-        ((,) <$> one `upon` fst <*> one `upon` snd :: Iso IdentityStateContext IO IO String (Char,Char))
+        ((,) <$> one `upon` fst <*> one `upon` snd :: Iso IdentityState IO IO String (Char,Char))
         (\f -> do
           it "used twice" do
             x <- f "abc"
@@ -63,8 +63,8 @@ spec = do
           put $ drop 2 x
           return y
 
-    fb "IdentityStateContext"
-      (takeTwo @IdentityStateContext @IO @String)
+    fb "IdentityState"
+      (takeTwo @IdentityState @IO @String)
       (\f -> do
         it "succeeds" $ f "abc" >>= (`shouldBe` ("ab", "c"))
 
@@ -76,7 +76,7 @@ spec = do
         it "prints all" $ b "abc" >>= (`shouldBe` ("abc","abc"))
 
     fb "LineColumn"
-      (takeTwo @LineColumn @(Either (Position String)) @(Position String))
+      (takeTwo :: Iso LineColumn FM IO (Position String) String)
       (\f -> do
         it "succeeds" $ f "abc" `shouldBe` Right ("ab", Position 1 3 "c")
 
@@ -89,7 +89,7 @@ spec = do
 
   describe "peek" do
     fb "simple"
-      (peek one :: Iso IdentityStateContext IO IO String Char)
+      (peek one :: Iso IdentityState IO IO String Char)
       (\f -> do
         it "none consumed" do
           x <- f "abc"
@@ -99,8 +99,8 @@ spec = do
         it "prints char" $ b 'a' >>= (`shouldBe` ('a',"a"))
 
     describe "Alternative" do
-      fb "IdentityStateContext"
-        (peek (takeUni 'x') <|> takeUni 'a' :: Iso IdentityStateContext IO IO String Char)
+      fb "IdentityState"
+        (peek (takeUni 'x') <|> takeUni 'a' :: Iso IdentityState IO IO String Char)
         (\f -> do
           it "take first" do
             x <- f "xa"
@@ -132,7 +132,7 @@ spec = do
           it "prints second" $ b 'a' >>= (`shouldBe` ('a',"a"))
 
   describe "try" do
-    let bp = (try $ one <* take 'b' :: Biparser IdentityStateContext (Seq Char) IO IO Char Char)
+    let bp = (try $ one <* take 'b' :: Biparser IdentityState (Seq Char) IO IO Char Char)
         f = runForward bp
         b = runBackward bp
 
@@ -156,8 +156,8 @@ spec = do
           x `shouldBe` ('z',"zb")
       
   describe "isNull" do
-    fb "IdentityStateContext"
-      (isNull :: ConstU IdentityStateContext String Identity Identity [()] Bool)
+    fb "IdentityState"
+      (isNull :: ConstU IdentityState String Identity Identity [()] Bool)
       (\f -> do
         it "true" $ f mempty `shouldBe` Identity (True,mempty)
 
@@ -208,8 +208,8 @@ spec = do
 
         it "contains break" $ b "cdab" >>= (`shouldBe` ("cdab", "cdabab"))
 
-    fb "IdentityStateContext"
-      (breakWhen' $ stripPrefix "ab" :: Iso IdentityStateContext IO IO String String)
+    fb "IdentityState"
+      (breakWhen' $ stripPrefix "ab" :: Iso IdentityState IO IO String String)
       (\f -> do
         it "empty" $ limit $
           f "" `shouldThrow` isUserError

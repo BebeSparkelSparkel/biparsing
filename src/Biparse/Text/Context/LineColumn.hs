@@ -1,11 +1,12 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-deprecations #-}
-module Biparse.Text.PositionContext
+module Biparse.Text.Context.LineColumn
   ( LineColumn
   , LinesOnly
   , Position(..)
   , startLineColumn
+  , ErrorPosition(..)
   ) where
 
 import Control.Monad.StateError (StateErrorT(StateErrorT), WrapError(Error,SubError,wrapError))
@@ -68,21 +69,43 @@ instance IsList text => IsList (Position text) where
   fromList = startLineColumn . GE.fromList
   toList = GE.toList . subState
 
-instance MonadError (Error c (Position text)) m => MonadFail (StateErrorT c (Position text) m) where
+-- * Positional Errors
+
+data ErrorPosition
+  = ErrorPosition Int Int String
+  | NoPosition String
+  deriving (Show, Eq)
+
+instance
+  ( MonadError (Error c (Position text) m) m
+  , WrapError c (Position text) m
+  , ErrorPosition ~ SubError c (Position text) m
+  ) => MonadFail (StateErrorT c (Position text) m) where
   fail x = StateErrorT do
-    s <- get
-    throwError $ wrapError @c (x,s)
+    s@(Position l c _) <- get
+    throwError $ wrapError @c @_ @m (ErrorPosition l c x,s)
 
-deriving instance
-  ( MonadError (String, Position text) m
-  )
-  => MonadError (String, Position text) (StateErrorT c (Position text) m)
+deriving instance MonadError ErrorPosition m => MonadError ErrorPosition (StateErrorT LinesOnly (Position text) m)
+deriving instance MonadError ErrorPosition m => MonadError ErrorPosition (StateErrorT LineColumn (Position text) m)
 
-instance WrapError c (Position text) where
-  type Error    c (Position text) = Position String
-  type SubError c (Position text) = String
-  wrapError (e,p) = p {subState = e}
+instance WrapError LineColumn (Position text) (m ErrorPosition) where
+  type Error    LineColumn (Position text) (m ErrorPosition) = ErrorPosition
+  type SubError LineColumn (Position text) (m ErrorPosition) = ErrorPosition
+  wrapError = \case
+    (NoPosition e, Position l c _) -> ErrorPosition l c e
+    (x, _) -> x
 
-instance E.Error (Position String) where
-  noMsg = fromString ""
-  strMsg = fromString
+instance WrapError LinesOnly (Position text) (m ErrorPosition) where
+  type Error    LinesOnly (Position text) (m ErrorPosition) = ErrorPosition
+  type SubError LinesOnly (Position text) (m ErrorPosition) = ErrorPosition
+  wrapError = \case
+    (NoPosition e, Position l c _) -> ErrorPosition l c e
+    (x, _) -> x
+
+instance WrapError LineColumn s Identity where
+  type Error LineColumn s Identity = Void
+  type SubError LineColumn s Identity = Void
+  wrapError = fst
+
+instance E.Error ErrorPosition where strMsg = NoPosition
+

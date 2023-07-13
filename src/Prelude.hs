@@ -33,6 +33,7 @@ module Prelude
   , module Data.Coerce
   , module Control.Monad.State
   , module Control.Monad.Except
+  , module Data.Void
 
   , (|>)
   , (^:^)
@@ -41,6 +42,7 @@ module Prelude
   , (>>>)
   ) where
 
+import Data.Void (Void, absurd)
 import Control.Monad.Except (MonadError(throwError))
 import Data.Coerce (Coercible, coerce)
 import Control.Applicative (Applicative((<*>),pure), (*>), (<*), liftA2, Alternative(empty,(<|>)))

@@ -43,7 +43,6 @@ module Biparse.Biparser
   , UpdateStateWithElement(..)
   , ElementContext
   , ReplaceSubState(..)
-  , IdentityStateContext
   , one
   , split
   , peek
@@ -377,20 +376,6 @@ type ElementContext context state = (GetSubState context state, UpdateStateWithE
 
 
 class ReplaceSubState s ss s' | s ss -> s' where replaceSubState :: s -> ss -> s'
-
--- ** Identity Context
--- Use as the context if @state ~ SubState IdentityStateContext state@ basically if there is no context outside the 
-
-data IdentityStateContext
-type instance SubState IdentityStateContext a = a
-instance GetSubState IdentityStateContext state where
-  getSubState = id
-
-instance UpdateStateWithSubState IdentityStateContext state where
-  updateSubStateContext _ _ s = s
-
-instance UpdateStateWithElement IdentityStateContext state where
-  updateElementContext _ _ s = s
 
 instance (Functor m, Functor n) => Functor (Biparser c s m n u) where
   fmap f (Biparser fw' bw') = Biparser
