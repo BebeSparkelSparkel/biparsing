@@ -40,6 +40,12 @@ module Prelude
   , module Data.Vector
   , module Data.Kind
   , module Biparse.Context.IdentityState
+  , module GHC.IO.Exception
+  , module Data.Void
+  , module Control.Monad.Except
+  , module Control.Monad.StateError
+  , module Data.MonoTraversable.Unprefixed
+  , module Biparse.Text
 
   , fb
   , errorPosition
@@ -53,7 +59,8 @@ import Data.Vector (Vector)
 import Data.ByteString (ByteString)
 import GHC.Float (Double)
 import Biparse.Text.Context.LineColumn (LineColumn, LinesOnly, Position(Position,line,column), ErrorPosition(ErrorPosition))
-import Data.Sequences (drop, index)
+import Biparse.Text (CharElement)
+import Data.Sequences (drop, index, cons)
 import Data.Functor.Identity (Identity(Identity, runIdentity))
 import Data.Maybe (Maybe(Just,Nothing), maybe)
 import Data.Int (Int)
@@ -80,30 +87,41 @@ import Control.Applicative (pure, (<|>), (<*), (*>), (<*>), empty, liftA2)
 import Data.Functor (Functor(fmap), (<$>), ($>))
 import Data.Bifunctor (first)
 import Control.Monad.State (StateT(runStateT), get, put)
-import Data.MonoTraversable (headMay)
+import Data.MonoTraversable (Element, headMay)
+import Data.MonoTraversable.Unprefixed (toList)
 import Data.Tuple (fst, snd)
 import Biparse.Biparser hiding (Biparser, Iso, Unit, Const, ConstU)
 import Control.Monad.Writer (WriterT(runWriterT))
-import Biparse.Biparser.StateWriter (Biparser, Iso, Unit, Const, ConstU, runForward, runBackward, evalForward, Forward)
+import Biparse.Biparser.StateWriter (Biparser, Iso, Unit, Const, ConstU, runForward, runBackward, evalForward)
 import Data.Either (Either(Left,Right), fromRight)
 import System.IO.Error (isUserError)
 import Data.Kind (Type)
+import GHC.IO.Exception (IOException)
+import Data.Void (Void)
+import Control.Monad.Except (MonadError(throwError,catchError))
+import Control.Monad.ChangeMonad (ChangeMonad)
+import Control.Monad.StateError (ResultMonad(ResultingMonad), ErrorState)
 
+import Biparse.Biparser.StateWriter (WrapError)
 import System.Timeout (timeout)
 
-fb :: forall c s m n u v.
-  ( Forward c s m
+fb :: forall c s m m' em n u v.
+  ( ChangeMonad m (ResultingMonad m)
+  , ChangeMonad (ResultingMonad m) m'
+  , m' ~ ResultingMonad (ResultingMonad m)
+  , ResultMonad m
+  , ResultMonad (ResultingMonad m)
   )
   => String
-  -> Biparser c s m n u v
-  -> ((s -> m (v, s)) -> Spec)
+  -> Biparser c s m em n u v
+  -> ((s -> m' (v, s)) -> Spec)
   -> ((u -> n (v, SubState c s)) -> Spec)
   -> Spec
 fb describeLabel bp fws bws = describe describeLabel do
   describe "forward" $ fws $ runForward bp
   describe "backward" $ bws $ runBackward bp
 
-errorPosition :: Int -> Int -> FM b -> Bool
+errorPosition :: Int -> Int -> Either ErrorPosition b -> Bool
 errorPosition l c = \case
   Left (ErrorPosition l' c' _) -> l == l' && c == c'
   _ -> False
@@ -112,5 +130,5 @@ errorPosition l c = \case
 limit :: IO a -> IO a
 limit = (>>= maybe (fail "Timeout") pure) . timeout 500
 
-type FM = Either ErrorPosition
+type FM text = Either (ErrorState String (Position text))
 

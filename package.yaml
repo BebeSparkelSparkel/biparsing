@@ -62,6 +62,8 @@ library:
 
     - -Wno-unused-packages
 
+      #- -fdefer-type-errors
+
 tests:
   spec:
     main: Spec.hs
@@ -83,8 +85,9 @@ tests:
       - OverloadedLists
       - NamedFieldPuns
     ghc-options:
-      - -Werror
+      #- -Werror
       - -Weverything
+      - -fprint-potential-instances
 
       - -Wno-missing-kind-signatures
       - -Wno-missing-safe-haskell-mode

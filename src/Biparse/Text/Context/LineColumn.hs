@@ -9,11 +9,14 @@ module Biparse.Text.Context.LineColumn
   , ErrorPosition(..)
   ) where
 
-import Control.Monad.StateError (StateErrorT(StateErrorT), WrapError(Error,SubError,wrapError))
+import Biparse.Error.WrapError (WrapError(Error,wrapError))
 import Biparse.Biparser (SubState, GetSubState(getSubState), UpdateStateWithElement(updateElementContext), UpdateStateWithSubState(updateSubStateContext), ReplaceSubState(replaceSubState))
+import Control.Monad.StateError (ErrorState(ErrorState))
 import GHC.Exts (IsList(Item))
 import GHC.Exts qualified as GE
+import Control.Monad.ChangeMonad (ChangeMonad(ChangeFunction,changeMonad), ResultMonad(ResultingMonad,resultMonad))
 
+import GHC.Err (undefined)
 import Control.Monad.Trans.Error qualified as E
 
 -- * Tracks line and column position
@@ -76,36 +79,36 @@ data ErrorPosition
   | NoPosition String
   deriving (Show, Eq)
 
-instance
-  ( MonadError (Error c (Position text) m) m
-  , WrapError c (Position text) m
-  , ErrorPosition ~ SubError c (Position text) m
-  ) => MonadFail (StateErrorT c (Position text) m) where
-  fail x = StateErrorT do
-    s@(Position l c _) <- get
-    throwError $ wrapError @c @_ @m (ErrorPosition l c x,s)
+instance E.Error ErrorPosition where strMsg = undefined
 
-deriving instance MonadError ErrorPosition m => MonadError ErrorPosition (StateErrorT LinesOnly (Position text) m)
-deriving instance MonadError ErrorPosition m => MonadError ErrorPosition (StateErrorT LineColumn (Position text) m)
+instance E.Error (ErrorState String (Position text)) where strMsg msg = undefined
+--instance Monoid text => E.Error (ErrorState String (Position text)) where strMsg msg = ErrorState msg $ Position (-1) (-1) mempty
 
-instance WrapError LineColumn (Position text) (m ErrorPosition) where
-  type Error    LineColumn (Position text) (m ErrorPosition) = ErrorPosition
-  type SubError LineColumn (Position text) (m ErrorPosition) = ErrorPosition
-  wrapError = \case
-    (NoPosition e, Position l c _) -> ErrorPosition l c e
-    (x, _) -> x
+instance MonadFail (Either ErrorPosition) where fail = Left . NoPosition
 
-instance WrapError LinesOnly (Position text) (m ErrorPosition) where
-  type Error    LinesOnly (Position text) (m ErrorPosition) = ErrorPosition
-  type SubError LinesOnly (Position text) (m ErrorPosition) = ErrorPosition
-  wrapError = \case
-    (NoPosition e, Position l c _) -> ErrorPosition l c e
-    (x, _) -> x
+instance WrapError ErrorPosition (Position text) where
+  type Error ErrorPosition (Position text) = ErrorPosition
+  wrapError e (Position l c _) = case e of
+    NoPosition msg -> ErrorPosition l c msg
+    _ -> undefined
 
-instance WrapError LineColumn s Identity where
-  type Error LineColumn s Identity = Void
-  type SubError LineColumn s Identity = Void
-  wrapError = fst
+instance WrapError String (Position text) where
+  type Error String (Position text) = ErrorPosition
+  wrapError msg (Position l c _) = ErrorPosition l c msg
 
-instance E.Error ErrorPosition where strMsg = NoPosition
+instance ResultMonad (Either ErrorPosition) where
+  type ResultingMonad (Either ErrorPosition) = Either ErrorPosition
+  resultMonad = ()
 
+instance ChangeMonad (Either (ErrorState String (Position text))) (Either ErrorPosition) where
+  type ChangeFunction (Either (ErrorState String (Position text))) (Either ErrorPosition) =
+    ErrorState String (Position text) -> ErrorPosition
+  changeMonad = first
+
+instance ChangeMonad (Either ErrorPosition) (Either ErrorPosition) where
+  type ChangeFunction (Either ErrorPosition) (Either ErrorPosition) = ()
+  changeMonad = const id
+
+--instance ResultMonad (Either (ErrorState String (Position text))) where
+--  type ResultingMonad (Either (ErrorState String (Position text))) = Either ErrorPosition
+--  resultMonad = _

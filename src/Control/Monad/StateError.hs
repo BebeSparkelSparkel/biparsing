@@ -1,56 +1,67 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE UndecidableInstances #-}
 module Control.Monad.StateError
   ( StateErrorT(..)
+  , ErrorState(..)
   , stateErrorT
   , runSET
-  , WrapError(..)
+  , ResultMonad(..)
   ) where
 
-import Biparse.Context.IdentityState (IdentityState)
-import System.IO (IO)
-import GHC.IO.Exception (IOException, userError)
 import Control.Monad.Except (catchError)
+import Control.Monad.ChangeMonad (ChangeMonad(ChangeFunction,changeMonad), ResultMonad(ResultingMonad,resultMonad))
+import Biparse.Error.WrapError (WrapError(Error,wrapError))
+import Control.Monad.Trans.Error qualified as E
+import Control.Exception (IOException)
+
+import System.IO (IO)
 
 -- * Allow errors to be combined with state information.
 
-newtype StateErrorT c s m a = StateErrorT {runStateErrorT :: StateT s m a}
-  deriving (Functor, Applicative, Alternative, Monad, MonadPlus)
+newtype StateErrorT s m a = StateErrorT {runStateErrorT :: StateT s m a}
+  deriving (Functor, Applicative, Monad)
 
-deriving instance Monad m => MonadState s (StateErrorT c s m)
-deriving instance MonadFail m => MonadFail (StateErrorT IdentityState s m)
+deriving instance Monad m => MonadState s (StateErrorT s m)
 
-deriving instance {-# OVERLAPS #-}  MonadError IOException (StateErrorT IdentityState s IO)
-deriving instance {-# OVERLAPPABLE #-} MonadError e m => MonadError e (StateErrorT IdentityState s m)
+data ErrorState e s = ErrorState {error :: e, state :: s} deriving (Show, Eq)
 
-stateErrorT :: forall c s m a. (s -> m (a, s)) -> StateErrorT c s m a
+deriving instance {-# OVERLAPS #-} Alternative (StateErrorT s Maybe)
+deriving instance {-# OVERLAPS #-} Alternative (StateErrorT s IO)
+instance {-# OVERLAPPABLE #-} (Monoid e, MonadError (ErrorState e s) m, MonadPlus m) => Alternative (StateErrorT s m) where
+  empty = throwError mempty
+  x <|> y = StateErrorT $ runStateErrorT x <|> runStateErrorT y
+
+deriving instance {-# OVERLAPS #-} MonadPlus (StateErrorT s Maybe)
+deriving instance {-# OVERLAPS #-} MonadPlus (StateErrorT s IO)
+deriving instance {-# OVERLAPPABLE #-} (Monoid e, MonadError (ErrorState e s) m, MonadPlus m) => MonadPlus (StateErrorT s m)
+
+deriving instance {-# OVERLAPS #-} MonadFail (StateErrorT s Maybe)
+deriving instance {-# OVERLAPS #-} MonadFail (StateErrorT s IO)
+instance {-# OVERLAPPABLE #-} MonadError (ErrorState String s) m => MonadFail (StateErrorT s m) where
+  fail msg = throwError msg
+
+deriving instance {-# OVERLAPS #-} MonadError () (StateErrorT s Maybe)
+deriving instance {-# OVERLAPS #-} MonadError IOException (StateErrorT s IO)
+instance {-# OVERLAPPABLE #-} MonadError (ErrorState e s) m => MonadError e (StateErrorT s m) where
+  throwError e = stateErrorT \s -> throwError $ ErrorState e s
+  catchError x eh = stateErrorT \s -> catchError (r x s) \(ErrorState e s') -> r (eh e) s'
+    where r = runStateT . runStateErrorT
+
+stateErrorT :: forall s m a. (s -> m (a, s)) -> StateErrorT s m a
 stateErrorT = StateErrorT . StateT
 
-runSET :: forall c s m a. StateErrorT c s m a -> s -> m (a, s)
-runSET = runStateT . runStateErrorT
+runSET :: forall s m a.
+  ( ChangeMonad m (ResultingMonad m)
+  , ResultMonad m
+  )
+  => StateErrorT s m a
+  -> s
+  -> ResultingMonad m (a, s)
+runSET = (changeMonad (resultMonad @m) .) . runStateT . runStateErrorT
 
--- * Allows including state in the error.
+instance
+  ( ChangeFunction (Either (ErrorState e s)) (Either (Error e s)) ~ (ErrorState e s -> Error e s)
+  , WrapError e s
+  ) => ResultMonad (Either (ErrorState e s)) where
+  type ResultingMonad (Either (ErrorState e s)) = Either (Error e s)
+  resultMonad (ErrorState e s) = wrapError e s
 
-class WrapError c s (m :: Type -> Type) where
-  type Error c s m :: Type
-  type SubError c s m :: Type
-  wrapError :: (SubError c s m, s) -> Error c s m
-
-instance WrapError IdentityState s IO where
-  type Error IdentityState s IO = IOException
-  type SubError IdentityState s IO = IOException
-  wrapError = fst
-
-instance WrapError IdentityState s Maybe where
-  type Error IdentityState s Maybe = ()
-  type SubError IdentityState s Maybe = ()
-  wrapError = const ()
-
-instance WrapError IdentityState s Identity where
-  type Error IdentityState s Identity = Void
-  type SubError IdentityState s Identity = Void
-  wrapError = fst
-
-instance MonadError Void Identity where
-   throwError = absurd
-   catchError = const
