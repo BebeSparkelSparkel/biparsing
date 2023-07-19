@@ -3,6 +3,7 @@ module Biparse.Context.IdentityState
   ) where
 
 import Biparse.Biparser (SubState, GetSubState(getSubState), UpdateStateWithSubState(updateSubStateContext), UpdateStateWithElement(updateElementContext))
+import Control.Monad.StateError (ErrorInstance(NewtypeInstance), ErrorContext)
 
 -- * Identity Context
 -- Use as the context if @state ~ SubState IdentityState state@ basically if there is no context outside the 
@@ -17,4 +18,6 @@ instance UpdateStateWithSubState IdentityState state where
 
 instance UpdateStateWithElement IdentityState state where
   updateElementContext _ _ s = s
+
+type instance ErrorContext IdentityState = NewtypeInstance
 

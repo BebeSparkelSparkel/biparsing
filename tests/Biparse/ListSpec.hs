@@ -85,7 +85,7 @@ spec = do
 
   fb
     "all"
-    (all $ takeUni 'a' <|> takeUni 'b' :: Iso LineColumn FM ErrorPosition IO (Position Text) [Char])
+    (all $ takeUni 'a' <|> takeUni 'b' :: Iso LineColumn (FM Text) ErrorPosition IO (Position Text) [Char])
     (\f -> do
       it "empty" do
         f "" `shouldBe` Right (mempty, "")

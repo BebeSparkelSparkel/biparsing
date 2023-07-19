@@ -8,11 +8,11 @@ spec :: Spec
 spec = do
   describe "Alternative" do
     it "empty" $ limit $
-      runSET (empty :: StateErrorT (Position Text) (Either (ErrorState String (Position Text))) ()) "abc" `shouldSatisfy` errorPosition 1 1
+      runSET (empty :: StateErrorT ErrorStateInstance (Position Text) (Either (ErrorState String (Position Text))) ()) "abc" `shouldSatisfy` errorPosition 1 1
 
   describe "MonadError" do
     it "catch state is the last state before fail" $ limit do
-      let x :: StateErrorT Int (Either (ErrorState String Int)) Char
+      let x :: StateErrorT ErrorStateInstance Int (Either (ErrorState String Int)) Char
           x = catchError
             (do
               put 2

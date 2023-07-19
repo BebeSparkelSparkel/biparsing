@@ -17,7 +17,7 @@ spec = do
   --    ( comap runIdentity $ fmap Identity
   --    $ takeUni "abc" <|> takeUni "def"
   --    :: Iso IdentityState (Except String) IO [String] (Identity String))
-  --  :: Iso LineColumn FM IO (Position String) [Identity String])
+  --  :: Iso LineColumn (FM String) IO (Position String) [Identity String])
   --  (\f -> do
   --    it "empty" do
   --      f "" `shouldBe` Right (mempty, Position 1 1 mempty)
@@ -53,10 +53,10 @@ spec = do
   --      b ["ghi"] `shouldThrow` isUserError
 
   fb "zoom"
-    (zoom @LinesOnly @LinesOnly @(Position [Text]) @(Position Text)
-      (one :: Iso LinesOnly FM ErrorPosition IO (Position [Text]) Text)
-      (naturalBaseTen :: Iso LinesOnly FM ErrorPosition IO (Position Text) Word)
-    :: Iso LinesOnly FM ErrorPosition IO (Position [Text]) Word)
+    (zoom @LinesOnly @LinesOnly @(Position [Text]) @(Position Text) @(FM [Text]) @(FM Text)
+      (one :: Iso LinesOnly (FM [Text]) ErrorPosition IO (Position [Text]) Text)
+      (naturalBaseTen :: Iso LinesOnly (FM Text) ErrorPosition IO (Position Text) Word)
+    :: Iso LinesOnly (FM [Text]) ErrorPosition IO (Position [Text]) Word)
     (\f -> do
       it "empty" do
         f [] `shouldSatisfy` errorPosition 1 1
@@ -72,9 +72,9 @@ spec = do
       it "prints Word" $ b 456 >>= (`shouldBe` (456, ["456"]))
 
   describe "runForward" do
-    let bp :: Unit LineColumn (Position String) FM ErrorPosition IO
+    let bp :: Unit LineColumn (Position String) (FM String) ErrorPosition IO
         bp = take 'a' *> take 'b'
-        f :: Position String -> FM ((), Position String)
+        f :: Position String -> Either ErrorPosition ((), Position String)
         f = runForward bp
 
     it "position incremented correctly" $

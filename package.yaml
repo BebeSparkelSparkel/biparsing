@@ -33,6 +33,7 @@ default-extensions:
   - GeneralizedNewtypeDeriving
   - StandaloneDeriving
   - QuantifiedConstraints
+  - DataKinds
 
 library:
   source-dirs: src/

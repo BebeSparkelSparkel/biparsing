@@ -59,13 +59,13 @@ spec = do
       prop "writes all" \t -> b t >>= (`shouldBe` (t, t))
 
   describe "add position to error" do
-    let bp :: Const LineColumn (Position Text) FM ErrorPosition IO ()
+    let bp :: Const LineColumn (Position Text) (Either (ErrorState String (Position Text))) ErrorPosition IO ()
         bp = take 'a' *> take 'b'
-        f :: Position Text -> FM ((), Position Text)
+        f :: Position Text -> Either ErrorPosition ((), Position Text)
         f = runForward bp
 
     it "empty" do
       f "" `shouldSatisfy` errorPosition 1 1
 
-type IsoLocal text a = Iso LineColumn FM ErrorPosition IO (Position text) a
+type IsoLocal text a = Iso LineColumn (FM text) ErrorPosition IO (Position text) a
 

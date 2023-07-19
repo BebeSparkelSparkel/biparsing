@@ -1,7 +1,10 @@
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE DataKinds #-}
 module Control.Monad.StateError
   ( StateErrorT(..)
   , ErrorState(..)
+  , ErrorInstance(..)
+  , ErrorContext
   , stateErrorT
   , runSET
   , ResultMonad(..)
@@ -17,43 +20,47 @@ import System.IO (IO)
 
 -- * Allow errors to be combined with state information.
 
-newtype StateErrorT s m a = StateErrorT {runStateErrorT :: StateT s m a}
+newtype StateErrorT (i :: ErrorInstance) s m a = StateErrorT {runStateErrorT :: StateT s m a}
   deriving (Functor, Applicative, Monad)
 
-deriving instance Monad m => MonadState s (StateErrorT s m)
+-- | Used to determine the instances to use for error handling from the context
+data ErrorInstance
+  = NewtypeInstance -- | Use the StateT instance
+  | ErrorStateInstance -- | Use MonadError (ErrorStateA e s) m
+
+type ErrorContext :: Type -> ErrorInstance
+type family ErrorContext c
+
+deriving instance Monad m => MonadState s (StateErrorT i s m)
 
 data ErrorState e s = ErrorState {error :: e, state :: s} deriving (Show, Eq)
 
-deriving instance {-# OVERLAPS #-} Alternative (StateErrorT s Maybe)
-deriving instance {-# OVERLAPS #-} Alternative (StateErrorT s IO)
-instance {-# OVERLAPPABLE #-} (Monoid e, MonadError (ErrorState e s) m, MonadPlus m) => Alternative (StateErrorT s m) where
+deriving instance MonadPlus m => Alternative (StateErrorT NewtypeInstance s m)
+instance (Monoid e, MonadError (ErrorState e s) m, MonadPlus m) => Alternative (StateErrorT ErrorStateInstance s m) where
   empty = throwError mempty
   x <|> y = StateErrorT $ runStateErrorT x <|> runStateErrorT y
 
-deriving instance {-# OVERLAPS #-} MonadPlus (StateErrorT s Maybe)
-deriving instance {-# OVERLAPS #-} MonadPlus (StateErrorT s IO)
-deriving instance {-# OVERLAPPABLE #-} (Monoid e, MonadError (ErrorState e s) m, MonadPlus m) => MonadPlus (StateErrorT s m)
+deriving instance MonadPlus m => MonadPlus (StateErrorT NewtypeInstance s m)
+deriving instance (Monoid e, MonadError (ErrorState e s) m, MonadPlus m) => MonadPlus (StateErrorT ErrorStateInstance s m)
 
-deriving instance {-# OVERLAPS #-} MonadFail (StateErrorT s Maybe)
-deriving instance {-# OVERLAPS #-} MonadFail (StateErrorT s IO)
-instance {-# OVERLAPPABLE #-} MonadError (ErrorState String s) m => MonadFail (StateErrorT s m) where
+deriving instance MonadFail m => MonadFail (StateErrorT NewtypeInstance s m)
+instance MonadError (ErrorState String s) m => MonadFail (StateErrorT ErrorStateInstance s m) where
   fail msg = throwError msg
 
-deriving instance {-# OVERLAPS #-} MonadError () (StateErrorT s Maybe)
-deriving instance {-# OVERLAPS #-} MonadError IOException (StateErrorT s IO)
-instance {-# OVERLAPPABLE #-} MonadError (ErrorState e s) m => MonadError e (StateErrorT s m) where
+deriving instance MonadError e m => MonadError e (StateErrorT NewtypeInstance s m)
+instance MonadError (ErrorState e s) m => MonadError e (StateErrorT ErrorStateInstance s m) where
   throwError e = stateErrorT \s -> throwError $ ErrorState e s
   catchError x eh = stateErrorT \s -> catchError (r x s) \(ErrorState e s') -> r (eh e) s'
     where r = runStateT . runStateErrorT
 
-stateErrorT :: forall s m a. (s -> m (a, s)) -> StateErrorT s m a
+stateErrorT :: forall c s m a. (s -> m (a, s)) -> StateErrorT c s m a
 stateErrorT = StateErrorT . StateT
 
-runSET :: forall s m a.
+runSET :: forall c s m a.
   ( ChangeMonad m (ResultingMonad m)
   , ResultMonad m
   )
-  => StateErrorT s m a
+  => StateErrorT c s m a
   -> s
   -> ResultingMonad m (a, s)
 runSET = (changeMonad (resultMonad @m) .) . runStateT . runStateErrorT

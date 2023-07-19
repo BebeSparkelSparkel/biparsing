@@ -30,7 +30,6 @@ instance ChangeMonad Maybe Maybe where
 --  type ChangeFunction (Either a) (Either a) = ()
 --  changeMonad = const id
 
-
 class ResultMonad (m :: Type -> Type) where
   type ResultingMonad (m :: Type -> Type) :: Type -> Type
   resultMonad :: ChangeFunction m (ResultingMonad m)

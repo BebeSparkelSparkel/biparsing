@@ -14,18 +14,18 @@ module Biparse.Biparser.StateWriter
   ) where
 
 import Control.Monad.ChangeMonad (ChangeMonad(ChangeFunction,changeMonad))
-import Control.Monad.StateError (StateErrorT, stateErrorT, runStateErrorT, runSET, ResultMonad(ResultingMonad,resultMonad))
+import Control.Monad.StateError (StateErrorT, stateErrorT, runStateErrorT, runSET, ResultMonad(ResultingMonad,resultMonad), ErrorContext)
 import Biparse.Error.WrapError (WrapError(wrapError))
 import Biparse.Biparser (SubState, forward, backward, ReplaceSubState(replaceSubState))
 import Biparse.Biparser qualified as B
 
-type Biparser c s m em n u v = B.Biparser c s (StateErrorT s m) em (WriterT (SubState c s) n) u v 
+type Biparser c s m em n u v = B.Biparser c s (StateErrorT (ErrorContext c) s m) em (WriterT (SubState c s) n) u v 
 type Iso c m em n s v = Biparser c s m em n v v
 type Unit c s m em n = Biparser c s m em n () ()
 type Const c s m em n u = Biparser c s m em n u ()
 type ConstU c s m em n u v = Biparser c s m em n u v
 
-type IsoClass c m em n a b = B.IsoClass c (StateErrorT a m) em (WriterT (SubState c a) n) a b
+type IsoClass c m em n a b = B.IsoClass c (StateErrorT (ErrorContext c) a m) em (WriterT (SubState c a) n) a b
 
 ---- | Discards unused s' state to avoid commingling m and n monads.
 --translate :: forall c' c s s' m m' n ss' u v.
@@ -49,19 +49,21 @@ type IsoClass c m em n a b = B.IsoClass c (StateErrorT a m) em (WriterT (SubStat
 --    pure (x,w')
 
 -- | Discards unused s' state to avoid commingling m and n monads.
-zoom  :: forall c' c s s' m em n u v ss'.
+zoom  :: forall c' c s s' m m' em n u v ss'.
   ( Monad m
   , Monad n
   , ReplaceSubState s ss' s'
   , ss' ~ SubState c' s'
+  , ChangeMonad m' m
+  , ChangeFunction m' m ~ ()
   )
   => Iso c m em n s ss'
-  -> Biparser c' s' m em n u v
+  -> Biparser c' s' m' em n u v
   -> Biparser c  s  m em n u v
 zoom (B.Biparser fw bw) (B.Biparser fw' bw') = B.Biparser
   (stateErrorT \s -> do
     (ss,s') <- (runStateT . runStateErrorT) fw s
-    (x,_) <- (runStateT . runStateErrorT) fw' $ replaceSubState s ss
+    (x,_) <- changeMonad () $ (runStateT . runStateErrorT) fw' $ replaceSubState s ss
     pure (x,s')
   )
   \u -> WriterT do

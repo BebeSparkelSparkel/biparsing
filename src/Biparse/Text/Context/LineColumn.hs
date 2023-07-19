@@ -11,7 +11,7 @@ module Biparse.Text.Context.LineColumn
 
 import Biparse.Error.WrapError (WrapError(Error,wrapError))
 import Biparse.Biparser (SubState, GetSubState(getSubState), UpdateStateWithElement(updateElementContext), UpdateStateWithSubState(updateSubStateContext), ReplaceSubState(replaceSubState))
-import Control.Monad.StateError (ErrorState(ErrorState))
+import Control.Monad.StateError (ErrorState(ErrorState), ErrorContext, ErrorInstance(ErrorStateInstance))
 import GHC.Exts (IsList(Item))
 import GHC.Exts qualified as GE
 import Control.Monad.ChangeMonad (ChangeMonad(ChangeFunction,changeMonad), ResultMonad(ResultingMonad,resultMonad))
@@ -76,21 +76,19 @@ instance IsList text => IsList (Position text) where
 
 data ErrorPosition
   = ErrorPosition Int Int String
-  | NoPosition String
+  -- | NoPosition String
   deriving (Show, Eq)
 
 instance E.Error ErrorPosition where strMsg = undefined
-
 instance E.Error (ErrorState String (Position text)) where strMsg msg = undefined
---instance Monoid text => E.Error (ErrorState String (Position text)) where strMsg msg = ErrorState msg $ Position (-1) (-1) mempty
 
-instance MonadFail (Either ErrorPosition) where fail = Left . NoPosition
+--instance MonadFail (Either ErrorPosition) where fail = Left . NoPosition
 
-instance WrapError ErrorPosition (Position text) where
-  type Error ErrorPosition (Position text) = ErrorPosition
-  wrapError e (Position l c _) = case e of
-    NoPosition msg -> ErrorPosition l c msg
-    _ -> undefined
+--instance WrapError ErrorPosition (Position text) where
+--  type Error ErrorPosition (Position text) = ErrorPosition
+--  wrapError e (Position l c _) = case e of
+--    -- NoPosition msg -> ErrorPosition l c msg
+--    _ -> undefined
 
 instance WrapError String (Position text) where
   type Error String (Position text) = ErrorPosition
@@ -108,6 +106,9 @@ instance ChangeMonad (Either (ErrorState String (Position text))) (Either ErrorP
 instance ChangeMonad (Either ErrorPosition) (Either ErrorPosition) where
   type ChangeFunction (Either ErrorPosition) (Either ErrorPosition) = ()
   changeMonad = const id
+
+type instance ErrorContext LineColumn = ErrorStateInstance
+type instance ErrorContext LinesOnly = ErrorStateInstance
 
 --instance ResultMonad (Either (ErrorState String (Position text))) where
 --  type ResultingMonad (Either (ErrorState String (Position text))) = Either ErrorPosition
