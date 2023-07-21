@@ -102,10 +102,9 @@ import Control.Monad.Except (MonadError(throwError,catchError))
 import Control.Monad.ChangeMonad (ChangeMonad)
 import Control.Monad.StateError (ResultMonad(ResultingMonad), ErrorState)
 
-import Biparse.Biparser.StateWriter (WrapError)
 import System.Timeout (timeout)
 
-fb :: forall c s m m' em n u v.
+fb :: forall c s m m' n u v.
   ( ChangeMonad m (ResultingMonad m)
   , ChangeMonad (ResultingMonad m) m'
   , m' ~ ResultingMonad (ResultingMonad m)
@@ -113,7 +112,7 @@ fb :: forall c s m m' em n u v.
   , ResultMonad (ResultingMonad m)
   )
   => String
-  -> Biparser c s m em n u v
+  -> Biparser c s m n u v
   -> ((s -> m' (v, s)) -> Spec)
   -> ((u -> n (v, SubState c s)) -> Spec)
   -> Spec

@@ -19,5 +19,5 @@ instance UpdateStateWithSubState IdentityState state where
 instance UpdateStateWithElement IdentityState state where
   updateElementContext _ _ s = s
 
-type instance ErrorContext IdentityState = NewtypeInstance
+type instance ErrorContext IdentityState = 'NewtypeInstance
 

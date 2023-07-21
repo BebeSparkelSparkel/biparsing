@@ -1,26 +1,39 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 module Biparse.Error.WrapError
-  ( WrapError(..)
+  ( wrapError
+  , WrapError(..)
   ) where
 
 import Control.Exception (IOException)
 import Control.Monad.Except (catchError)
 
+wrapError :: forall e s. WrapError e s => e -> s -> Error e s
+wrapError e s = wrapError' @e @s e $ stateForError @e s
+
 class WrapError e s where
   type Error e s :: Type
-  wrapError :: e -> s -> Error e s
+  type StateForError e s :: Type
+  wrapError' :: e -> StateForError e s -> Error e s
+  stateForError :: s -> StateForError e s
 
 instance WrapError IOException s where
   type Error IOException s = IOException
-  wrapError = const
+  type StateForError IOException s = ()
+  wrapError' = const
+  stateForError = const ()
 
 instance WrapError Void s where
   type Error Void s = Void
-  wrapError = absurd
+  type StateForError Void s = ()
+  wrapError' = absurd
+  stateForError = const ()
 
 instance WrapError () s where
   type Error () s = ()
-  wrapError = const
+  type StateForError () s = ()
+  wrapError' = const
+  stateForError = const ()
 
 instance MonadError Void Identity where
   throwError = absurd

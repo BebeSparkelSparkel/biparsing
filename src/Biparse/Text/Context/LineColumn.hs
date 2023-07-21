@@ -9,9 +9,10 @@ module Biparse.Text.Context.LineColumn
   , ErrorPosition(..)
   ) where
 
-import Biparse.Error.WrapError (WrapError(Error,wrapError))
+import Biparse.Error.WrapError (WrapError(Error,StateForError,wrapError',stateForError))
 import Biparse.Biparser (SubState, GetSubState(getSubState), UpdateStateWithElement(updateElementContext), UpdateStateWithSubState(updateSubStateContext), ReplaceSubState(replaceSubState))
-import Control.Monad.StateError (ErrorState(ErrorState), ErrorContext, ErrorInstance(ErrorStateInstance))
+import Control.Monad.StateError (ErrorState, ErrorContext, ErrorInstance(ErrorStateInstance))
+--import Control.Monad.StateError (ErrorState(ErrorState), ErrorContext, ErrorInstance(ErrorStateInstance))
 import GHC.Exts (IsList(Item))
 import GHC.Exts qualified as GE
 import Control.Monad.ChangeMonad (ChangeMonad(ChangeFunction,changeMonad), ResultMonad(ResultingMonad,resultMonad))
@@ -28,7 +29,7 @@ data Position text = Position
   { line :: Int
   , column :: Int
   , subState :: text
-  } deriving (Show, Eq)
+  } deriving (Show, Eq, Functor)
 
 type instance SubState LineColumn (Position text) = text
 type instance SubState LinesOnly (Position text) = text
@@ -80,19 +81,13 @@ data ErrorPosition
   deriving (Show, Eq)
 
 instance E.Error ErrorPosition where strMsg = undefined
-instance E.Error (ErrorState String (Position text)) where strMsg msg = undefined
-
---instance MonadFail (Either ErrorPosition) where fail = Left . NoPosition
-
---instance WrapError ErrorPosition (Position text) where
---  type Error ErrorPosition (Position text) = ErrorPosition
---  wrapError e (Position l c _) = case e of
---    -- NoPosition msg -> ErrorPosition l c msg
---    _ -> undefined
+instance E.Error (ErrorState String (Position text)) where strMsg = undefined
 
 instance WrapError String (Position text) where
   type Error String (Position text) = ErrorPosition
-  wrapError msg (Position l c _) = ErrorPosition l c msg
+  type StateForError String (Position text) = Position text
+  wrapError' msg (Position l c _) = ErrorPosition l c msg
+  stateForError = id
 
 instance ResultMonad (Either ErrorPosition) where
   type ResultingMonad (Either ErrorPosition) = Either ErrorPosition
@@ -103,13 +98,15 @@ instance ChangeMonad (Either (ErrorState String (Position text))) (Either ErrorP
     ErrorState String (Position text) -> ErrorPosition
   changeMonad = first
 
+-- | "This instance is not sound and is a hack for zoom. The monad conversion in zoom should be more complete or throw away the text entirely but 'catch' in 'MonadError e (StateErrorT s m)' makes this difficult.
+instance ChangeMonad (Either (ErrorState e (Position text))) (Either (ErrorState e (Position [text]))) where
+  type ChangeFunction (Either (ErrorState e (Position text))) (Either (ErrorState e (Position [text]))) = ()
+  changeMonad () = first $ second $ fmap $ singleton
+
 instance ChangeMonad (Either ErrorPosition) (Either ErrorPosition) where
   type ChangeFunction (Either ErrorPosition) (Either ErrorPosition) = ()
   changeMonad = const id
 
-type instance ErrorContext LineColumn = ErrorStateInstance
-type instance ErrorContext LinesOnly = ErrorStateInstance
+type instance ErrorContext LineColumn = 'ErrorStateInstance
+type instance ErrorContext LinesOnly = 'ErrorStateInstance
 
---instance ResultMonad (Either (ErrorState String (Position text))) where
---  type ResultingMonad (Either (ErrorState String (Position text))) = Either ErrorPosition
---  resultMonad = _

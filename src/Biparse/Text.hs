@@ -12,7 +12,7 @@ import Biparse.List (splitOn)
 
 type CharElement c s = SubElement c s ~ Char
 
-char :: forall c s m em n u text.
+char :: forall c s m n u text.
   ( CharElement c s
   , IsSequence text
   , ElementContext c s
@@ -23,12 +23,12 @@ char :: forall c s m em n u text.
   , text ~ SubState c s
   )
   => Char
-  -> Biparser c s m em n u ()
+  -> Biparser c s m n u ()
 char c = do
   c' <- one `upon` const c
   unless (c == c') $ fail $ "Did not find expected character " <> show c <> " and instead found " <> show c'
 
-string :: forall c s m em n u text.
+string :: forall c s m n u text.
   ( CharElement c s
   , IsSequence text
   , Show text
@@ -39,10 +39,10 @@ string :: forall c s m em n u text.
   , text ~ SubState c s
   )
   => text
-  -> Const c s m em n u
+  -> Const c s m n u
 string = stripPrefix
 
-lines :: forall c s m em n text.
+lines :: forall c s m n text.
   ( CharElement c s
   , IsSequence text
   , MonadState s m
@@ -57,6 +57,6 @@ lines :: forall c s m em n text.
   , ElementContext c s
   , text ~ SubState c s
   )
-  => Iso c m em n s [text]
+  => Iso c m n s [text]
 lines = splitOn $ string "\r\n" <|> char '\n'
 

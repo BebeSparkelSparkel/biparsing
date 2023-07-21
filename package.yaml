@@ -12,28 +12,28 @@ dependencies:
 default-extensions:
   - BlockArguments
   - ConstraintKinds
+  - DataKinds
   - DeriveFunctor
   - DeriveGeneric
+  - DuplicateRecordFields
   - FlexibleContexts
   - FlexibleInstances
+  - FunctionalDependencies
+  - GeneralizedNewtypeDeriving
   - ImportQualifiedPost
   - LambdaCase
+  - MultiParamTypeClasses
+  - QuantifiedConstraints
   - RankNTypes
   - RecordWildCards
+  - ScopedTypeVariables
+  - StandaloneDeriving
+  - StandaloneKindSignatures
   - TupleSections
   - TypeApplications
   - TypeFamilies
   - TypeOperators
   - ViewPatterns
-  - ScopedTypeVariables
-  - MultiParamTypeClasses
-  - FunctionalDependencies
-  - StandaloneKindSignatures
-  - DuplicateRecordFields
-  - GeneralizedNewtypeDeriving
-  - StandaloneDeriving
-  - QuantifiedConstraints
-  - DataKinds
 
 library:
   source-dirs: src/
@@ -50,7 +50,7 @@ library:
     - Prelude
     #- Paths_biparsing
   ghc-options:
-    #- -Werror
+    - -Werror
     - -Weverything
 
     - -Wno-missing-kind-signatures
@@ -86,7 +86,7 @@ tests:
       - OverloadedLists
       - NamedFieldPuns
     ghc-options:
-      #- -Werror
+      - -Werror
       - -Weverything
       - -fprint-potential-instances
 
@@ -100,5 +100,7 @@ tests:
       - -Wno-missing-import-lists
       - -Wno-missing-export-lists
       - -Wno-incomplete-uni-patterns
+      - -Wno-orphans
 
       - -Wno-unused-packages
+

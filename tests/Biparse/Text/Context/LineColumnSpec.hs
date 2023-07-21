@@ -33,8 +33,8 @@ spec = do
         bp = takeWhile (/= ':')
 
     describe "forward" do
-      --let f :: _ -> Either ErrorPosition (Text, Position Text)
-      let f = runForward bp
+      let f :: Position Text -> Either ErrorPosition (Text, Position Text)
+          f = runForward bp
 
       it "no splitter" do
         f "abc" `shouldBe` Right ("abc", Position 1 4 mempty)
@@ -59,7 +59,7 @@ spec = do
       prop "writes all" \t -> b t >>= (`shouldBe` (t, t))
 
   describe "add position to error" do
-    let bp :: Const LineColumn (Position Text) (Either (ErrorState String (Position Text))) ErrorPosition IO ()
+    let bp :: Const LineColumn (Position Text) (Either (ErrorState String (Position Text))) IO ()
         bp = take 'a' *> take 'b'
         f :: Position Text -> Either ErrorPosition ((), Position Text)
         f = runForward bp
@@ -67,5 +67,5 @@ spec = do
     it "empty" do
       f "" `shouldSatisfy` errorPosition 1 1
 
-type IsoLocal text a = Iso LineColumn (FM text) ErrorPosition IO (Position text) a
+type IsoLocal text a = Iso LineColumn (FM text) IO (Position text) a
 

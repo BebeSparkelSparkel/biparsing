@@ -54,9 +54,9 @@ spec = do
 
   fb "zoom"
     (zoom @LinesOnly @LinesOnly @(Position [Text]) @(Position Text) @(FM [Text]) @(FM Text)
-      (one :: Iso LinesOnly (FM [Text]) ErrorPosition IO (Position [Text]) Text)
-      (naturalBaseTen :: Iso LinesOnly (FM Text) ErrorPosition IO (Position Text) Word)
-    :: Iso LinesOnly (FM [Text]) ErrorPosition IO (Position [Text]) Word)
+      (one :: Iso LinesOnly (FM [Text]) IO (Position [Text]) Text)
+      (naturalBaseTen :: Iso LinesOnly (FM Text) IO (Position Text) Word)
+    :: Iso LinesOnly (FM [Text]) IO (Position [Text]) Word)
     (\f -> do
       it "empty" do
         f [] `shouldSatisfy` errorPosition 1 1
@@ -72,7 +72,7 @@ spec = do
       it "prints Word" $ b 456 >>= (`shouldBe` (456, ["456"]))
 
   describe "runForward" do
-    let bp :: Unit LineColumn (Position String) (FM String) ErrorPosition IO
+    let bp :: Unit LineColumn (Position String) (FM String) IO
         bp = take 'a' *> take 'b'
         f :: Position String -> Either ErrorPosition ((), Position String)
         f = runForward bp
