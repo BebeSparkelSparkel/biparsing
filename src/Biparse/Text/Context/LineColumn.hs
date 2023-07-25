@@ -12,10 +12,9 @@ module Biparse.Text.Context.LineColumn
 import Biparse.Error.WrapError (WrapError(Error,StateForError,wrapError',stateForError))
 import Biparse.Biparser (SubState, GetSubState(getSubState), UpdateStateWithElement(updateElementContext), UpdateStateWithSubState(updateSubStateContext), ReplaceSubState(replaceSubState))
 import Control.Monad.StateError (ErrorState, ErrorContext, ErrorInstance(ErrorStateInstance))
---import Control.Monad.StateError (ErrorState(ErrorState), ErrorContext, ErrorInstance(ErrorStateInstance))
 import GHC.Exts (IsList(Item))
 import GHC.Exts qualified as GE
-import Control.Monad.ChangeMonad (ChangeMonad(ChangeFunction,changeMonad), ResultMonad(ResultingMonad,resultMonad))
+import Control.Monad.ChangeMonad (ChangeMonad(ChangeFunction,changeMonad), ResultMonad(ResultingMonad,resultMonad), SecondInstance, ThirdInstance)
 
 import GHC.Err (undefined)
 import Control.Monad.Trans.Error qualified as E
@@ -77,7 +76,6 @@ instance IsList text => IsList (Position text) where
 
 data ErrorPosition
   = ErrorPosition Int Int String
-  -- | NoPosition String
   deriving (Show, Eq)
 
 instance E.Error ErrorPosition where strMsg = undefined
@@ -89,23 +87,31 @@ instance WrapError String (Position text) where
   wrapError' msg (Position l c _) = ErrorPosition l c msg
   stateForError = id
 
-instance ResultMonad (Either ErrorPosition) where
-  type ResultingMonad (Either ErrorPosition) = Either ErrorPosition
+instance ResultMonad (Either ErrorPosition) () where
+  type ResultingMonad (Either ErrorPosition) () = Either ErrorPosition
   resultMonad = ()
 
-instance ChangeMonad (Either (ErrorState String (Position text))) (Either ErrorPosition) where
-  type ChangeFunction (Either (ErrorState String (Position text))) (Either ErrorPosition) =
+instance ChangeMonad () (Either (ErrorState String (Position text))) (Either ErrorPosition) where
+  type ChangeFunction () (Either (ErrorState String (Position text))) (Either ErrorPosition) =
     ErrorState String (Position text) -> ErrorPosition
   changeMonad = first
 
--- | "This instance is not sound and is a hack for zoom. The monad conversion in zoom should be more complete or throw away the text entirely but 'catch' in 'MonadError e (StateErrorT s m)' makes this difficult.
-instance ChangeMonad (Either (ErrorState e (Position text))) (Either (ErrorState e (Position [text]))) where
-  type ChangeFunction (Either (ErrorState e (Position text))) (Either (ErrorState e (Position [text]))) = ()
-  changeMonad () = first $ second $ fmap $ singleton
+--instance ChangeMonad (Either (ErrorState e (Position text))) (Either (ErrorState e (Position text))) where
+--  type ChangeFunction (Either (ErrorState e (Position text))) (Either (ErrorState e (Position text))) = ()
+--  changeMonad () = id
 
-instance ChangeMonad (Either ErrorPosition) (Either ErrorPosition) where
-  type ChangeFunction (Either ErrorPosition) (Either ErrorPosition) = ()
-  changeMonad = const id
+-- | "This instance is not sound and is a hack for zoom. The monad conversion in zoom should be more complete or throw away the text entirely but 'catch' in 'MonadError e (StateErrorT s m)' makes this difficult.
+instance ChangeMonad SecondInstance (Either (ErrorState e (Position text))) (Either (ErrorState e (Position [text]))) where
+  type ChangeFunction SecondInstance (Either (ErrorState e (Position text))) (Either (ErrorState e (Position [text]))) = ()
+  changeMonad () = first $ second $ fmap $ singleton
+instance Monoid text => ChangeMonad ThirdInstance (Either (ErrorState e (Position [text]))) (Either (ErrorState e (Position text))) where
+  type ChangeFunction ThirdInstance (Either (ErrorState e (Position [text]))) (Either (ErrorState e (Position text))) = ()
+  changeMonad () = first $ second $ ($> mempty)
+  
+
+--instance ChangeMonad is (Either ErrorPosition) (Either ErrorPosition) where
+--  type ChangeFunction _ (Either ErrorPosition) (Either ErrorPosition) = ()
+--  changeMonad = const id
 
 type instance ErrorContext LineColumn = 'ErrorStateInstance
 type instance ErrorContext LinesOnly = 'ErrorStateInstance

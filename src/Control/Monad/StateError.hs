@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE DataKinds #-}
 module Control.Monad.StateError
@@ -55,19 +56,19 @@ instance MonadError (ErrorState e s) m => MonadError e (StateErrorT 'ErrorStateI
 stateErrorT :: forall c s m a. (s -> m (a, s)) -> StateErrorT c s m a
 stateErrorT = StateErrorT . StateT
 
-runSET :: forall c s m a.
-  ( ChangeMonad m (ResultingMonad m)
-  , ResultMonad m
+runSET :: forall is c s m a.
+  ( ChangeMonad is m (ResultingMonad m is)
+  , ResultMonad m is
   )
   => StateErrorT c s m a
   -> s
-  -> ResultingMonad m (a, s)
-runSET = (changeMonad (resultMonad @m) .) . runStateT . runStateErrorT
+  -> ResultingMonad m is (a, s)
+runSET = (changeMonad @is (resultMonad @m @is) .) . runStateT . runStateErrorT
 
 instance
-  ( ChangeFunction (Either (ErrorState e s)) (Either (Error e s)) ~ (ErrorState e s -> Error e s)
+  ( ChangeFunction is (Either (ErrorState e s)) (Either (Error e s)) ~ (ErrorState e s -> Error e s)
   , WrapError e s
-  ) => ResultMonad (Either (ErrorState e s)) where
-  type ResultingMonad (Either (ErrorState e s)) = Either (Error e s)
+  ) => ResultMonad (Either (ErrorState e s)) is where
+  type ResultingMonad (Either (ErrorState e s)) is = Either (Error e s)
   resultMonad (ErrorState e s) = wrapError e s
 

@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 module Biparse.Biparser.StateWriter
   ( Biparser
   , Iso
@@ -13,7 +14,7 @@ module Biparse.Biparser.StateWriter
   ) where
 
 import Control.Monad.ChangeMonad (ChangeMonad(ChangeFunction,changeMonad))
-import Control.Monad.StateError (StateErrorT, stateErrorT, runStateErrorT, runSET, ResultMonad(ResultingMonad,resultMonad), ErrorContext)
+import Control.Monad.StateError (StateErrorT, stateErrorT, runStateErrorT, runSET, ResultMonad(ResultingMonad), ErrorContext)
 import Biparse.Biparser (SubState, forward, backward, ReplaceSubState(replaceSubState))
 import Biparse.Biparser qualified as B
 
@@ -47,13 +48,13 @@ type IsoClass c m n a b = B.IsoClass c (StateErrorT (ErrorContext c) a m) (Write
 --    pure (x,w')
 
 -- | Discards unused s' state to avoid commingling m and n monads.
-zoom  :: forall c' c s s' m m' n u v ss'.
+zoom  :: forall is c' c s s' m m' n u v ss'.
   ( Monad m
   , Monad n
   , ReplaceSubState s ss' s'
   , ss' ~ SubState c' s'
-  , ChangeMonad m' m
-  , ChangeFunction m' m ~ ()
+  , ChangeMonad is m' m
+  , ChangeFunction is m' m ~ ()
   )
   => Iso c m n s ss'
   -> Biparser c' s' m' n u v
@@ -61,7 +62,7 @@ zoom  :: forall c' c s s' m m' n u v ss'.
 zoom (B.Biparser fw bw) (B.Biparser fw' bw') = B.Biparser
   (stateErrorT \s -> do
     (ss,s') <- (runStateT . runStateErrorT) fw s
-    (x,_) <- changeMonad () $ (runStateT . runStateErrorT) fw' $ replaceSubState s ss
+    (x,_) <- changeMonad @is () $ (runStateT . runStateErrorT) fw' $ replaceSubState s ss
     pure (x,s')
   )
   \u -> WriterT do
@@ -71,30 +72,26 @@ zoom (B.Biparser fw bw) (B.Biparser fw' bw') = B.Biparser
 
 -- * Helper run functions
 
-type Forward m m' =
-  ( ChangeMonad (ResultingMonad m) m'
-  , ChangeMonad m (ResultingMonad m)
-  , ResultMonad m
-  , ResultMonad (ResultingMonad m)
-  --, ChangeFunction (ResultingMonad m) m' ~ ChangeFunction (ResultingMonad m) (ResultingMonad (ResultingMonad m))
-  , m' ~ ResultingMonad (ResultingMonad m)
+runForward :: forall is c s m n u v.
+  ( ChangeMonad is m (ResultingMonad m is)
+  , ResultMonad m is
   )
-
-runForward :: forall c s m m' n u v.
-  Forward m m'
   => Biparser c s m n u v
   -> s
-  -> m' (v, s)
-runForward bp = changeMonad (resultMonad @(ResultingMonad m) :: ChangeFunction (ResultingMonad m) m') . runSET (forward bp)
+  -> ResultingMonad m is (v, s)
+--runForward bp = changeMonad @is (resultMonad @(ResultingMonad m is) @is :: ChangeFunction is (ResultingMonad m is) m') . runSET (forward bp)
+runForward bp = runSET @is (forward bp)
 
-evalForward :: forall c s m m' n u v.
-  ( Forward m m'
-  , Functor m'
+evalForward :: forall is c s m m' n u v.
+  ( Functor m'
+  , ChangeMonad is m m'
+  , ResultMonad m is
+  , m' ~ ResultingMonad m is
   )
   => Biparser c s m n u v
   -> s
   -> m' v
-evalForward = (fmap fst .) . runForward
+evalForward = (fmap fst .) . runForward @is
 
 runBackward :: forall c s m n u v. Biparser c s m n u v -> u -> n (v, SubState c s)
 runBackward = (runWriterT .) . backward
