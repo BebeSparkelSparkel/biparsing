@@ -17,6 +17,7 @@ module Biparse.List
   --, untilM
   --, untilM'
   --, untilId
+  , untilInclusive
   , headAlt
   , tailAlt
   ) where
@@ -245,6 +246,21 @@ whileM' p x = ifM (p `uponM` headAlt <|> pure False)
 --  -> Biparser c s Identity Identity u v
 --  -> Biparser c s Identity Identity [u] [v]
 --untilId = whileId . mapFW Data.Bool.not
+
+untilInclusive :: forall c s m n u v.
+  ( Monoid (SubState c s)
+  , Monad m
+  , Monad n
+  , Alternative n
+  )
+  => (v -> Bool)
+  -> Biparser c s m n u v
+  -> Biparser c s m n [u] [v]
+untilInclusive p bp = do
+  x <- bp `uponM` headAlt
+  if p x
+  then pure [x]
+  else (x :) <$> untilInclusive p bp `uponM` tailAlt
 
 headAlt :: forall a n. (Alternative n, MonoFoldable a) => a -> n (Element a)
 headAlt = maybe empty pure . headMay

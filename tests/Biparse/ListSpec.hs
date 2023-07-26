@@ -250,4 +250,20 @@ spec = do
 
   --    it "takes all" $ b ["a","b"] `shouldBe` Identity (["a","b"],"ab")
 
+  fb @() "untilInclusive"
+    (untilInclusive (== 'c') one :: Iso LineColumn (FM (Seq Char)) IO (Position (Seq Char)) String)
+    (\f -> do
+      it "empty" $ f "" `shouldSatisfy` errorPosition 1 1
+      it "no match" $ f "ab" `shouldSatisfy` errorPosition 1 3
+      it "only match" $ f "c" `shouldBe` Right (['c'], Position 1 2 "")
+      it "first match" $ f "cab" `shouldBe` Right (['c'], Position 1 2 "ab")
+      it "middle match" $ f "abcd" `shouldBe` Right ("abc", Position 1 4 "d")
+      it "last match" $ f "abc" `shouldBe` Right ("abc", Position 1 4 "")
+      it "middle match" $ f "abcd" `shouldBe` Right ("abc", Position 1 4 "d")
+    )
+    \b -> do
+      it "empty" $ b "" `shouldThrow` isUserError
+      it "no match" $ b "ab" `shouldThrow` isUserError
+      it "middle match" $ b "abcd" >>= (`shouldBe` ("abc","abc"))
+
 instance {-# OVERLAPS #-} IsString [Maybe Char] where fromString = fmap pure

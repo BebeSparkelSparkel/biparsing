@@ -63,7 +63,7 @@ library:
 
     - -Wno-unused-packages
 
-      #- -fdefer-type-errors
+    #- -fdefer-type-errors
 
 tests:
   spec:
