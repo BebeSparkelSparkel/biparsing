@@ -1,4 +1,5 @@
 {-# LANGUAGE NoImplicitPrelude #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
 module Prelude
   ( module GHC.Err
   , module System.IO
@@ -46,6 +47,7 @@ module Prelude
   , module Control.Monad.StateError
   , module Data.MonoTraversable.Unprefixed
   , module Biparse.Text
+  , module Control.Monad.ChangeMonad
 
   , fb
   , errorPosition
@@ -99,17 +101,15 @@ import Data.Kind (Type)
 import GHC.IO.Exception (IOException)
 import Data.Void (Void)
 import Control.Monad.Except (MonadError(throwError,catchError))
-import Control.Monad.ChangeMonad (ChangeMonad)
 import Control.Monad.StateError (ResultMonad(ResultingMonad), ErrorState)
 
+import Control.Monad.ChangeMonad (ChangeMonad)
 import System.Timeout (timeout)
 
-fb :: forall c s m m' n u v.
-  ( ChangeMonad m (ResultingMonad m)
-  , ChangeMonad (ResultingMonad m) m'
-  , m' ~ ResultingMonad (ResultingMonad m)
-  , ResultMonad m
-  , ResultMonad (ResultingMonad m)
+fb :: forall is c s m m' n u v.
+  ( m' ~ ResultingMonad m is
+  , ChangeMonad is m m'
+  , ResultMonad m is
   )
   => String
   -> Biparser c s m n u v
@@ -117,7 +117,7 @@ fb :: forall c s m m' n u v.
   -> ((u -> n (v, SubState c s)) -> Spec)
   -> Spec
 fb describeLabel bp fws bws = describe describeLabel do
-  describe "forward" $ fws $ runForward bp
+  describe "forward" $ fws $ runForward @is bp
   describe "backward" $ bws $ runBackward bp
 
 errorPosition :: Int -> Int -> Either ErrorPosition b -> Bool

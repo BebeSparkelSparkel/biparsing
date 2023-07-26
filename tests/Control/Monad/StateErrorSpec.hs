@@ -8,7 +8,7 @@ spec :: Spec
 spec = do
   describe "Alternative" do
     it "empty" $ limit $
-      runSET (empty :: StateErrorT 'ErrorStateInstance (Position Text) (Either (ErrorState String (Position Text))) ()) "abc" `shouldSatisfy` errorPosition 1 1
+      runSET @() (empty :: StateErrorT 'ErrorStateInstance (Position Text) (Either (ErrorState String (Position Text))) ()) "abc" `shouldSatisfy` errorPosition 1 1
 
   describe "MonadError" do
     it "catch state is the last state before fail" $ limit do
@@ -21,10 +21,10 @@ spec = do
             \_ -> do
               s <- get
               throwError $ show s
-      runSET x 1 `shouldBe` Left "2"
+      runSET @() x 1 `shouldBe` Left "2"
 
-instance ChangeMonad (Either (ErrorState String Int)) (Either String) where
-  type ChangeFunction (Either (ErrorState String Int)) (Either String) =
+instance ChangeMonad () (Either (ErrorState String Int)) (Either String) where
+  type ChangeFunction () (Either (ErrorState String Int)) (Either String) =
     ErrorState String Int -> String
   changeMonad = first
 

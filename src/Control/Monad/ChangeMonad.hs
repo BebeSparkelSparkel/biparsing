@@ -2,8 +2,6 @@
 module Control.Monad.ChangeMonad
   ( ChangeMonad(..)
   , ResultMonad(..)
-  , SecondInstance
-  , ThirdInstance
   ) where
 
 import System.IO (IO)
@@ -11,9 +9,6 @@ import System.IO (IO)
 class ChangeMonad instanceSelector m n where
   type ChangeFunction instanceSelector m n
   changeMonad :: ChangeFunction instanceSelector m n -> m a -> n a
-
-data SecondInstance
-data ThirdInstance
 
 --instance ChangeMonad is Identity Identity where
 --  type ChangeFunction _ Identity Identity = ()

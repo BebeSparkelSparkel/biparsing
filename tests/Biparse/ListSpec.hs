@@ -8,7 +8,7 @@ import Data.Text qualified as T
 
 spec :: Spec
 spec = do
-  fb "takeElementsWhile"
+  fb @() "takeElementsWhile"
     (fmap w2c <$> takeElementsWhile (isDigit . w2c) `upon` fmap c2w :: Iso IdentityState IO IO ByteString String)
     (\f -> do
       it "matches some digits" do
@@ -29,7 +29,7 @@ spec = do
       it "prints none" $ b mempty >>= (`shouldBe` (mempty, mempty))
 
   describe "many" do
-    fb "with takeUni"
+    fb @() "with takeUni"
       (many $ takeUni 'a' :: Iso IdentityState IO IO Text [Char])
       (\f -> do
         it "takes none" do
@@ -43,7 +43,7 @@ spec = do
 
         it "prints none" $ b mempty >>= (`shouldBe` (mempty, mempty))
 
-    fb "with takeTri"
+    fb @() "with takeTri"
       (   many
       $   try (takeTri "TRUE" True 1)
       <|>      takeTri "FALSE" False 0
@@ -68,7 +68,7 @@ spec = do
           b mempty
             `shouldBe` Just (mempty, mempty)
 
-  fb "some"
+  fb @() "some"
     (some (takeUni 1) :: Iso IdentityState IO IO [Int] (NonEmpty Int))
     (\f -> do
       it "fails on none" do
@@ -83,7 +83,7 @@ spec = do
     \b -> do
       it "prints all" $ b [1,1,1] >>= (`shouldBe` ([1,1,1], [1,1,1]))
 
-  fb
+  fb @()
     "all"
     (all $ takeUni 'a' <|> takeUni 'b' :: Iso LineColumn (FM Text) IO (Position Text) [Char])
     (\f -> do
@@ -113,7 +113,7 @@ spec = do
   describe "splitElem" do
     let bp :: Iso IdentityState IO IO Text [Text]
         bp = splitElem ':'
-        f = runForward bp
+        f = runForward @() bp
         b = runBackward bp
         t name f' b' = describe name do
           it "forward" $ limit do
@@ -129,12 +129,11 @@ spec = do
     t "empty last" "ab:" ["ab",mempty]
     t "empty first" ":ab" [mempty,"ab"]
 
-    let ef = evalForward bp
+    let ef = evalForward @() bp
     prop "forward should never return [\"\"]" $ forAll (T.pack <$> listOf (elements "ab:")) \string -> do
       ef string >>= (`shouldNotBe` [mempty])
 
-  fb
-    "splitOn"
+  fb @() "splitOn"
     (splitOn $ stripPrefix "ab" :: Iso IdentityState IO IO Text [Text])
     (\f -> do
       it "empty" $ limit do
@@ -167,7 +166,7 @@ spec = do
         x <- b xs
         x `shouldBe` (xs,"abcdababefab")
 
-  fb "whileM"
+  fb @() "whileM"
     (whileM (peek (memptyWrite one >>= \x -> pure $ x /= 'x')) one :: Iso IdentityState IO IO Text [Char])
     (\f -> do
       it "empty" do

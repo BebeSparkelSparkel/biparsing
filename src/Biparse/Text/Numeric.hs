@@ -3,6 +3,7 @@
 module Biparse.Text.Numeric
   ( NaturalConstraints
   , naturalBaseTen
+  , naturalBaseTen'
   , IntConstrints
   , intBaseTen
   , RealConstrints
@@ -41,6 +42,9 @@ naturalBaseTen :: forall c s m n a. NaturalConstraints c s m n a => Iso c m n s 
 naturalBaseTen = do
   ds <- toList <$> digitsBaseTen
   maybe (fail $ "Could not parse " <> show ds <> " to natural base 10.") pure $ readMay ds
+
+naturalBaseTen' :: forall a c s m n. NaturalConstraints c s m n a => Iso c m n s a
+naturalBaseTen' = naturalBaseTen
 
 instance NaturalConstraints c s m n Int   => IsoClass c m n s Int   where iso = naturalBaseTen
 instance NaturalConstraints c s m n Int8  => IsoClass c m n s Int8  where iso = naturalBaseTen

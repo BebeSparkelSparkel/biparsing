@@ -11,13 +11,13 @@ spec = do
 
       describe "forward" do
         it "increments column" do
-          runForward bp "ab" `shouldBe` Right ('a', Position 1 2 "b")
+          runForward @() bp "ab" `shouldBe` Right ('a', Position 1 2 "b")
 
         it "increments row" do
-          runForward bp "\nb" `shouldBe` Right ('\n', Position 2 1 "b")
+          runForward @() bp "\nb" `shouldBe` Right ('\n', Position 2 1 "b")
 
         it "resets colum on newline" do
-          runForward (bp >> bp) "a\nb" `shouldBe` Right ('\n', Position 2 1 "b")
+          runForward @() (bp >> bp) "a\nb" `shouldBe` Right ('\n', Position 2 1 "b")
 
       describe "backward" do
         it "prints a character" do
@@ -34,7 +34,7 @@ spec = do
 
     describe "forward" do
       let f :: Position Text -> Either ErrorPosition (Text, Position Text)
-          f = runForward bp
+          f = runForward @() bp
 
       it "no splitter" do
         f "abc" `shouldBe` Right ("abc", Position 1 4 mempty)
@@ -62,7 +62,7 @@ spec = do
     let bp :: Const LineColumn (Position Text) (Either (ErrorState String (Position Text))) IO ()
         bp = take 'a' *> take 'b'
         f :: Position Text -> Either ErrorPosition ((), Position Text)
-        f = runForward bp
+        f = runForward @() bp
 
     it "empty" do
       f "" `shouldSatisfy` errorPosition 1 1

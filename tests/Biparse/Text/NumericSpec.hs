@@ -4,7 +4,7 @@ import Biparse.Text.Numeric
 
 spec :: Spec
 spec = do
-  fb "naturalBaseTen"
+  fb @() "naturalBaseTen"
     (naturalBaseTen :: Iso LineColumn (FM Text) IO (Position Text) Word)
     (\f -> do
       it "success" do
@@ -22,7 +22,7 @@ spec = do
         b 1   >>= (`shouldBe` (1,   "1"))
         b 123 >>= (`shouldBe` (123, "123"))
 
-  fb "intBaseTen"
+  fb @() "intBaseTen"
     (intBaseTen :: Iso LineColumn (FM Text) IO (Position Text) Int)
     (\f -> do
       it "success" do
@@ -45,7 +45,7 @@ spec = do
         b (-1)   >>= (`shouldBe` (-1,   "-1"))
         b (-123) >>= (`shouldBe` (-123, "-123"))
 
-  fb "realBaseTen"
+  fb @() "realBaseTen"
     (realBaseTen :: Iso LineColumn (FM String) IO (Position String) Double)
     (\f -> do
       it "whole" do

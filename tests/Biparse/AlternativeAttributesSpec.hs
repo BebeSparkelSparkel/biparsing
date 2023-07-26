@@ -10,7 +10,7 @@ spec = do
         bp = runAtt @'[Bool] $ a @Bool one <|>> emptyAtt
 
     describe "forward" do
-      let f = runForward bp
+      let f = runForward @() bp
 
       it "consumes one" $ f "abc" >>= (`shouldBe` ('a',"bc"))
 
@@ -23,7 +23,7 @@ spec = do
           a @'False \x -> x <|> pure 'x'
 
     describe "forward" do
-      let f = runForward bp
+      let f = runForward @() bp
 
       it "consumes one" $ f "abc" >>= (`shouldBe` ('a',"bc"))
 

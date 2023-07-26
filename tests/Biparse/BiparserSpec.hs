@@ -4,7 +4,7 @@ spec :: Spec
 spec = do
   describe "one" do
     describe "IdentityState" do
-      fb "id"
+      fb @() "id"
         (one :: Iso IdentityState IO IO String Char)
         (\f -> do
           it "one use" do
@@ -17,7 +17,7 @@ spec = do
         \b -> do
           it "typical use" $ b 'a' >>= (`shouldBe` ('a',"a"))
 
-      fb "tuple"
+      fb @() "tuple"
         ((,) <$> one `upon` fst <*> one `upon` snd :: Iso IdentityState IO IO String (Char,Char))
         (\f -> do
           it "used twice" do
@@ -27,7 +27,7 @@ spec = do
         \b -> do
           it "used twice" $ b ('a','b') >>= (`shouldBe` (('a','b'),"ab"))
 
-    fb "LineColumn"
+    fb @() "LineColumn"
       (one :: Iso LineColumn (FM Text) IO (Position Text) Char)
       (\f -> do
         it "empty" do
@@ -40,7 +40,7 @@ spec = do
       \b -> do
         it "write char" $ b 'd' >>= (`shouldBe` ('d', "d"))
 
-    fb "LineColumn [Text]"
+    fb @() "LineColumn [Text]"
       (one :: Iso LinesOnly (FM [Text]) IO (Position [Text]) Text)
       (\f -> do
         it "empty" $ f [] `shouldSatisfy` errorPosition 1 1
@@ -64,7 +64,7 @@ spec = do
           put $ drop 2 x
           return y
 
-    fb "IdentityState"
+    fb @() "IdentityState"
       --(takeTwo @IdentityState @IO @@String)
       takeTwo
       (\f -> do
@@ -77,7 +77,7 @@ spec = do
 
         it "prints all" $ b "abc" >>= (`shouldBe` ("abc","abc"))
 
-    --fb "LineColumn"
+    --fb @() "LineColumn"
     --  (takeTwo :: Iso LineColumn (FM String) IO (Position String) String)
     --  (\f -> do
     --    it "succeeds" $ f "abc" `shouldBe` Right ("ab", Position 1 3 "c")
@@ -90,7 +90,7 @@ spec = do
     --    it "prints all" $ b "abc" >>= (`shouldBe` ("abc","abc"))
 
   describe "peek" do
-    fb "simple"
+    fb @() "simple"
       (peek one :: Iso IdentityState IO IO String Char)
       (\f -> do
         it "none consumed" do
@@ -101,7 +101,7 @@ spec = do
         it "prints char" $ b 'a' >>= (`shouldBe` ('a',"a"))
 
     describe "Alternative" do
-      fb "IdentityState"
+      fb @() "IdentityState"
         (peek (takeUni 'x') <|> takeUni 'a' :: Iso IdentityState IO IO String Char)
         (\f -> do
           it "take first" do
@@ -119,7 +119,7 @@ spec = do
 
           it "prints second" $ b 'a' >>= (`shouldBe` ('a',"a"))
 
-      fb "LineColumn"
+      fb @() "LineColumn"
         (peek (takeUni 'x') <|> takeUni 'a' :: Iso LineColumn (FM String) IO (Position String) Char)
         (\f -> do
           it "take first" $ f "xa" `shouldBe` Right ('x', Position 1 1 "xa")
@@ -135,7 +135,7 @@ spec = do
 
   describe "try" do
     let bp = (try $ one <* take 'b' :: Biparser IdentityState (Seq Char) IO IO Char Char)
-        f = runForward bp
+        f = runForward @() bp
         b = runBackward bp
 
     describe "forward" do
@@ -144,7 +144,7 @@ spec = do
         x `shouldBe` ('a',"c")
       
       it "does not consume state in failed attempt" do
-        x <- runForward (bp <|> takeUni 'c') "cde"
+        x <- runForward @() (bp <|> takeUni 'c') "cde"
         x `shouldBe` ('c', "de")
 
       it "fails if no alternate" do
@@ -158,7 +158,7 @@ spec = do
           x `shouldBe` ('z',"zb")
       
   describe "isNull" do
-    fb "IdentityState"
+    fb @() "IdentityState"
       (isNull :: ConstU IdentityState String Identity Identity [()] Bool)
       (\f -> do
         it "true" $ f mempty `shouldBe` Identity (True,mempty)
@@ -170,7 +170,7 @@ spec = do
 
         it "false" $ b [()] `shouldBe` Identity (False,mempty)
 
-    fb "LineColumn"
+    fb @() "LineColumn"
       (isNull :: ConstU LineColumn (Position String) Identity Identity [()] Bool)
       (\f -> do
         it "true" $ f "" `shouldBe` Identity (True,"")
@@ -183,7 +183,7 @@ spec = do
         it "false" $ b [()] `shouldBe` Identity (False,mempty)
 
   describe "breakWhen'" do
-    fb "LineColumn"
+    fb @() "LineColumn"
       (breakWhen' $ stripPrefix "ab" :: Iso LineColumn (FM String) IO (Position String) String)
       (\f -> do
         it "empty" $ limit $
@@ -210,7 +210,7 @@ spec = do
 
         it "contains break" $ b "cdab" >>= (`shouldBe` ("cdab", "cdabab"))
 
-    fb "IdentityState"
+    fb @() "IdentityState"
       (breakWhen' $ stripPrefix "ab" :: Iso IdentityState IO IO String String)
       (\f -> do
         it "empty" $ limit $
