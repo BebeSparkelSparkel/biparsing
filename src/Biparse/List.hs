@@ -19,6 +19,8 @@ module Biparse.List
   --, untilId
   , untilInclusive
   , untilExclusive
+  , untilExclusive'
+  , UntilClusive
   , untilClusive
   , headAlt
   , tailAlt
@@ -250,45 +252,44 @@ whileM' p x = ifM (p `uponM` headAlt <|> pure False)
 --untilId = whileId . mapFW Data.Bool.not
 
 -- | Run 'bp' until 'p' succeeds. Includes the success result in list. If 'p' does not succeed, fails.
-untilInclusive :: forall c s m n u v.
-  ( Monoid (SubState c s)
-  , Monad m
-  , Monad n
-  , Alternative n
-  )
+untilInclusive, untilExclusive :: forall c s m n u v.
+  UntilClusive c s m n
   => (v -> Bool)
   -> Biparser c s m n u v
   -> Biparser c s m n [u] [v]
-untilInclusive = untilClusive singleton
+untilInclusive = untilClusive \f x -> f $ singleton x
 
--- | Run 'bp' until 'p' succeeds. Excludes the success result in the list. If 'p' does not succeed, fails.
-untilExclusive :: forall c s m n u v.
+-- | Run 'bp' until 'p' succeeds. Excludes the success result from the list, but includes it as the second value int the tuple. If 'p' does not succeed, fails.
+untilExclusive = untilClusive \f _ -> f mempty
+
+untilExclusive' :: forall c s m n u v.
+  UntilClusive c s m n
+  => (v -> Bool)
+  -> Biparser c s m n u v
+  -> Biparser c s m n [u] ([v], v)
+untilExclusive' = untilClusive \f x -> (f mempty, x)
+
+type UntilClusive c s m n =
   ( Monoid (SubState c s)
   , Monad m
   , Monad n
   , Alternative n
   )
-  => (v -> Bool)
-  -> Biparser c s m n u v
-  -> Biparser c s m n [u] [v]
-untilExclusive = untilClusive $ const mempty
 
 -- | Builder for 'untilInclusive' and 'untilExclusive'.
-untilClusive :: forall c s m n u v.
-  ( Monoid (SubState c s)
-  , Monad m
-  , Monad n
-  , Alternative n
-  )
-  => (v -> [v])
+untilClusive :: forall c s m n u v a.
+  UntilClusive c s m n
+  => (([v] -> [v]) -> v -> a)
   -> (v -> Bool)
   -> Biparser c s m n u v
-  -> Biparser c s m n [u] [v]
-untilClusive f p bp = do
-  x <- bp `uponM` headAlt
-  if p x
-  then pure $ f x
-  else (x :) <$> untilClusive f p bp `uponM` tailAlt
+  -> Biparser c s m n [u] a
+untilClusive f p bp = uncurry f <$> uc
+  where
+  uc = do
+    x <- bp `uponM` headAlt
+    if p x
+    then pure (id, x)
+    else first ((x :) .) <$> uc `uponM` tailAlt
 
 
 
