@@ -18,6 +18,8 @@ module Biparse.List
   --, untilM'
   --, untilId
   , untilInclusive
+  , untilExclusive
+  , untilClusive
   , headAlt
   , tailAlt
   ) where
@@ -247,6 +249,7 @@ whileM' p x = ifM (p `uponM` headAlt <|> pure False)
 --  -> Biparser c s Identity Identity [u] [v]
 --untilId = whileId . mapFW Data.Bool.not
 
+-- | Run 'bp' until 'p' succeeds. Includes the success result in list. If 'p' does not succeed, fails.
 untilInclusive :: forall c s m n u v.
   ( Monoid (SubState c s)
   , Monad m
@@ -256,11 +259,38 @@ untilInclusive :: forall c s m n u v.
   => (v -> Bool)
   -> Biparser c s m n u v
   -> Biparser c s m n [u] [v]
-untilInclusive p bp = do
+untilInclusive = untilClusive singleton
+
+-- | Run 'bp' until 'p' succeeds. Excludes the success result in the list. If 'p' does not succeed, fails.
+untilExclusive :: forall c s m n u v.
+  ( Monoid (SubState c s)
+  , Monad m
+  , Monad n
+  , Alternative n
+  )
+  => (v -> Bool)
+  -> Biparser c s m n u v
+  -> Biparser c s m n [u] [v]
+untilExclusive = untilClusive $ const mempty
+
+-- | Builder for 'untilInclusive' and 'untilExclusive'.
+untilClusive :: forall c s m n u v.
+  ( Monoid (SubState c s)
+  , Monad m
+  , Monad n
+  , Alternative n
+  )
+  => (v -> [v])
+  -> (v -> Bool)
+  -> Biparser c s m n u v
+  -> Biparser c s m n [u] [v]
+untilClusive f p bp = do
   x <- bp `uponM` headAlt
   if p x
-  then pure [x]
-  else (x :) <$> untilInclusive p bp `uponM` tailAlt
+  then pure $ f x
+  else (x :) <$> untilClusive f p bp `uponM` tailAlt
+
+
 
 headAlt :: forall a n. (Alternative n, MonoFoldable a) => a -> n (Element a)
 headAlt = maybe empty pure . headMay
