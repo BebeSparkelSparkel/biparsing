@@ -250,6 +250,28 @@ spec = do
 
   --    it "takes all" $ b ["a","b"] `shouldBe` Identity (["a","b"],"ab")
 
+  fb @() "whileFwdAllBwd"
+    (whileFwdAllBwd (take 3 $> False <|> pure True) one :: Iso IdentityState EitherString EitherString [Int] [Int])
+    (\f -> do
+      it "empty success" $ f [3] `shouldBe` EValue (mempty,mempty)
+      it "some success" $ f [0,1,2,3,4] `shouldBe` EValue ([0,1,2],[4])
+      it "fail not predicate success" $ f [0,1,2] `shouldSatisfy` isString
+    )
+    \b -> do
+      it "empty u" $ b [] `shouldBe` EValue ([],[3])
+      it "some u" $ b [0,1,2] `shouldBe` EValue ([0,1,2],[0,1,2,3])
+
+  fb @() "untilFwdSuccessBwdAll"
+    (one `untilFwdSuccessBwdAll` take 3 :: Iso IdentityState EitherString EitherString [Int] [Int])
+    (\f -> do
+      it "empty success" $ f [3] `shouldBe` EValue (mempty,mempty)
+      it "some success" $ f [0,1,2,3,4] `shouldBe` EValue ([0,1,2],[4])
+      it "fail not predicate success" $ f [0,1,2] `shouldSatisfy` isString
+    )
+    \b -> do
+      it "empty u" $ b [] `shouldBe` EValue ([],[3])
+      it "some u" $ b [0,1,2] `shouldBe` EValue ([0,1,2],[0,1,2,3])
+
   fb @() "untilInclusive"
     (untilInclusive (== 'c') one :: Iso LineColumn (FM (Seq Char)) IO (Position (Seq Char)) String)
     (\f -> do
@@ -265,17 +287,6 @@ spec = do
       it "empty" $ b "" `shouldThrow` isUserError
       it "no match" $ b "ab" `shouldThrow` isUserError
       it "middle match" $ b "abcd" >>= (`shouldBe` ("abc","abc"))
-
-  fb @() "untilSuccess"
-    (one `untilSuccess` take 3 :: Iso IdentityState EitherString EitherString [Int] [Int])
-    (\f -> do
-      it "empty success" $ f [3] `shouldBe` EValue (mempty,mempty)
-      it "some success" $ f [0,1,2,3,4] `shouldBe` EValue ([0,1,2],[4])
-      it "fail not predicate success" $ f [0,1,2] `shouldSatisfy` isString
-    )
-    \b -> do
-      it "empty u" $ b [] `shouldBe` EValue ([],[3])
-      it "some u" $ b [0,1,2] `shouldBe` EValue ([0,1,2],[0,1,2,3])
 
 instance {-# OVERLAPS #-} IsString [Maybe Char] where fromString = fmap pure
 

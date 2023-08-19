@@ -13,11 +13,12 @@ module Biparse.List
   , splitOn
   , whileM
   , whileM'
+  , whileFwdAllBwd
+  , untilFwdSuccessBwdAll
   --, whileId
   --, untilM
   --, untilM'
   --, untilId
-  , untilSuccess
   --, untilNothing
   , untilInclusive
   , untilExclusive
@@ -186,6 +187,7 @@ splitOn x
     (pure mempty)
     (breakWhen' x `uponM` headAlt ^:^ (so <|> pure mempty) `uponM` tailAlt)
 
+-- | Runs 'predicate' and if 'predicate' returns 'True' then run 'produce'. Repeat until 'predicate' returns 'False'. The 'predicate' does not modify the state nor does it write.
 whileM :: forall c s m n u v ss.
   ( MonadPlus m
   , MonadState s m
@@ -196,8 +198,9 @@ whileM :: forall c s m n u v ss.
   => Biparser c s m n u Bool
   -> Biparser c s m n u v
   -> Biparser c s m n [u] [v]
-whileM p = whileM' (peek $ memptyWrite p)
+whileM predicate produce = whileM' (peek $ memptyWrite predicate) produce
 
+-- | Like 'whileM' but the predicate does modify the state and writes.
 whileM' :: forall c s m n u v.
   ( MonadPlus m
   , Monad n
@@ -207,9 +210,38 @@ whileM' :: forall c s m n u v.
   => Biparser c s m n u Bool
   -> Biparser c s m n u v
   -> Biparser c s m n [u] [v]
-whileM' p x = ifM (p `uponM` headAlt <|> pure False)
-  (x `uponM` headAlt ^:^ whileM' p x `uponM` tailAlt)
+whileM' predicate produce = ifM (predicate `uponM` headAlt <|> pure False)
+  (produce `uponM` headAlt ^:^ whileM' predicate produce `uponM` tailAlt)
   (pure mempty)
+
+-- | For forward: runs 'predicate` first. If 'predicate' returns true, runs 'produce'.
+-- For backward: 'produce' is run fore every 'u' in '[u]' and 'predicate' is run at the end.
+whileFwdAllBwd :: forall c s m n u v.
+  ( Monad m
+  , Alternative m
+  , Monad n
+  )
+  => Biparser c s m n () Bool
+  -> Biparser c s m n u v
+  -> Biparser c s m n [u] [v]
+whileFwdAllBwd predicate produce = Biparser
+  ( ifM (forward predicate)
+    (cons <$> forward produce <*> forward (whileFwdAllBwd predicate produce))
+    (pure mempty)
+  )
+  \us -> traverse (backward produce) us <* backward predicate ()
+
+-- | Like 'whileFwdAllBwd' but runs 'produce' until 'predicate' succeeds.
+untilFwdSuccessBwdAll :: forall c s m n u v.
+  ( Monoid (SubState c s)
+  , MonadPlus m
+  , Monad n
+  , Alternative n
+  )
+  => Biparser c s m n u v
+  -> Unit c s m n
+  -> Biparser c s m n [u] [v]
+untilFwdSuccessBwdAll produce predicate = whileFwdAllBwd (False <$ predicate <|> pure True) produce
 
 -- | Should be able to use ghosts of departed prrofs to get rid of partial head tail
 --whileId :: forall c s u v.
@@ -253,27 +285,6 @@ whileM' p x = ifM (p `uponM` headAlt <|> pure False)
 --  -> Biparser c s Identity Identity [u] [v]
 --untilId = whileId . mapFW Data.Bool.not
 
--- | For forward: runs 'predicate` first. If 'predicate' fails, resets state and runs 'produce'. If no 'predicate' success, fail.
--- For backward: 'produce' is run fore every 'u' in '[u]' and 'predicate' is run at the end.
-untilSuccess :: forall c s m n u v.
-  ( Monad m
-  , Alternative m
-  , Monad n
-  )
-  => Biparser c s m n u v
-  -> Unit c s m n
-  -> Biparser c s m n [u] [v]
-untilSuccess produce predicate = Biparser
-  (   forward predicate $> mempty
-  <|> do
-        x <- forward produce
-        cons x <$> forward (untilSuccess produce predicate)
-  )
-  \us -> do
-    vs <- for us $ backward produce
-    backward predicate ()
-    pure vs
-
 ---- Run 'bp' unitl it returns 'Nothing'. Fails if 'Nothing' is never returned.
 --untilNothing :: forall c s m n u v.
 --  UntilClusive c s m n
@@ -292,9 +303,10 @@ untilInclusive, untilExclusive :: forall c s m n u v.
   -> Biparser c s m n [u] [v]
 untilInclusive = untilClusive \f x -> f $ singleton x
 
--- | Run 'bp' until 'p' succeeds. Excludes the success result from the list, but includes it as the second value int the tuple. If 'p' does not succeed, fails.
+-- | Like untilInclusive, but excludes the success result from the list,
 untilExclusive = untilClusive \f _ -> f mempty
 
+-- | Like 'untilExclusive' but includes the success result as the second value in the tuple.
 untilExclusive' :: forall c s m n u v.
   UntilClusive c s m n
   => (v -> Bool)

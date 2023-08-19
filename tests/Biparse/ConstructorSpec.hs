@@ -4,8 +4,8 @@ import Biparse.Constructor as BC
 --import GHC.Num ((+))
 --import Control.Lens (_1, _2, (^.))
 
-import Control.Monad.Reader (runReader)
-import Control.Monad.State (runState)
+import Control.Monad.Reader (runReaderT)
+import Control.Lens (_1)
 
 spec :: Spec
 spec = do
@@ -28,10 +28,28 @@ spec = do
 
   --      it "success" $ b [(1,3)] `shouldBe` EValue (4,[(1,3)])
 
+  describe "lensBiparse" do
+    let lb = lensBiparse _1 (take 1 :: Biparser IdentityState [Int] EitherString EitherString () ()) :: Constructor ([Int],()) EitherString EitherString () ()
+
+    describe "forward" do
+      let f = runForwardC lb
+      it "success" $ f ([1],()) `shouldBe` EValue ()
+      it "fail" $ f ([1],()) `shouldBe` EValue ()
+
+    describe "backward" do
+      let b = runBackwardC lb ()
+      it "success" $ b ([],()) `shouldBe` EValue ((), ([1], ()))
+
   describe "expose" do
     let e = expose :: Constructor s Identity Identity u s
 
-    it "forward" $ runReader (unFwd . pfst . deconstruct $ e) 'c' `shouldBe` 'c'
+    it "forward" $ runForwardC e 'c' `shouldBe` Identity 'c'
 
-    it "backward" $ runState (($ ()) . unBwd . psnd . deconstruct $ e) 'c' `shouldBe` ('c','c')
+    it "backward" $ runBackwardC e () 'c' `shouldBe` Identity ('c','c')
+
+runForwardC :: Constructor s m n u v -> s -> m v
+runForwardC c s = runReaderT (unFwd $ pfst $ deconstruct c) s
+
+runBackwardC :: Constructor s m n u v -> u -> s -> n (v,s)
+runBackwardC c u s = runStateT ((unBwd $ psnd $ deconstruct c) u) s
 
