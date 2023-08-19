@@ -266,4 +266,16 @@ spec = do
       it "no match" $ b "ab" `shouldThrow` isUserError
       it "middle match" $ b "abcd" >>= (`shouldBe` ("abc","abc"))
 
+  fb @() "untilSuccess"
+    (one `untilSuccess` take 3 :: Iso IdentityState EitherString EitherString [Int] [Int])
+    (\f -> do
+      it "empty success" $ f [3] `shouldBe` EValue (mempty,mempty)
+      it "some success" $ f [0,1,2,3,4] `shouldBe` EValue ([0,1,2],[4])
+      it "fail not predicate success" $ f [0,1,2] `shouldSatisfy` isString
+    )
+    \b -> do
+      it "empty u" $ b [] `shouldBe` EValue ([],[3])
+      it "some u" $ b [0,1,2] `shouldBe` EValue ([0,1,2],[0,1,2,3])
+
 instance {-# OVERLAPS #-} IsString [Maybe Char] where fromString = fmap pure
+

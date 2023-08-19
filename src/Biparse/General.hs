@@ -206,12 +206,6 @@ rest :: forall c s m n ss.
   => Iso c m n s ss
 rest = split $ get <* put mempty
 
-headAlt :: (MonoFoldable a, Alternative m) => a -> m (Element a)
-headAlt = maybe empty pure . headMay
-
-tailAlt :: (IsSequence a, Alternative m) => a -> m a
-tailAlt = maybe empty pure . tailMay
-
 failForward :: forall c s m n u v.
   Alternative m
   => Biparser c s m n u v

@@ -10,6 +10,7 @@ module Prelude
   , module Data.Bool
   , module Data.Char
   , module Data.Either
+  , module Control.Monad.EitherString
   , module Data.Eq
   , module Data.Function
   , module Data.Functor
@@ -34,12 +35,18 @@ module Prelude
   , module Control.Monad.State
   , module Control.Monad.Except
   , module Data.Void
+  , module Data.Traversable
 
   , (|>)
   , (^:^)
   , (<$$>)
   , (<$$)
   , (>>>)
+
+  , headAlt
+  , lastAlt
+  , tailAlt
+  , initAlt
   ) where
 
 import Data.Void (Void, absurd)
@@ -52,9 +59,10 @@ import Control.Monad.State.Class (MonadState(state,get,put), modify, gets)
 import Control.Monad.Writer (WriterT(WriterT,runWriterT))
 import Control.Monad.Writer.Class (MonadWriter(tell,pass))
 import Data.Bifunctor (Bifunctor, first, second)
-import Data.Bool (Bool(True,False), otherwise, bool)
+import Data.Bool (Bool(True,False), otherwise, bool, (&&))
 import Data.Char (Char)
-import Data.Either (Either(Left), fromRight)
+import Data.Either (Either(Left), fromRight, either)
+import Control.Monad.EitherString (EitherString)
 import Data.Eq (Eq((==)))
 import Data.Function (($), (.), (&), id, const, flip)
 import Data.Functor (Functor(fmap), (<$), ($>), (<$>), void)
@@ -62,6 +70,7 @@ import Data.Functor.Identity (Identity(Identity,runIdentity))
 import Data.Int (Int)
 import Data.Kind (Type)
 import Data.Maybe (Maybe(Just,Nothing), maybe, fromMaybe)
+import Data.Traversable (for)
 import Data.MonoTraversable (MonoFoldable, headMay, Element, lastMay)
 import Data.MonoTraversable.Unprefixed (for_, null, length, toList)
 import Data.Monoid (Monoid(mempty))
@@ -95,4 +104,16 @@ infixl 4 <$$
 infixr 9 >>>
 (>>>) :: (a -> b) -> (b -> c) -> a -> c
 (>>>) = flip (.)
+
+headAlt :: forall a n. (Alternative n, MonoFoldable a) => a -> n (Element a)
+headAlt = maybe empty pure . headMay
+
+lastAlt :: forall a n. (Alternative n, MonoFoldable a) => a -> n (Element a)
+lastAlt = maybe empty pure . lastMay
+
+tailAlt :: forall a n. (Alternative n, IsSequence a) => a -> n a
+tailAlt = maybe empty pure . tailMay
+
+initAlt :: forall a n. (Alternative n, IsSequence a) => a -> n a
+initAlt = maybe empty pure . initMay
 

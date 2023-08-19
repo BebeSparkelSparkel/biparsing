@@ -15,7 +15,8 @@ module Biparse.Text.Context.LineColumn
 
 import Biparse.Error.WrapError (WrapError(Error,StateForError,wrapError',stateForError))
 import Biparse.Biparser (SubState, GetSubState(getSubState), UpdateStateWithElement(updateElementContext), UpdateStateWithSubState(updateSubStateContext), ReplaceSubState(replaceSubState))
-import Control.Monad.StateError (ErrorState, ErrorContext, ErrorInstance(ErrorStateInstance))
+import Control.Monad.StateError (StateErrorT, ErrorState, ErrorContext, ErrorInstance(ErrorStateInstance))
+import Control.Monad.EitherString (EitherString(EValue,EString))
 import GHC.Exts (IsList(Item))
 import GHC.Exts qualified as GE
 import Control.Monad.ChangeMonad (ChangeMonad(ChangeFunction,changeMonad), ResultMonad(ResultingMonad,resultMonad))
@@ -116,4 +117,12 @@ instance Monoid text => ChangeMonad ListToElement (EEP e [text]) (EEP e text) wh
   
 type instance ErrorContext LineColumn = 'ErrorStateInstance
 type instance ErrorContext LinesOnly = 'ErrorStateInstance
+
+type SE ss = StateErrorT 'ErrorStateInstance (Position ss) (EESP ss)
+instance ChangeMonad () EitherString (SE ss) where
+  type ChangeFunction () EitherString (SE ss) = ()
+  changeMonad () = \case
+    EValue x -> pure x
+    EString msg -> fail msg
+    _ -> empty
 

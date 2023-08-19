@@ -6,4 +6,4 @@ extra-deps:
     subdirs:
       - mono-traversable
   - mtl-2.3.1
-
+  - exceptions-0.10.7

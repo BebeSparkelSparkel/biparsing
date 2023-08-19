@@ -11,14 +11,16 @@ module Control.Monad.StateError
   , ResultMonad(..)
   ) where
 
-import Control.Monad.Except (catchError)
-import Control.Monad.ChangeMonad (ChangeMonad(ChangeFunction,changeMonad), ResultMonad(ResultingMonad,resultMonad))
 import Biparse.Error.WrapError (WrapError(Error), wrapError)
+import Control.Monad.ChangeMonad (ChangeMonad(ChangeFunction,changeMonad), ResultMonad(ResultingMonad,resultMonad))
+import Control.Monad.Except (catchError)
+import Control.Monad.TransformerBaseMonad (TransformerBaseMonad, LiftBaseMonad, liftBaseMonad)
+import Control.Monad.Trans (MonadTrans, lift)
 
 -- * Allow errors to be combined with state information.
 
 newtype StateErrorT (i :: ErrorInstance) s m a = StateErrorT {runStateErrorT :: StateT s m a}
-  deriving (Functor, Applicative, Monad)
+  deriving (Functor, Applicative, Monad, MonadTrans)
 
 -- | Used to determine the instances to use for error handling from the context
 data ErrorInstance
@@ -72,3 +74,6 @@ instance
   type ResultingMonad (Either (ErrorState e s)) is = Either (Error e s)
   resultMonad (ErrorState e s) = wrapError e s
 
+type instance TransformerBaseMonad (StateErrorT _ _ m) = m
+
+instance Monad m => LiftBaseMonad (StateErrorT c s m) where liftBaseMonad = lift

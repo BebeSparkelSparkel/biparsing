@@ -8,6 +8,7 @@ dependencies:
   - mtl
   - mono-traversable
   - transformers
+  - lens
 
 default-extensions:
   - BlockArguments
@@ -34,6 +35,7 @@ default-extensions:
   - TypeFamilies
   - TypeOperators
   - ViewPatterns
+  - DerivingVia
 
 library:
   source-dirs: src/
@@ -46,6 +48,10 @@ library:
 
 # used for InitTails and should be removed when added to mono-traversable
     - text
+
+    - generic-data
+    - exceptions >=0.10.4 && <0.11
+    - data-default
   other-modules:
     - Prelude
     #- Paths_biparsing

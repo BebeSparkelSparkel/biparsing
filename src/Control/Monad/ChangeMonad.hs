@@ -6,25 +6,17 @@ module Control.Monad.ChangeMonad
 
 import System.IO (IO)
 
+-- * ChangeMonad
+
 class ChangeMonad instanceSelector m n where
   type ChangeFunction instanceSelector m n
   changeMonad :: ChangeFunction instanceSelector m n -> m a -> n a
 
---instance ChangeMonad is Identity Identity where
---  type ChangeFunction _ Identity Identity = ()
---  changeMonad = const id
---
---instance ChangeMonad is IO IO where
---  type ChangeFunction _ IO IO = ()
---  changeMonad = const id
---
---instance ChangeMonad is Maybe Maybe where
---  type ChangeFunction _ Maybe Maybe = ()
---  changeMonad = const id
-
 instance ChangeMonad () m m where
   type ChangeFunction _ _ _ = ()
   changeMonad = const id
+
+-- * ResultMonad
 
 class ResultMonad (m :: Type -> Type) instanceSelector where
   type ResultingMonad (m :: Type -> Type) instanceSelector :: Type -> Type
@@ -40,5 +32,9 @@ instance ResultMonad IO  () where
 
 instance ResultMonad Maybe () where
   type ResultingMonad Maybe () = Maybe
+  resultMonad = ()
+
+instance ResultMonad EitherString () where
+  type ResultingMonad EitherString () = EitherString
   resultMonad = ()
 

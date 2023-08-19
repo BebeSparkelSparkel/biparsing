@@ -51,11 +51,18 @@ module Biparse.Biparser
   , isNull
   , write
   , breakWhen'
+  , EmptyWrite
+  , WriteConstructor
+  , writeConstructor
   ) where
 
 import Biparse.FixFail (FixFail(fixFail))
 import Data.Profunctor (Profunctor(dimap))
 import Control.Monad.Extra (findM)
+import Control.Monad.ChangeMonad (ChangeMonad, ChangeFunction, changeMonad)
+import Control.Monad.Writer.Class (listen)
+
+import Control.Monad.Writer (mapWriterT)
 
 -- | Product type for simultainously constructing forward and backward running programs.
 data Biparser context s m n u v = Biparser
@@ -512,6 +519,38 @@ breakWhen' (Biparser fw bw) = Biparser fw' bw'
     tell x
     bw ()
     return x
+
+type WriteConstructor a b e n na nb ss m =
+  ( MonadWriter a na
+  , MonadWriter b nb
+  , MonadWriter ss n
+  , MonadError e n
+  , ChangeMonad EmptyWrite na n
+  , ChangeFunction EmptyWrite na n ~ ()
+  , ChangeMonad EmptyWrite nb n
+  , ChangeFunction EmptyWrite nb n ~ ()
+  , Monad m
+  )
+data EmptyWrite
+writeConstructor :: forall c s m n na nb a b e ss u v w.
+  WriteConstructor a b e n na nb ss m
+  => (a -> Either e (b -> Either e ss))
+  -> Biparser c s m na u v
+  -> (v -> Biparser c s m nb u w)
+  -> Biparser c s m n u w
+writeConstructor c (Biparser fw bw) bp = Biparser
+  do
+    x <- fw
+    forward $ bp x
+  \u -> do
+    (x,x') <- changeMonad @EmptyWrite () $ listen $ bw u
+    c' <- either throwError pure $ c x'
+    (y,y') <- changeMonad @EmptyWrite () $ listen $ backward (bp x) u
+    either throwError tell $ c' y'
+    return y
+instance (Monoid b, Monad n) => ChangeMonad EmptyWrite (WriterT a n) (WriterT b n) where
+  type ChangeFunction EmptyWrite (WriterT a n) (WriterT b n) = ()
+  changeMonad () = mapWriterT (>>= \(x,_) -> pure (x,mempty))
 
 instance (Monoid (SubState c s), Monad m, Applicative n) => Applicative (Biparser c s m n u) where
   pure v = Biparser (pure v) (const $ pure v)

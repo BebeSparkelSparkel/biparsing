@@ -17,6 +17,8 @@ module Biparse.List
   --, untilM
   --, untilM'
   --, untilId
+  , untilSuccess
+  --, untilNothing
   , untilInclusive
   , untilExclusive
   , untilExclusive'
@@ -26,7 +28,7 @@ module Biparse.List
   , tailAlt
   ) where
 
-import Biparse.Biparser (Biparser, uponM, Iso, SubElement, SubState, emptyForward, one, try, upon, mono, ElementContext, FixFail, fix, peek, Unit, UpdateStateWithSubState, isNull, breakWhen', GetSubState)
+import Biparse.Biparser (Biparser(Biparser,forward,backward), uponM, Iso, SubElement, SubState, emptyForward, one, try, upon, mono, ElementContext, FixFail, fix, peek, Unit, UpdateStateWithSubState, isNull, breakWhen', GetSubState)
 import Biparse.General (take, takeNot, Take, memptyWrite, BreakWhen, rest)
 import Data.List.NonEmpty (NonEmpty, nonEmpty)
 
@@ -43,7 +45,7 @@ replicateBiparserT = \case
   n -> \x -> do
     v <- x `uponM` (emptyFail n . headMay)
     vs <- replicateBiparserT (n - 1) x `uponM` (emptyFail n . tailMay)
-    return $ v : vs
+    return $ v `cons` vs
   where
   emptyFail :: Int -> Maybe a -> n a
   emptyFail n = maybe
@@ -67,7 +69,7 @@ takeElementsWhile f =
   try do
     x <- one `uponM` headAlt
     unless (f x) emptyForward
-    (x :) <$> takeElementsWhile f `uponM` tailAlt
+    cons x <$> takeElementsWhile f `uponM` tailAlt
   <|> return mempty
 
 type Many c s m n =
@@ -86,7 +88,7 @@ many :: forall c s m n u v.
 many x =
   do
     y <- x `uponM` headAlt
-    (y :) <$> many x `uponM` tailAlt
+    cons y <$> many x `uponM` tailAlt
   <|> pure mempty
 
 manyId :: forall c s m n u v.
@@ -143,7 +145,7 @@ all :: forall c s m n u v ss.
   -> Biparser c s m n [u] [v]
 all x = ifM isNull (pure mempty) do
   y <- x `uponM` headAlt
-  (y :) <$> all x `uponM` tailAlt
+  cons y <$> all x `uponM` tailAlt
 
 -- | Splits the substate on given element
 splitElem :: forall c s m n ss.
@@ -158,7 +160,7 @@ splitElem x = correctEmpty splitter
   splitter :: Iso c m n s [ss]
   splitter = do
     y <- fromList <$> manyIso (takeNot x) `uponM` fmap toList . headAlt
-    take x *> ((y :) <$> splitter `uponM` tailAlt) <|> pure (singleton y)
+    take x *> (cons y <$> splitter `uponM` tailAlt) <|> pure (singleton y)
 
   correctEmpty :: Iso c m n s [ss] -> Iso c m n s [ss]
   correctEmpty = mono \case
@@ -251,6 +253,37 @@ whileM' p x = ifM (p `uponM` headAlt <|> pure False)
 --  -> Biparser c s Identity Identity [u] [v]
 --untilId = whileId . mapFW Data.Bool.not
 
+-- | For forward: runs 'predicate` first. If 'predicate' fails, resets state and runs 'produce'. If no 'predicate' success, fail.
+-- For backward: 'produce' is run fore every 'u' in '[u]' and 'predicate' is run at the end.
+untilSuccess :: forall c s m n u v.
+  ( Monad m
+  , Alternative m
+  , Monad n
+  )
+  => Biparser c s m n u v
+  -> Unit c s m n
+  -> Biparser c s m n [u] [v]
+untilSuccess produce predicate = Biparser
+  (   forward predicate $> mempty
+  <|> do
+        x <- forward produce
+        cons x <$> forward (untilSuccess produce predicate)
+  )
+  \us -> do
+    vs <- for us $ backward produce
+    backward predicate ()
+    pure vs
+
+---- Run 'bp' unitl it returns 'Nothing'. Fails if 'Nothing' is never returned.
+--untilNothing :: forall c s m n u v.
+--  UntilClusive c s m n
+--  => Biparser c s m n u (Maybe v)
+--  -> Biparser c s m n [u] [v]
+--untilNothing bp
+--  =    bp `uponM` headAlt
+--  >>= maybe (pure mempty) \x -> cons x
+--  <$> untilNothing bp `uponM` tailAlt
+
 -- | Run 'bp' until 'p' succeeds. Includes the success result in list. If 'p' does not succeed, fails.
 untilInclusive, untilExclusive :: forall c s m n u v.
   UntilClusive c s m n
@@ -289,19 +322,5 @@ untilClusive f p bp = uncurry f <$> uc
     x <- bp `uponM` headAlt
     if p x
     then pure (id, x)
-    else first ((x :) .) <$> uc `uponM` tailAlt
-
-
-
-headAlt :: forall a n. (Alternative n, MonoFoldable a) => a -> n (Element a)
-headAlt = maybe empty pure . headMay
-
-lastAlt :: forall a n. (Alternative n, MonoFoldable a) => a -> n (Element a)
-lastAlt = maybe empty pure . lastMay
-
-tailAlt :: forall a n. (Alternative n, IsSequence a) => a -> n a
-tailAlt = maybe empty pure . tailMay
-
-initAlt :: forall a n. (Alternative n, IsSequence a) => a -> n a
-initAlt = maybe empty pure . initMay
+    else first (cons x .) <$> uc `uponM` tailAlt
 

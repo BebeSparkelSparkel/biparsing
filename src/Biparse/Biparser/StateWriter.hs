@@ -70,6 +70,31 @@ zoom (B.Biparser fw bw) (B.Biparser fw' bw') = B.Biparser
     (_,w') <- runWriterT (bw  w)
     pure (x,w')
 
+
+----------------------------------------
+--gc <- zoom _groupCode $ unless (x == 102) $ fail $ "Expected group code 102 but received group code: " <> show x
+---- | 
+--something :: forall .
+--  ( Eq v
+--  )
+--  => v -- | Expected value
+--  -> (v -> String) -- | Error message
+--  -> (s -> v)
+--  -> Biparser c s m n () v
+--
+----------------------------------------
+--    v <- zoom (_value . _ValueText) do
+--      char '{'
+--      rest
+--    pure $ CodeValue gc v
+---- | 
+--something' :: forall .
+--  (
+--  )
+--  => (u -> n v)
+--  -> 
+
+
 -- * Helper run functions
 
 runForward :: forall is c s m n u v.

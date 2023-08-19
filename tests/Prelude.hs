@@ -35,6 +35,7 @@ module Prelude
   , module Biparse.Biparser.StateWriter
   , module GHC.Float
   , module Data.Either
+  , module Control.Monad.EitherString
   , module System.IO.Error
   , module Data.ByteString
   , module Data.Sequence
@@ -84,7 +85,7 @@ import Test.QuickCheck
 import Test.QuickCheck.Instances.Text ()
 import Text.Show (Show(show))
 import Control.Monad ((>>=), return, (>>), fail, MonadPlus)
-import Data.Function ((.), ($), const)
+import Data.Function ((.), ($), const, id)
 import Control.Applicative (pure, (<|>), (<*), (*>), (<*>), empty, liftA2)
 import Data.Functor (Functor(fmap), (<$>), ($>))
 import Data.Bifunctor (first)
@@ -95,7 +96,8 @@ import Data.Tuple (fst, snd)
 import Biparse.Biparser hiding (Biparser, Iso, Unit, Const, ConstU)
 import Control.Monad.Writer (WriterT(runWriterT))
 import Biparse.Biparser.StateWriter (Biparser, Iso, Unit, Const, ConstU, runForward, runBackward, evalForward)
-import Data.Either (Either(Left,Right), fromRight)
+import Data.Either (Either(Left,Right), fromRight, isLeft)
+import Control.Monad.EitherString (EitherString(EValue), isString)
 import System.IO.Error (isUserError)
 import Data.Kind (Type)
 import GHC.IO.Exception (IOException)
