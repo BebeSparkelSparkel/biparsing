@@ -1,5 +1,9 @@
 module Biparse.Constructor
   ( Constructor(..)
+  , comap
+  , comapM
+  , upon
+  , uponM
   , Focus
   , focus
   , FocusOne
@@ -11,7 +15,7 @@ module Biparse.Constructor
   , exposes
   ) where
 
-import Control.Monad.ChangeMonad (ChangeMonad(ChangeFunction,changeMonad))
+import Control.Monad.ChangeMonad (ChangeMonad(ChangeFunction), changeMonad)
 import Biparse.Biparser (Biparser(Biparser), SubState, SubElement, one, Iso, GetSubState, UpdateStateWithElement)
 import Biparse.Context.IdentityState (IdentityState)
 import Biparse.Biparser.StateWriter qualified as BSW
@@ -35,6 +39,37 @@ instance Monad n => Comap StateInstance (Fwd m :*: Bwd (StateT s n)) where
 type instance BwdMonad StateInstance (Constructor _ _ n) = n
 deriving via (Fwd (ReaderT s m) :*: Bwd (StateT s n)) instance Monad n => Comap StateInstance (Constructor s m n)
 
+comap :: forall s m n u u' v.
+  Monad n
+  => (u -> u')
+  -> Constructor s m n u' v
+  -> Constructor s m n u v
+comap = FB.comap @StateInstance
+
+comapM :: forall s m n u u' v.
+  Monad n
+  => (u -> n u')
+  -> Constructor s m n u' v
+  -> Constructor s m n u v
+comapM = FB.comapM @StateInstance
+
+infix 8 `upon`
+upon :: forall s m n u u' v.
+  Monad n
+  => Constructor s m n u' v
+  -> (u -> u')
+  -> Constructor s m n u v
+upon = flip comap
+
+infix 8 `uponM`
+uponM :: forall s m n u u' v.
+  Monad n
+  => Constructor s m n u' v
+  -> (u -> n u')
+  -> Constructor s m n u v
+uponM = flip comapM
+
+
 type Focus m m' n n' =
   -- m
   ( Monad m
@@ -57,7 +92,7 @@ focus :: forall c s m m' n n' u v u' s'.
 focus f g (Biparser fw bw) (Constructor (Fwd fw' :*: Bwd bw')) = Biparser
   do
     r <- fw
-    changeMonad @() @m' @m () $ runReaderT fw' r
+    changeMonad $ runReaderT fw' r
   \u -> do
     (v,s') <- liftBaseMonad do
       x <- f u

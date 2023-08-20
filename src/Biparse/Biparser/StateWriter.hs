@@ -13,7 +13,7 @@ module Biparse.Biparser.StateWriter
   , runBackward
   ) where
 
-import Control.Monad.ChangeMonad (ChangeMonad(ChangeFunction,changeMonad))
+import Control.Monad.ChangeMonad (ChangeMonad(ChangeFunction,changeMonad'))
 import Control.Monad.StateError (StateErrorT, stateErrorT, runStateErrorT, runSET, ResultMonad(ResultingMonad), ErrorContext)
 import Biparse.Biparser (SubState, forward, backward, ReplaceSubState(replaceSubState))
 import Biparse.Biparser qualified as B
@@ -25,27 +25,6 @@ type Const c s m n u = Biparser c s m n u ()
 type ConstU c s m n u v = Biparser c s m n u v
 
 type IsoClass c m n a b = B.IsoClass c (StateErrorT (ErrorContext c) a m) (WriterT (SubState c a) n) a b
-
----- | Discards unused s' state to avoid commingling m and n monads.
---translate :: forall c' c s s' m m' n ss' u v.
---   ( Monad m
---   , Monad n
---   , ss' ~ SubState c' s'
---   )
---  => (forall a. StateErrorT c' s' m' a -> StateErrorT c s m a)
---  -> Biparser c  s  m  n ss' s'
---  -> Biparser c' s' m' n u   v
---  -> Biparser c  s  m  n u   v
---translate f (B.Biparser fw bw) (B.Biparser fw' bw') = B.Biparser
---  (stateErrorT \s -> do
---    (s',s'') <- runSET fw s
---    (x, _) <- f $ runSET fw' s'
---    pure (x,s'')
---  )
---  \u -> WriterT do
---    (x,w)  <- runWriterT (bw' u)
---    (_,w') <- runWriterT (bw  w)
---    pure (x,w')
 
 -- | Discards unused s' state to avoid commingling m and n monads.
 zoom  :: forall is c' c s s' m m' n u v ss'.
@@ -62,38 +41,13 @@ zoom  :: forall is c' c s s' m m' n u v ss'.
 zoom (B.Biparser fw bw) (B.Biparser fw' bw') = B.Biparser
   (stateErrorT \s -> do
     (ss,s') <- (runStateT . runStateErrorT) fw s
-    (x,_) <- changeMonad @is () $ (runStateT . runStateErrorT) fw' $ replaceSubState s ss
+    (x,_) <- changeMonad' @is () $ (runStateT . runStateErrorT) fw' $ replaceSubState s ss
     pure (x,s')
   )
   \u -> WriterT do
     (x,w)  <- runWriterT (bw' u)
     (_,w') <- runWriterT (bw  w)
     pure (x,w')
-
-
-----------------------------------------
---gc <- zoom _groupCode $ unless (x == 102) $ fail $ "Expected group code 102 but received group code: " <> show x
----- | 
---something :: forall .
---  ( Eq v
---  )
---  => v -- | Expected value
---  -> (v -> String) -- | Error message
---  -> (s -> v)
---  -> Biparser c s m n () v
---
-----------------------------------------
---    v <- zoom (_value . _ValueText) do
---      char '{'
---      rest
---    pure $ CodeValue gc v
----- | 
---something' :: forall .
---  (
---  )
---  => (u -> n v)
---  -> 
-
 
 -- * Helper run functions
 
@@ -104,7 +58,6 @@ runForward :: forall is c s m n u v.
   => Biparser c s m n u v
   -> s
   -> ResultingMonad m is (v, s)
---runForward bp = changeMonad @is (resultMonad @(ResultingMonad m is) @is :: ChangeFunction is (ResultingMonad m is) m') . runSET (forward bp)
 runForward bp = runSET @is (forward bp)
 
 evalForward :: forall is c s m m' n u v.

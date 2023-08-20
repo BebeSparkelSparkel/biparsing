@@ -64,7 +64,7 @@ module Biparse.Biparser
 import Biparse.FixFail (FixFail(fixFail))
 import Data.Profunctor (Profunctor(dimap))
 import Control.Monad.Extra (findM)
-import Control.Monad.ChangeMonad (ChangeMonad, ChangeFunction, changeMonad)
+import Control.Monad.ChangeMonad (ChangeMonad, ChangeFunction, changeMonad')
 import Control.Monad.Writer.Class (listen)
 import Control.Profunctor.FwdBwd ((:*:)((:*:)), Fwd(Fwd), Bwd(Bwd), BwdMonad, Comap)
 import Control.Profunctor.FwdBwd qualified as FB
@@ -568,14 +568,14 @@ writeConstructor c (Biparser fw bw) bp = Biparser
     x <- fw
     forward $ bp x
   \u -> do
-    (x,x') <- changeMonad @EmptyWrite () $ listen $ bw u
+    (x,x') <- changeMonad' @EmptyWrite () $ listen $ bw u
     c' <- either throwError pure $ c x'
-    (y,y') <- changeMonad @EmptyWrite () $ listen $ backward (bp x) u
+    (y,y') <- changeMonad' @EmptyWrite () $ listen $ backward (bp x) u
     either throwError tell $ c' y'
     return y
 instance (Monoid b, Monad n) => ChangeMonad EmptyWrite (WriterT a n) (WriterT b n) where
   type ChangeFunction EmptyWrite (WriterT a n) (WriterT b n) = ()
-  changeMonad () = mapWriterT (>>= \(x,_) -> pure (x,mempty))
+  changeMonad' () = mapWriterT (>>= \(x,_) -> pure (x,mempty))
 
 instance (Monoid (SubState c s), Monad m, Applicative n) => Applicative (Biparser c s m n u) where
   pure v = Biparser (pure v) (const $ pure v)

@@ -12,7 +12,7 @@ module Control.Monad.StateError
   ) where
 
 import Biparse.Error.WrapError (WrapError(Error), wrapError)
-import Control.Monad.ChangeMonad (ChangeMonad(ChangeFunction,changeMonad), ResultMonad(ResultingMonad,resultMonad))
+import Control.Monad.ChangeMonad (ChangeMonad(ChangeFunction,changeMonad'), ResultMonad(ResultingMonad,resultMonad))
 import Control.Monad.Except (catchError)
 import Control.Monad.TransformerBaseMonad (TransformerBaseMonad, LiftBaseMonad, liftBaseMonad)
 import Control.Monad.Trans (MonadTrans, lift)
@@ -65,7 +65,7 @@ runSET :: forall is c s m a.
   => StateErrorT c s m a
   -> s
   -> ResultingMonad m is (a, s)
-runSET = (changeMonad @is (resultMonad @m @is) .) . runStateT . runStateErrorT
+runSET = (changeMonad' @is (resultMonad @m @is) .) . runStateT . runStateErrorT
 
 instance
   ( ChangeFunction is (Either (ErrorState e s)) (Either (Error e s)) ~ (ErrorState e s -> Error e s)

@@ -19,7 +19,7 @@ import Control.Monad.StateError (StateErrorT, ErrorState, ErrorContext, ErrorIns
 import Control.Monad.EitherString (EitherString(EValue,EString))
 import GHC.Exts (IsList(Item))
 import GHC.Exts qualified as GE
-import Control.Monad.ChangeMonad (ChangeMonad(ChangeFunction,changeMonad), ResultMonad(ResultingMonad,resultMonad))
+import Control.Monad.ChangeMonad (ChangeMonad(ChangeFunction,changeMonad'), ResultMonad(ResultingMonad,resultMonad))
 
 import GHC.Err (undefined)
 import Control.Monad.Trans.Error qualified as E
@@ -102,18 +102,18 @@ type EESP ss = EEP String ss
 instance ChangeMonad () (EESP text) (Either ErrorPosition) where
   type ChangeFunction () (EESP text) (Either ErrorPosition) =
     ErrorState String (Position text) -> ErrorPosition
-  changeMonad = first
+  changeMonad' = first
 
 -- | "This instance is not sound and is a hack for zoom. The monad conversion in zoom should be more complete or throw away the text entirely but 'catch' in 'MonadError e (StateErrorT s m)' makes this difficult.
 data ElementToList
 instance ChangeMonad ElementToList (EEP e text) (EEP e [text]) where
   type ChangeFunction ElementToList (EEP e text) (EEP e [text]) = ()
-  changeMonad () = first $ second $ fmap $ singleton
+  changeMonad' () = first $ second $ fmap $ singleton
 
 data ListToElement
 instance Monoid text => ChangeMonad ListToElement (EEP e [text]) (EEP e text) where
   type ChangeFunction ListToElement (EEP e [text]) (EEP e text) = ()
-  changeMonad () = first $ second $ ($> mempty)
+  changeMonad' () = first $ second $ ($> mempty)
   
 type instance ErrorContext LineColumn = 'ErrorStateInstance
 type instance ErrorContext LinesOnly = 'ErrorStateInstance
@@ -121,7 +121,7 @@ type instance ErrorContext LinesOnly = 'ErrorStateInstance
 type SE ss = StateErrorT 'ErrorStateInstance (Position ss) (EESP ss)
 instance ChangeMonad () EitherString (SE ss) where
   type ChangeFunction () EitherString (SE ss) = ()
-  changeMonad () = \case
+  changeMonad' () = \case
     EValue x -> pure x
     EString msg -> fail msg
     _ -> empty

@@ -1,6 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 module Control.Monad.ChangeMonad
   ( ChangeMonad(..)
+  , changeMonad
   , ResultMonad(..)
   ) where
 
@@ -10,11 +11,17 @@ import System.IO (IO)
 
 class ChangeMonad instanceSelector m n where
   type ChangeFunction instanceSelector m n
-  changeMonad :: ChangeFunction instanceSelector m n -> m a -> n a
+  changeMonad' :: ChangeFunction instanceSelector m n -> m a -> n a
+
+changeMonad :: forall m n.
+  ( ChangeMonad () m n
+  , ChangeFunction () m n ~ ()
+  ) => forall a. m a -> n a
+changeMonad = changeMonad' @() ()
 
 instance ChangeMonad () m m where
   type ChangeFunction _ _ _ = ()
-  changeMonad = const id
+  changeMonad' = const id
 
 -- * ResultMonad
 

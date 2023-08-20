@@ -26,7 +26,7 @@ spec = do
 instance ChangeMonad () (Either (ErrorState String Int)) (Either String) where
   type ChangeFunction () (Either (ErrorState String Int)) (Either String) =
     ErrorState String Int -> String
-  changeMonad = first
+  changeMonad' = first
 
 instance WrapError String Int where
   type Error String Int = String
