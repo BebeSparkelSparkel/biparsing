@@ -9,31 +9,31 @@ module Biparse.Constructor
   , expectFwd
   , expose
   , exposes
-  , Fwd(..)
-  , Bwd(..)
-  , (:*:)(..)
-  , Comap(..)
   ) where
 
 import Control.Monad.ChangeMonad (ChangeMonad(ChangeFunction,changeMonad))
---import Biparse.Biparser (Biparser(Biparser), Iso, forward, backward, one, SubElement, SubState, ElementContext)
 import Biparse.Biparser (Biparser(Biparser), SubState, SubElement, one, Iso, GetSubState, UpdateStateWithElement)
 import Biparse.Context.IdentityState (IdentityState)
 import Biparse.Biparser.StateWriter qualified as BSW
 import Control.Lens (Traversal', preview, assign)
-import GHC.Generics (Generic, Generic1)
 import Control.Monad.TransformerBaseMonad (TransformerBaseMonad, LiftBaseMonad, liftBaseMonad)
 import Control.Monad.Reader (ReaderT(ReaderT), runReaderT, ask)
 import Data.Default (Default, def)
 import Control.Monad.Trans (lift)
 import Control.Monad.StateError (runStateErrorT)
-import Generic.Data (gpure, gap, gempty, galt)
+import Control.Profunctor.FwdBwd ((:*:)((:*:)), Fwd(Fwd), Bwd(Bwd), BwdMonad, Comap)
+import Control.Profunctor.FwdBwd qualified as FB
 
 newtype Constructor s m n u v = Constructor {deconstruct :: (Fwd (ReaderT s m) :*: Bwd (StateT s n)) u v}
   deriving (Functor, Applicative, Alternative, Monad, MonadFail)
 
-type instance BwdMonad (Constructor _ _ n) = n
-deriving via (Fwd (ReaderT s m) :*: Bwd (StateT s n)) instance Monad n => Comap (Constructor s m n)
+data StateInstance
+type instance BwdMonad StateInstance (_ :*: Bwd (StateT _ n)) = n
+instance Monad n => Comap StateInstance (Fwd m :*: Bwd (StateT s n)) where
+  comap f (Fwd x :*: Bwd y) = Fwd x :*: Bwd (y . f)
+  comapM f (Fwd x :*: Bwd y) = Fwd x :*: Bwd \u -> StateT \s -> f u >>= (flip runStateT s) . y
+type instance BwdMonad StateInstance (Constructor _ _ n) = n
+deriving via (Fwd (ReaderT s m) :*: Bwd (StateT s n)) instance Monad n => Comap StateInstance (Constructor s m n)
 
 type Focus m m' n n' =
   -- m
@@ -146,45 +146,4 @@ exposes :: forall s m n u a.
   => (s -> a)
   -> Constructor s m n u a
 exposes = (<$> expose)
-
-newtype Fwd m u v = Fwd {unFwd :: m v} deriving (Functor, Applicative, Alternative, Monad, MonadFail)
-
-newtype Bwd m u v = Bwd {unBwd :: u -> m v} deriving (Functor, Generic1)
-instance Applicative m => Applicative (Bwd m u) where
-  pure = gpure
-  (<*>) = gap
-instance Monad m => Monad (Bwd m u) where
-  Bwd bw >>= f = Bwd \u -> bw u >>= ($ u) . unBwd . f
-instance Alternative m => Alternative (Bwd m u) where
-  empty = Bwd $ const empty
-  Bwd x <|> Bwd y = Bwd \u -> x u <|> y u
-instance MonadFail m => MonadFail (Bwd m u) where
-  fail = Bwd . const . fail
-
-data (:*:) p q u v = (:*:) {pfst :: p u v, psnd :: q u v} deriving (Functor, Generic, Generic1)
-instance (Applicative (p u), Applicative (q u)) => Applicative ((:*:) p q u) where
-  pure = gpure
-  (<*>) = gap
-instance (Alternative (p u), Alternative (q u)) => Alternative ((:*:) p q u) where
-  empty = gempty
-  (<|>) = galt
-instance (Monad (p u), Monad (q u)) => Monad ((:*:) p q u) where
-  (fw :*: bw) >>= f = (fw >>= pfst . f) :*: (bw >>= psnd . f)
-instance (MonadFail (p u), MonadFail (q u)) => MonadFail ((:*:) p q u) where
-  fail msg = fail msg :*: fail msg
-
-type BwdMonad :: (Type -> Type -> Type) -> Type -> Type
-type family BwdMonad m
-class Comap p where
-  comap :: (u -> u') -> p u' v -> p u v
-  comapM :: (u -> BwdMonad p u') -> p u' v -> p u v
-  upon :: p u' v -> (u -> u') -> p u v
-  upon = flip comap
-  uponM :: p u' v -> (u -> BwdMonad p u') -> p u v
-  uponM = flip comapM
-
-type instance BwdMonad (_ :*: Bwd (StateT _ n)) = n
-instance Monad n => Comap (Fwd m :*: Bwd (StateT s n)) where
-  comap f (Fwd x :*: Bwd y) = Fwd x :*: Bwd (y . f)
-  comapM f (Fwd x :*: Bwd y) = Fwd x :*: Bwd \u -> StateT \s -> f u >>= (flip runStateT s) . y
 

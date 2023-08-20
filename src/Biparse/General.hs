@@ -26,7 +26,7 @@ module Biparse.General
   ) where
 
 import Data.Bool qualified
-import Biparse.Biparser (Biparser, upon, Iso, uponM, Unit, unit, one, try, SubState, SubElement, ElementContext, SubStateContext, split, Const, mapWrite, Unit, ignoreForward, comapM, mapMs, comap)
+import Biparse.Biparser (Biparser, Iso, Unit, unit, one, try, SubState, SubElement, ElementContext, SubStateContext, split, Const, mapWrite, Unit, ignoreForward, mapMs, upon, uponM, comap, comapM)
 import Data.Sequences qualified
 
 identity :: forall c s m n ss.

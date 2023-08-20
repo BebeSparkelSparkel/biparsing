@@ -29,7 +29,7 @@ module Biparse.List
   , tailAlt
   ) where
 
-import Biparse.Biparser (Biparser(Biparser,forward,backward), uponM, Iso, SubElement, SubState, emptyForward, one, try, upon, mono, ElementContext, FixFail, fix, peek, Unit, UpdateStateWithSubState, isNull, breakWhen', GetSubState)
+import Biparse.Biparser (Biparser(Biparser), forward, backward, Iso, SubElement, SubState, emptyForward, one, try, mono, ElementContext, FixFail, fix, peek, Unit, UpdateStateWithSubState, isNull, breakWhen', GetSubState, upon, uponM)
 import Biparse.General (take, takeNot, Take, memptyWrite, BreakWhen, rest)
 import Data.List.NonEmpty (NonEmpty, nonEmpty)
 

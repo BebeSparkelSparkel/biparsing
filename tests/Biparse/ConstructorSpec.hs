@@ -6,6 +6,7 @@ import Biparse.Constructor as BC
 
 import Control.Monad.Reader (runReaderT)
 import Control.Lens (_1)
+import Control.Profunctor.FwdBwd (unFwd, unBwd, pfst, psnd)
 
 spec :: Spec
 spec = do
