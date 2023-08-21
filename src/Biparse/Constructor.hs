@@ -82,7 +82,7 @@ type Focus m m' n n' =
   , n' ~ TransformerBaseMonad n
   , Monad n'
   )
-focus :: forall c s m m' n n' u v u' s'.
+focus :: forall m' n' s' c s m n u v u'.
   Focus m m' n n'
   => (u -> n' u')
   -> (u' -> s')
@@ -115,7 +115,7 @@ type FocusOne c s m m' n n' ss se =
   --
   , Focus m m' n n'
   )
-focusOne :: forall c s m m' n n' u v ss se.
+focusOne :: forall m' n' se c s m n u v ss.
   FocusOne c s m m' n n' ss se
   => (u -> se)
   -> Constructor se m' n' u v
@@ -123,7 +123,7 @@ focusOne :: forall c s m m' n n' u v ss se.
   -- => Constructor ss m' n' u v -> Biparser c s m n u v
 focusOne f c = focus pure f one c
 
-focusOneDef :: forall c s m m' n n' u v ss se.
+focusOneDef :: forall m' n' se c s m n u v ss.
   ( Default se
   , ChangeFunction () m' m ~ ()
   --
