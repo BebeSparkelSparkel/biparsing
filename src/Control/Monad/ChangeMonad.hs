@@ -3,6 +3,7 @@ module Control.Monad.ChangeMonad
   ( ChangeMonad(..)
   , changeMonad
   , ResultMonad(..)
+  , Lift
   ) where
 
 import System.IO (IO)
@@ -44,4 +45,7 @@ instance ResultMonad Maybe () where
 instance ResultMonad EitherString () where
   type ResultingMonad EitherString () = EitherString
   resultMonad = ()
+
+-- | Used for the 'MonadTrans' 'lift' function for changing the monad.
+data Lift
 

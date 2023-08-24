@@ -49,6 +49,7 @@ module Prelude
   , module Data.MonoTraversable.Unprefixed
   , module Biparse.Text
   , module Control.Monad.ChangeMonad
+  , module Biparse.Utils
 
   , fb
   , errorPosition
@@ -104,6 +105,7 @@ import GHC.IO.Exception (IOException)
 import Data.Void (Void)
 import Control.Monad.Except (MonadError(throwError,catchError))
 import Control.Monad.StateError (ResultMonad(ResultingMonad), ErrorState)
+import Biparse.Utils (headAlt)
 
 import Control.Monad.ChangeMonad (ChangeMonad)
 import System.Timeout (timeout)

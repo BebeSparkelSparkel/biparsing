@@ -2,7 +2,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE PatternSynonyms #-}
 module Biparse.Biparser
-  ( Biparser(Biparser,unBiparser)
+  ( Biparser(Biparser, ..)
   , forward
   , setForward
   , backward
@@ -421,26 +421,24 @@ instance (Functor m, Functor n) => Functor (Biparser c s m n u) where
 -- | Takes and writes one element. Updates the context and substate.
 one :: forall c s m n ss.
   ( IsSequence ss
-  , MonadFail m
   , ElementContext c s
+  -- m
   , MonadState s m
+  , MonadFail m
+  , Alternative m
+  -- n
   , MonadWriter ss n
+  -- assignments
   , ss ~ SubState c s
   ) => Iso c m n s (SubElement c s)
 one = Biparser fw bw
   where
   fw = do
     s <- get
-    headTailMay (getSubState @c s) & \case
-      Just (x, ss) -> put (updateElementContext @c s x ss) $> x
-      Nothing -> fail "Could not take one element. The container is empty."
+    (x, ss) <- headTailAlt (getSubState @c s) <|> fail "Could not take one element. The container is empty."
+    put (updateElementContext @c s x ss) $> x
   bw :: SubElement c s -> n (SubElement c s)
   bw c = tell (singleton c) $> c
-  headTailMay :: IsSequence b => b -> Maybe (Element b, b)
-  headTailMay x = do
-    h <- headMay x
-    s <- tailMay x
-    return (h, s)
 
 -- | Takes and writes substate. Updates the context and substate.
 split :: forall c s m n ss.

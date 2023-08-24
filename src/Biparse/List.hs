@@ -35,8 +35,11 @@ import Data.List.NonEmpty (NonEmpty, nonEmpty)
 
 replicateBiparserT :: forall c s m n u v.
   ( Monoid (SubState c s)
+  -- m
   , Monad m
+  -- n
   , MonadFail n
+  , Alternative n
   )
   => Int
   -> Biparser c s m n u v
@@ -44,14 +47,12 @@ replicateBiparserT :: forall c s m n u v.
 replicateBiparserT = \case
   0 -> const $ return $ mempty
   n -> \x -> do
-    v <- x `uponM` (emptyFail n . headMay)
-    vs <- replicateBiparserT (n - 1) x `uponM` (emptyFail n . tailMay)
+    v <- x `uponM` (emptyFail n . headAlt)
+    vs <- replicateBiparserT (n - 1) x `uponM` (emptyFail n . tailAlt)
     return $ v `cons` vs
   where
-  emptyFail :: Int -> Maybe a -> n a
-  emptyFail n = maybe
-    (fail $ "Expected " <> show n <> " more elements but there are none left.")
-    return
+  emptyFail :: Int -> n a -> n a
+  emptyFail n = (<|> (fail $ "Expected " <> show n <> " more elements but there are none left."))
 
 -- | Takes
 takeElementsWhile :: forall c s m n ss.

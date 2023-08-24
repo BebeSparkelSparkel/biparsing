@@ -12,7 +12,7 @@ module Control.Monad.StateError
   ) where
 
 import Biparse.Error.WrapError (WrapError(Error), wrapError)
-import Control.Monad.ChangeMonad (ChangeMonad(ChangeFunction,changeMonad'), ResultMonad(ResultingMonad,resultMonad))
+import Control.Monad.ChangeMonad (ChangeMonad(ChangeFunction,changeMonad'), ResultMonad(ResultingMonad,resultMonad), Lift)
 import Control.Monad.Except (catchError)
 import Control.Monad.TransformerBaseMonad (TransformerBaseMonad, LiftBaseMonad, liftBaseMonad)
 import Control.Monad.Trans (MonadTrans, lift)
@@ -73,6 +73,10 @@ instance
   ) => ResultMonad (Either (ErrorState e s)) is where
   type ResultingMonad (Either (ErrorState e s)) is = Either (Error e s)
   resultMonad (ErrorState e s) = wrapError e s
+
+instance Monad m => ChangeMonad Lift m (StateErrorT 'NewtypeInstance s m) where
+  type ChangeFunction Lift m (StateErrorT 'NewtypeInstance s m) = ()
+  changeMonad' () = lift
 
 type instance TransformerBaseMonad (StateErrorT _ _ m) = m
 

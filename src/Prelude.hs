@@ -36,17 +36,7 @@ module Prelude
   , module Control.Monad.Except
   , module Data.Void
   , module Data.Traversable
-
-  , (|>)
-  , (^:^)
-  , (<$$>)
-  , (<$$)
-  , (>>>)
-
-  , headAlt
-  , lastAlt
-  , tailAlt
-  , initAlt
+  , module Biparse.Utils
   ) where
 
 import Data.Void (Void, absurd)
@@ -76,7 +66,7 @@ import Data.MonoTraversable.Unprefixed (for_, null, length, toList)
 import Data.Monoid (Monoid(mempty))
 import Data.Ord (Ord, (>), (>=))
 import Data.Semigroup (Semigroup, (<>))
-import Data.Sequences (IsSequence, initMay, tailMay, singleton, cons, snoc, span, replicate, Index, fromList, initDef, lengthIndex, initTails)
+import Data.Sequences (IsSequence, singleton, initTails, Index, span, lengthIndex, replicate, cons, fromList, snoc)
 import Data.String (String, IsString(fromString))
 import Data.Tuple (fst, snd, uncurry)
 import GHC.Enum (toEnum, fromEnum)
@@ -85,35 +75,5 @@ import Numeric.Natural (Natural)
 import Text.Show (Show(show))
 import Text.Read (Read)
 import Control.Monad.State (StateT(StateT,runStateT), execState)
-
-(|>) :: Alternative f => f a -> a -> f a
-x |> y = x <|> pure y
-
-infixr 5 ^:^
-(^:^) :: Applicative f => f a -> f [a] -> f [a]
-(^:^) = liftA2 (:)
-
-infixl 4 <$$>
-(<$$>) :: (Functor f, Functor g) => (a -> b) -> f (g a) -> f (g b)
-(<$$>) = fmap . fmap
-
-infixl 4 <$$
-(<$$) :: (Functor f, Functor g) => b -> f (g a) -> f (g b)
-(<$$) = fmap . (<$)
-
-infixr 9 >>>
-(>>>) :: (a -> b) -> (b -> c) -> a -> c
-(>>>) = flip (.)
-
-headAlt :: forall a n. (Alternative n, MonoFoldable a) => a -> n (Element a)
-headAlt = maybe empty pure . headMay
-
-lastAlt :: forall a n. (Alternative n, MonoFoldable a) => a -> n (Element a)
-lastAlt = maybe empty pure . lastMay
-
-tailAlt :: forall a n. (Alternative n, IsSequence a) => a -> n a
-tailAlt = maybe empty pure . tailMay
-
-initAlt :: forall a n. (Alternative n, IsSequence a) => a -> n a
-initAlt = maybe empty pure . initMay
+import Biparse.Utils (headAlt, tailAlt, initAlt, headTailAlt, lastAlt, (^:^))
 

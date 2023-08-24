@@ -16,10 +16,14 @@ char :: forall c s m n u text.
   ( CharElement c s
   , IsSequence text
   , ElementContext c s
+  -- m
   , MonadState s m
   , MonadFail m
+  , Alternative m
+  -- n
   , MonadWriter text n
   , MonadFail n
+  -- assignments
   , text ~ SubState c s
   )
   => Char

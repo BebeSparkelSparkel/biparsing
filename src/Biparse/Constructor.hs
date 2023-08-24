@@ -1,35 +1,54 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE PatternSynonyms #-}
 module Biparse.Constructor
-  ( Constructor(..)
+  ( Constructor(Constructor, ..)
+  , runForwardC
+  , runBackwardC
   , comap
   , comapM
   , upon
   , uponM
-  , Focus
-  , focus
+  , focusOneDef
   , FocusOne
   , focusOne
-  , focusOneDef
+  , Focus
+  , focus
   , lensBiparse
   , expectFwd
   , expose
   , exposes
   ) where
 
-import Control.Monad.ChangeMonad (ChangeMonad(ChangeFunction), changeMonad)
+import Control.Monad.ChangeMonad (ChangeMonad(ChangeFunction,changeMonad'))
 import Biparse.Biparser (Biparser(Biparser), SubState, SubElement, one, Iso, GetSubState, UpdateStateWithElement)
 import Biparse.Context.IdentityState (IdentityState)
 import Biparse.Biparser.StateWriter qualified as BSW
 import Control.Lens (Traversal', preview, assign)
 import Control.Monad.TransformerBaseMonad (TransformerBaseMonad, LiftBaseMonad, liftBaseMonad)
-import Control.Monad.Reader (ReaderT(ReaderT), runReaderT, ask)
+import Control.Monad.Reader (ReaderT(ReaderT), ask)
 import Data.Default (Default, def)
 import Control.Monad.Trans (lift)
 import Control.Monad.StateError (runStateErrorT)
 import Control.Profunctor.FwdBwd ((:*:)((:*:)), Fwd(Fwd), Bwd(Bwd), BwdMonad, Comap)
 import Control.Profunctor.FwdBwd qualified as FB
 
-newtype Constructor s m n u v = Constructor {deconstruct :: (Fwd (ReaderT s m) :*: Bwd (StateT s n)) u v}
+newtype Constructor s m n u v = Constructor' {deconstruct :: (Fwd (ReaderT s m) :*: Bwd (StateT s n)) u v}
   deriving (Functor, Applicative, Alternative, Monad, MonadFail)
+pattern Constructor :: ReaderT s m v -> (u -> StateT s n v) -> Constructor s m n u v
+pattern Constructor fw bw = Constructor' (Fwd fw :*: Bwd bw)
+{-# COMPLETE Constructor #-}
+pattern ConstructorUnT :: (s -> m v) -> (u -> s -> n (v,s)) -> Constructor s m n u v
+pattern ConstructorUnT fw bw <- Constructor (ReaderT fw) ((runStateT .) -> bw) where
+  ConstructorUnT fw bw = Constructor (ReaderT fw) (StateT . bw)
+{-# COMPLETE ConstructorUnT #-}
+
+
+runForwardC :: Constructor s m n u v -> s -> m v
+runForwardC (ConstructorUnT fw _) = fw
+
+runBackwardC :: Constructor s m n u v -> u -> s -> n (v,s)
+runBackwardC (ConstructorUnT _ bw) = bw
+
 
 data StateInstance
 type instance BwdMonad StateInstance (_ :*: Bwd (StateT _ n)) = n
@@ -69,12 +88,47 @@ uponM :: forall s m n u u' v.
   -> Constructor s m n u v
 uponM = flip comapM
 
+-- | 'focus' with 'one' and a 'Default' value.
+-- When forward, runs the 'Constructor' one the first sub-element.
+-- When backward, run the 'Constructor' on the 'Default' value of 'se'.
+focusOneDef :: forall is m' n' se c s m n u v ss.
+  ( Default se
+  --
+  , FocusOne is c s m m' n n' ss se
+  )
+  => Constructor se m' n' se v
+  -> Biparser c s m n u v
+focusOneDef = focusOne @is (const $ pure def)
 
-type Focus m m' n n' =
+type FocusOne is c s m m' n n' ss se =
+  ( IsSequence ss
+  , GetSubState c s
+  , UpdateStateWithElement c s
+  -- m
+  , MonadState s m
+  , MonadFail m
+  , Alternative m
+  -- n
+  , MonadWriter ss n
+  -- assignments
+  , ss ~ SubState c s
+  , se ~ SubElement c s
+  --
+  , Focus is m m' n n'
+  )
+-- |
+focusOne :: forall is m' n' se c s m n u v ss.
+  FocusOne is c s m m' n n' ss se
+  => (u -> n' se)
+  -> Constructor se m' n' se v
+  -> Biparser c s m n u v
+focusOne f c = focus @is f id one c
+
+type Focus is m m' n n' =
   -- m
   ( Monad m
-  , ChangeMonad () m' m
-  , () ~ ChangeFunction () m' m
+  , ChangeMonad is m' m
+  , () ~ ChangeFunction is m' m
   -- n
   , Monad n
   , LiftBaseMonad n
@@ -82,57 +136,24 @@ type Focus m m' n n' =
   , n' ~ TransformerBaseMonad n
   , Monad n'
   )
-focus :: forall m' n' s' c s m n u v u'.
-  Focus m m' n n'
-  => (u -> n' u')
-  -> (u' -> s')
-  -> Iso c m n s s'
-  -> Constructor s' m' n' u' v
+-- | Uses 
+focus :: forall is m' n' s' c s m n u v u'.
+  Focus is m m' n n'
+  => (u -> n' u') -- ^ Converts the contextual 'Biparser' 'u' to 'u\'' used by the 'Constructor' profunctor.
+  -> (u' -> s') -- ^ Extracts the 's\'' to be used as the read-only variable in 'Fwd (ReaderT s\' m)' and the state in 'Bwd (StateT s\' n)'.
+  -> Iso c m n s s' -- ^ The isomorphic biparser that translates between 's' and 's\''. Same use as in 'zoom'
+  -> Constructor s' m' n' u' v -- ^ The 'Constructor' that when forward uses 's\'' to create 'v' and when backward modifies 's\'' for writing.
   -> Biparser c s m n u v
-focus f g (Biparser fw bw) (Constructor (Fwd fw' :*: Bwd bw')) = Biparser
+focus f g (Biparser fw bw) (ConstructorUnT fw' bw') = Biparser
   do
     r <- fw
-    changeMonad $ runReaderT fw' r
+    changeMonad' @is () $ fw' r
   \u -> do
     (v,s') <- liftBaseMonad do
       x <- f u
-      runStateT (bw' x) $ g x
+      bw' x $ g x
     _ <- bw s'
     pure v
-
-type FocusOne c s m m' n n' ss se =
-  ( IsSequence ss
-  , GetSubState c s
-  , UpdateStateWithElement c s
-  -- m
-  , MonadFail m
-  , MonadState s m
-  -- n
-  , MonadWriter ss n
-  -- assignments
-  , ss ~ SubState c s
-  , se ~ SubElement c s
-  --
-  , Focus m m' n n'
-  )
-focusOne :: forall m' n' se c s m n u v ss.
-  FocusOne c s m m' n n' ss se
-  => (u -> se)
-  -> Constructor se m' n' u v
-  -> Biparser c s m n u v
-  -- => Constructor ss m' n' u v -> Biparser c s m n u v
-focusOne f c = focus pure f one c
-
-focusOneDef :: forall m' n' se c s m n u v ss.
-  ( Default se
-  , ChangeFunction () m' m ~ ()
-  --
-  , FocusOne c s m m' n n' ss se
-  )
-  => Constructor se m' n' u v
-  -> Biparser c s m n u v
---focusOneDef c = focus pure (const def) one c
-focusOneDef c = focusOne (const def) c
 
 lensBiparse :: forall s s' m n u v.
   ( MonadFail m
@@ -143,14 +164,14 @@ lensBiparse :: forall s s' m n u v.
   -> BSW.Biparser IdentityState s' m n u v
   -> Constructor s m n u v
 lensBiparse t (Biparser fw bw) = Constructor
-  $   Fwd do
-        s <- preview t >>= maybe (fail $ "lensBiparse could not preview") pure
-        (v, _) <- ReaderT $ const $ runStateT (runStateErrorT fw) s
-        pure v
-  :*: Bwd \u -> do
-        (v,w) <- lift $ runWriterT $ bw u
-        assign t w
-        pure v
+  do
+    s <- preview t >>= maybe (fail $ "lensBiparse could not preview") pure
+    (v, _) <- ReaderT $ const $ runStateT (runStateErrorT fw) s
+    pure v
+  $ \u -> do
+    (v,w) <- lift $ runWriterT $ bw u
+    assign t w
+    pure v
 
 expectFwd ::
   ( MonadFail m
@@ -163,16 +184,16 @@ expectFwd ::
   -> v
   -> Constructor s m n u ()
 expectFwd t x = Constructor
-  $   Fwd do
-        y <- preview t >>= maybe (fail $ "expectFwd could not preview when looking for: " <> show x) pure
-        unless (x == y) $ fail $ "Expected '" <> show y <> "' to equal '" <> show x <> "'."
-  :*: Bwd (const $ assign t x)
+  do
+    y <- preview t >>= maybe (fail $ "expectFwd could not preview when looking for: " <> show x) pure
+    unless (x == y) $ fail $ "Expected '" <> show y <> "' to equal '" <> show x <> "'."
+  $ const $ assign t x
 
 expose :: forall s m n u.
   ( Monad m
   , Monad n
   ) => Constructor s m n u s
-expose = Constructor $ Fwd ask :*: Bwd (const get)
+expose = Constructor ask $ const get
 
 exposes :: forall s m n u a.
   ( Monad m
