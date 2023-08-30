@@ -5,12 +5,15 @@ module Control.Profunctor.FwdBwd
   , Bwd(..)
   , BwdMonad
   , Comap(..)
+  , FwdBwd
+  , pattern FwdBwd
   ) where
 
 import GHC.Generics (Generic, Generic1)
 import Generic.Data (gpure, gap, gempty, galt)
 
 data (:*:) p q u v = (:*:) {pfst :: p u v, psnd :: q u v} deriving (Functor, Generic, Generic1)
+{-# COMPLETE (:*:) #-}
 instance (Applicative (p u), Applicative (q u)) => Applicative ((:*:) p q u) where
   pure = gpure
   (<*>) = gap
@@ -51,4 +54,9 @@ type instance BwdMonad () (_ :*: Bwd n) = n
 instance Monad n => Comap () (Fwd m :*: Bwd n) where
   comap f (Fwd fw :*: Bwd bw) = Fwd fw :*: Bwd (bw . f)
   comapM f (Fwd fw :*: Bwd bw) = Fwd fw :*: Bwd (bw <=< f)
+
+type FwdBwd m n u v = (Fwd m :*: Bwd n) u v
+pattern FwdBwd :: m v -> (u -> n v) -> (Fwd m :*: Bwd n) u v
+pattern FwdBwd fw bw = Fwd fw :*: Bwd bw
+{-# COMPLETE FwdBwd #-}
 

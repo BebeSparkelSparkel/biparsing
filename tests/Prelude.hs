@@ -50,6 +50,7 @@ module Prelude
   , module Biparse.Text
   , module Control.Monad.ChangeMonad
   , module Biparse.Utils
+  , module Data.Semigroup
 
   , fb
   , errorPosition
@@ -69,10 +70,11 @@ import Data.Functor.Identity (Identity(Identity, runIdentity))
 import Data.Maybe (Maybe(Just,Nothing), maybe)
 import Data.Int (Int)
 import Data.Word (Word)
+import Data.Semigroup ((<>))
 import Data.Monoid (mempty)
 import Data.Ord ((>))
 import Biparse.General
-import Data.Eq ((==), (/=))
+import Data.Eq (Eq, (==), (/=))
 import Data.Text (Text)
 import Data.Char (Char, isDigit)
 import Data.Bool (Bool(True,False), otherwise, (&&))
@@ -87,8 +89,8 @@ import Test.QuickCheck.Instances.Text ()
 import Text.Show (Show(show))
 import Control.Monad ((>>=), return, (>>), fail, MonadPlus)
 import Data.Function ((.), ($), const, id)
-import Control.Applicative (pure, (<|>), (<*), (*>), (<*>), empty, liftA2)
-import Data.Functor (Functor(fmap), (<$>), ($>))
+import Control.Applicative (pure, (<|>), (<*), (*>), (<*>), empty, liftA2, Alternative)
+import Data.Functor (Functor(fmap), (<$>), ($>), (<&>))
 import Data.Bifunctor (first)
 import Control.Monad.State (StateT(runStateT), get, put)
 import Data.MonoTraversable (Element, headMay)
@@ -128,7 +130,6 @@ errorPosition :: Int -> Int -> Either ErrorPosition b -> Bool
 errorPosition l c = \case
   Left (ErrorPosition l' c' _) -> l == l' && c == c'
   _ -> False
-
 
 limit :: IO a -> IO a
 limit = (>>= maybe (fail "Timeout") pure) . timeout 500

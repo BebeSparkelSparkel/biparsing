@@ -48,6 +48,7 @@ module Biparse.Biparser
   , UpdateStateWithElement(..)
   , ElementContext
   , ReplaceSubState(..)
+  , One
   , one
   , split
   , peek
@@ -66,14 +67,14 @@ import Data.Profunctor (Profunctor(dimap))
 import Control.Monad.Extra (findM)
 import Control.Monad.ChangeMonad (ChangeMonad, ChangeFunction, changeMonad')
 import Control.Monad.Writer.Class (listen)
-import Control.Profunctor.FwdBwd ((:*:)((:*:)), Fwd(Fwd), Bwd(Bwd), BwdMonad, Comap)
+import Control.Profunctor.FwdBwd (BwdMonad, Comap, FwdBwd, pattern FwdBwd)
 import Control.Profunctor.FwdBwd qualified as FB
 import Control.Monad.Writer (mapWriterT)
 
 -- | Product type for simultainously constructing forward and backward running programs.
-newtype Biparser context s m n u v = Biparser' {unBiparser :: (Fwd m :*: Bwd n) u v}
+newtype Biparser context s m n u v = Biparser' {unBiparser :: FwdBwd m n u v}
 pattern Biparser :: m v -> (u -> n v) -> Biparser c s m n u v
-pattern Biparser fw bw = Biparser' (Fwd fw :*: Bwd bw)
+pattern Biparser fw bw = Biparser' (FwdBwd fw bw)
 {-# COMPLETE Biparser #-}
 forward :: Biparser c s m n u v -> m v
 forward (Biparser fw _) = fw
@@ -418,8 +419,7 @@ instance (Functor m, Functor n) => Functor (Biparser c s m n u) where
 -- Must be used to construct all other biparsers that have context.
 -- Used to ensure that context is updated correctly.
 
--- | Takes and writes one element. Updates the context and substate.
-one :: forall c s m n ss.
+type One c s m n ss =
   ( IsSequence ss
   , ElementContext c s
   -- m
@@ -430,7 +430,9 @@ one :: forall c s m n ss.
   , MonadWriter ss n
   -- assignments
   , ss ~ SubState c s
-  ) => Iso c m n s (SubElement c s)
+  )
+-- | Takes and writes one element. Updates the context and substate.
+one :: forall c s m n ss.  One c s m n ss => Iso c m n s (SubElement c s)
 one = Biparser fw bw
   where
   fw = do

@@ -1,7 +1,9 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE UndecidableInstances #-}
 module Biparse.Constructor
   ( Constructor(Constructor, ..)
+  , Construct
   , runForwardC
   , runBackwardC
   , comap
@@ -17,10 +19,15 @@ module Biparse.Constructor
   , expectFwd
   , expose
   , exposes
+  --, WrapUnwrap(..)
+  --, wrappedOne
+  --, unordered
+  --, Unordered(..)
   ) where
 
 import Control.Monad.ChangeMonad (ChangeMonad(ChangeFunction,changeMonad'))
-import Biparse.Biparser (Biparser(Biparser), SubState, SubElement, one, Iso, GetSubState, UpdateStateWithElement)
+import Biparse.Biparser (Biparser(Biparser), SubState, SubElement, one, Iso, GetSubState, UpdateStateWithElement, One)
+import Biparse.Biparser qualified as B
 import Biparse.Context.IdentityState (IdentityState)
 import Biparse.Biparser.StateWriter qualified as BSW
 import Control.Lens (Traversal', preview, assign)
@@ -29,19 +36,25 @@ import Control.Monad.Reader (ReaderT(ReaderT), ask)
 import Data.Default (Default, def)
 import Control.Monad.Trans (lift)
 import Control.Monad.StateError (runStateErrorT)
-import Control.Profunctor.FwdBwd ((:*:)((:*:)), Fwd(Fwd), Bwd(Bwd), BwdMonad, Comap)
+import Control.Profunctor.FwdBwd (BwdMonad, Comap, FwdBwd, pattern FwdBwd, Fwd, Bwd)
 import Control.Profunctor.FwdBwd qualified as FB
+import GHC.Generics (Generic(from,to), Rep)
+--import GHC.Generics qualified as G
 
-newtype Constructor s m n u v = Constructor' {deconstruct :: (Fwd (ReaderT s m) :*: Bwd (StateT s n)) u v}
+newtype Constructor s m n u v = Constructor' {deconstruct :: FwdBwd (ReaderT s m) (StateT s n) u v}
   deriving (Functor, Applicative, Alternative, Monad, MonadFail)
 pattern Constructor :: ReaderT s m v -> (u -> StateT s n v) -> Constructor s m n u v
-pattern Constructor fw bw = Constructor' (Fwd fw :*: Bwd bw)
+pattern Constructor fw bw = Constructor' (FwdBwd fw bw)
 {-# COMPLETE Constructor #-}
 pattern ConstructorUnT :: (s -> m v) -> (u -> s -> n (v,s)) -> Constructor s m n u v
 pattern ConstructorUnT fw bw <- Constructor (ReaderT fw) ((runStateT .) -> bw) where
   ConstructorUnT fw bw = Constructor (ReaderT fw) (StateT . bw)
 {-# COMPLETE ConstructorUnT #-}
 
+type Construct m n s = Constructor s m n s s
+
+mapS :: Functor n => (s' -> s) -> (s -> s') -> Constructor s m n u v -> Constructor s' m n u v
+mapS f g (ConstructorUnT fw bw) = ConstructorUnT (fw . f) \u s -> second g <$> bw u (f s)
 
 runForwardC :: Constructor s m n u v -> s -> m v
 runForwardC (ConstructorUnT fw _) = fw
@@ -49,14 +62,13 @@ runForwardC (ConstructorUnT fw _) = fw
 runBackwardC :: Constructor s m n u v -> u -> s -> n (v,s)
 runBackwardC (ConstructorUnT _ bw) = bw
 
-
 data StateInstance
-type instance BwdMonad StateInstance (_ :*: Bwd (StateT _ n)) = n
-instance Monad n => Comap StateInstance (Fwd m :*: Bwd (StateT s n)) where
-  comap f (Fwd x :*: Bwd y) = Fwd x :*: Bwd (y . f)
-  comapM f (Fwd x :*: Bwd y) = Fwd x :*: Bwd \u -> StateT \s -> f u >>= (flip runStateT s) . y
+type instance BwdMonad StateInstance (_ FB.:*: Bwd (StateT _ n)) = n
+instance Monad n => Comap StateInstance (Fwd m FB.:*: Bwd (StateT s n)) where
+  comap f (FwdBwd x y) = FwdBwd x (y . f)
+  comapM f (FwdBwd x y) = FwdBwd x \u -> StateT \s -> f u >>= (flip runStateT s) . y
 type instance BwdMonad StateInstance (Constructor _ _ n) = n
-deriving via (Fwd (ReaderT s m) :*: Bwd (StateT s n)) instance Monad n => Comap StateInstance (Constructor s m n)
+deriving via (Fwd (ReaderT s m) FB.:*: Bwd (StateT s n)) instance Monad n => Comap StateInstance (Constructor s m n)
 
 comap :: forall s m n u u' v.
   Monad n
@@ -202,4 +214,31 @@ exposes :: forall s m n u a.
   => (s -> a)
   -> Constructor s m n u a
 exposes = (<$> expose)
+
+---- * Wrap and unwrap ADT Constructors
+--
+--data WrapUnwrap a b = WrapUnwrap (forall m. Alternative m => a -> m b) (forall n. Applicative n => b -> n a)
+--
+--wrappedOne :: forall c m n s a b ss.
+--  ( Element ss ~ a
+--  , MonadPlus m
+--  , Alternative n
+--  , One c s m n ss
+--  )
+--  => WrapUnwrap a b -> Iso c m n s b
+--wrappedOne (WrapUnwrap f g) = do
+--  x <- one `B.uponM` g
+--  f x
+--
+--unordered :: forall s m n.
+--  ( Generic s
+--  , Unordered (Rep s) m n s s
+--  , Monad n
+--  ) => Construct m n s
+--unordered = mapS from to $ unordered'
+--
+--class Unordered s m n u v where
+--  unordered' :: Constructor (s a) m n u v
+--
+--instance Unordered => Unordered (D1 i (C1 i' sel)) where unordered' = m1 . m1 
 
