@@ -6,54 +6,47 @@ import GHC.Generics (Generic)
 import Biparse.Text.Context.LineColumn (startLineColumn)
 
 spec :: Spec
-spec = focus do
-  fb @() "ISB"
-    (unordered :: Iso LinesOnly (FM Ts) EitherString (Position Ts) ISB)
-    (\f -> do
-      describe "success" do
-        prop "success" \(i,s,b,t) -> forAll (shuffle [One i, Two s, Three b]) \h ->
-          f (startLineColumn (h <> t)) `shouldBe` Right (ISB i s b, Position 4 1 t)
+spec = pure ()
 
-      describe "fail" do
-        xit "Only Two" $ f [Two "False", Two "True"] `shouldSatisfy` errorPosition 2 1
-        xit "Only One" $ f [One 0, One 1] `shouldSatisfy` errorPosition 1 1
-    )
-    \b -> do
-      prop "print all" \v@(ISB i s b') ->
-        b v `shouldBe` EValue (v, [One i, Two s, Three b'])
 
-type Ts = [TriSum Int String Bool]
 
-data TriSum a b c = One a | Two b | Three c deriving (Show, Eq)
 
-instance (Arbitrary a, Arbitrary b, Arbitrary c) => Arbitrary (TriSum a b c) where
-  arbitrary = oneof [One <$> arbitrary, Two <$> arbitrary, Three <$> arbitrary]
-  shrink = \case
-    One x -> One <$> shrink x
-    Two x -> Two <$> shrink x
-    Three x -> Three <$> shrink x
 
-oneWU :: WrapUnwrap (TriSum a b c) a
-oneWU = WrapUnwrap (\case One x -> pure x; _ -> empty;) (pure . One)
+-----------------------------------------------------
+data ABC = ABC
+  { def :: Int
+  , ghi :: Accumulating [String]
+  } deriving (Show, Generic)
 
-twoWU :: WrapUnwrap (TriSum a b c) b
-twoWU = WrapUnwrap (\case Two x -> pure x; _ -> empty;) (pure . Two)
+added = unsafePerformIO $ addIORefs $ from $ ABC 1 (Accumulating ["abcdef"])
+type IntStringList = [Either Int String]
+parsers = makeParsers @IdentityState @(StateErrorT 'NewtypeInstance IntStringList IO) @(WriterT IntStringList IO) @IntStringList $ snd $ added
 
-threeWU :: WrapUnwrap (TriSum a b c) c
-threeWU = WrapUnwrap (\case Three x -> pure x; _ -> empty;) (pure. Three)
+up = unorderdParser @IdentityState @(StateErrorT 'NewtypeInstance IntStringList IO) @(WriterT IntStringList IO) @IntStringList $ ABC 1 (Accumulating ["abcdef"])
 
-data ISB = ISB Int String Bool deriving (Show, Eq, Generic)
+instance Accumulate [a] where
+  type AccumulateElement [a] = a
+  accumulate = cons
 
-instance Arbitrary ISB where
-  arbitrary = ISB <$> arbitrary <*> arbitrary <*> arbitrary
-  shrink (ISB i s b) = shrink (i,s,b) <&> \(x,y,z) -> ISB x y z
+instance
+  ( MonadState IntStringList m
+  , MonadFail m
+  , Alternative m
+  , MonadWriter IntStringList n
+  , MonadFail n
+  ) => IsoClass IdentityState m n IntStringList String where
+  iso = comap Right $ one >>= \case
+    Right x -> pure x
+    _ -> fail $ "Expected right"
 
-instance (MonadPlus m, Alternative n, One c s m n Ts) => IsoClass c m n s String where
-  iso = wrappedOne twoWU
-
-instance (MonadPlus m, Alternative n, One c s m n Ts) => IsoClass c m n s Int where
-  iso = wrappedOne oneWU
-
-instance (MonadPlus m, Alternative n, One c s m n Ts) => IsoClass c m n s Bool where
-  iso = wrappedOne threeWU
+instance
+  ( MonadState IntStringList m
+  , MonadFail m
+  , Alternative m
+  , MonadWriter IntStringList n
+  , MonadFail n
+  ) => IsoClass IdentityState m n IntStringList Int where
+  iso = comap Left $ one >>= \case
+    Left x -> pure x
+    _ -> fail $ "Expected left"
 

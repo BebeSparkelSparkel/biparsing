@@ -16,6 +16,7 @@ default-extensions:
   - DataKinds
   - DeriveFunctor
   - DeriveGeneric
+  - DerivingVia
   - DuplicateRecordFields
   - FlexibleContexts
   - FlexibleInstances
@@ -24,6 +25,7 @@ default-extensions:
   - ImportQualifiedPost
   - LambdaCase
   - MultiParamTypeClasses
+  - PatternSynonyms
   - QuantifiedConstraints
   - RankNTypes
   - RecordWildCards
@@ -35,24 +37,17 @@ default-extensions:
   - TypeFamilies
   - TypeOperators
   - ViewPatterns
-  - DerivingVia
-  - PatternSynonyms
 
 library:
   source-dirs: src/
   dependencies:
-    #- string-conversions
     - profunctors
     - extra
     - data-diverse
     - safe
-
-# used for InitTails and should be removed when added to mono-traversable
-    - text
-
     - generic-data
-    - exceptions >=0.10.4 && <0.11
     - data-default
+    - hvect
   other-modules:
     - Prelude
     #- Paths_biparsing

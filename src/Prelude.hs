@@ -40,7 +40,7 @@ module Prelude
   , module Text.Show
   ) where
 
-import Biparse.Utils (headAlt, tailAlt, initAlt, headTailAlt, lastAlt, (^:^))
+import Biparse.Utils (headAlt, tailAlt, initAlt, headTailAlt, lastAlt, (^:^), (<$$>))
 import Control.Applicative (Applicative((<*>),pure), (*>), (<*), liftA2, Alternative(empty,(<|>)))
 import Control.Monad (Monad((>>=),return), when, unless, MonadFail(fail), MonadPlus, guard, (=<<), (>=>), (<=<))
 import Control.Monad.EitherString (EitherString)
@@ -58,7 +58,7 @@ import Data.Coerce (Coercible, coerce)
 import Data.Either (Either(Left), fromRight, either)
 import Data.Eq (Eq((==)))
 import Data.Function (($), (.), (&), id, const, flip)
-import Data.Functor (Functor(fmap), (<$), ($>), (<$>), void)
+import Data.Functor (Functor(fmap), (<$), ($>), (<$>), (<&>), void)
 import Data.Functor.Identity (Identity(Identity,runIdentity))
 import Data.Int (Int)
 import Data.Kind (Type)
