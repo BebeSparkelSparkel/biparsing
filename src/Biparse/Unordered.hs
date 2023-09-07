@@ -5,10 +5,15 @@
 {-# LANGUAGE ImpredicativeTypes #-}
 {-# LANGUAGE GADTs #-}
 module Biparse.Unordered
-  ( unorderedBiparser
+  ( unorderedBiparserDef
+  , unorderedBiparser
+  , unorderdParser
+  , Accumulating(..)
+  , Optional(..)
   ) where
 
 import Biparse.Biparser (Iso, IsoClass(iso), SubState, upon, try, forward, backward, Biparser(Biparser))
+import Biparse.List (many, Many)
 import GHC.Generics (Rec0, (:*:)((:*:)), M1(M1,unM1), K1(K1,unK1), Generic(Rep,to,from), D1, Meta(MetaData))
 import Data.Proxy (Proxy(Proxy))
 import Data.Kind (Constraint)
@@ -20,7 +25,6 @@ import System.IO.Unsafe (unsafePerformIO)
 import GHC.TypeLits (Symbol, KnownSymbol, AppendSymbol, symbolVal)
 import Data.MonoTraversable.Unprefixed (all)
 import Data.Default (Default(def))
-
 
 type Lifted :: (Type -> Type) -> Type -> Type
 newtype Lifted m a = Lifted {runLifted :: a} deriving (Functor)
@@ -66,21 +70,26 @@ instance MapG m (K1 i c) where
 -- will implement the following after the more simple solution
 -- code 102 can appear in multiple places and should use This That These 
 
-unorderedBiparser :: forall c m n a b.
+unorderedBiparserDef :: forall c m n a b.
   ( MakeWriter c m n a (Rep b)
-  , Default b
   , UnorderedParser c m n a b
+  , Default b
   , Monad n
   ) => Iso c m n a b
-unorderedBiparser = Biparser
-  (unorderdParserDef @c @m @n @a @b)
+unorderedBiparserDef = Biparser
+  (unorderdParser @c @m @n @a @b def)
   (backward $ to <$> makeWriter @c @m @n @a `upon` from)
-  
-unorderdParserDef :: forall c m n a b.
-  ( Default b
+
+unorderedBiparser :: forall c m n a b.
+  ( MakeWriter c m n a (Rep b)
   , UnorderedParser c m n a b
-  ) => m b
-unorderdParserDef = unorderdParser @c @m @n @a def
+  , Monad n
+  )
+  => b
+  -> Iso c m n a b
+unorderedBiparser x = Biparser
+  (unorderdParser @c @m @n @a @b x)
+  (backward $ to <$> makeWriter @c @m @n @a `upon` from)
 
 unorderdParser :: forall c m n a b.
   UnorderedParser c m n a b
@@ -140,36 +149,34 @@ type TypeName :: (Type -> Type) -> Symbol
 type family TypeName a where TypeName (D1 ('MetaData dataName moduleName packageName _) _) = packageName ++ "." ++ moduleName ++ "." ++ dataName
 
 newtype Accumulating a = Accumulating {unAccumulating :: a} deriving (Show, Eq, Ord)
-class Accumulate a where
-  type AccumulateElement a :: Type
-  accumulate :: AccumulateElement a -> a -> a
-  --initialAccumulate :: a
+instance
+  ( IsoClass c m n a (Element b)
+  , IsSequence b
+  , Many c a m n
+  ) => IsoClass c m n a (Accumulating b) where
+  iso = Accumulating . fromList <$> many iso `upon` toList . unAccumulating
+
+newtype Optional a = Optional {unOptional :: a} deriving (Show, Eq, Ord)
+instance (IsoClass c m n a b, Functor m, Monad n) => IsoClass c m n a (Optional b) where
+  iso = Optional <$> iso `upon` unOptional
+
+type Refs :: forall {k}. (k -> Type) -> [Type]
+type family Refs f where
+  Refs (M1 _ _ f) = Refs f
+  Refs (f :*: g) = Append (Refs f) (Refs g)
+  Refs (Rec0 (Accumulating a)) = '[ IORef (Accumulating a) ]
+  Refs (Rec0 a) = '[ IORef a ]
 
 class AddIORefs (f :: Type -> Type) where
-  --type ResultType f :: Type -> Type
-  type Refs f :: [Type]
-  --addIORefs :: f p -> IO (Lifted IORef (ResultType f p), HVect (Refs f))
   addIORefs :: f p -> IO (Lifted IORef (LiftType IORef f p), HVect (Refs f))
 instance AddIORefs f => AddIORefs (M1 i c f) where
-  --type ResultType (M1 i c f) = M1 i c (ResultType f)
-  type Refs (M1 i c f) = Refs f
   addIORefs = fmap (first $ Lifted . M1 . runLifted) . addIORefs . unM1
 instance (AddIORefs f, AddIORefs g) => AddIORefs (f :*: g) where
-  --type ResultType (f :*: g) = ResultType f :*: ResultType g
-  type Refs (f :*: g) = Append (Refs f) (Refs g)
   addIORefs (x :*: y) = do
-    (Lifted x',x'') <- addIORefs x
-    (Lifted y',y'') <- addIORefs y
+    (Lifted x', x'') <- addIORefs x
+    (Lifted y', y'') <- addIORefs y
     pure (Lifted $ x' :*: y', x'' <++> y'')
---instance {-# OVERLAPS #-} AddIORefs (Rec0 (Accumulating a)) where
---  type ResultType (Rec0 (Accumulating a)) = Rec0 (Accumulating (IORef a))
---  type Refs (Rec0 (Accumulating a)) = Accumulating (IORef a)
---  addIORefs (K1 x) = do
---    r <- newIORef x
---    pure (K1 r, HV.singleton r)
 instance {-# OVERLAPPABLE #-} AddIORefs (Rec0 a) where
-  --type ResultType (Rec0 a) = Rec0 (IORef a)
-  type Refs (Rec0 a) = '[ IORef a ]
   addIORefs (K1 x) = do
     r <- newIORef x
     pure (Lifted $ K1 r, HV.singleton r)
@@ -177,8 +184,8 @@ instance {-# OVERLAPPABLE #-} AddIORefs (Rec0 a) where
 class MakeParsers c m n a bs where
   makeParsers :: HVect bs -> [ParserType (m Bool)]
 instance {-# OVERLAPS #-}
-  ( IsoClass c m n a (AccumulateElement b)
-  , Accumulate b
+  ( IsoClass c m n a (Element b)
+  , SemiSequence b
   , MonadPlus m
   , MonadState a m
   , MakeParsers c m n a bs
@@ -186,7 +193,7 @@ instance {-# OVERLAPS #-}
   makeParsers (r :&: rs)
     = AccumulatingParser ( do
           x <- forward $ try $ iso @c @m @n @a
-          pure $ unsafePerformIO $ modifyIORef r $ Accumulating . accumulate x . unAccumulating
+          () <- pure $ unsafePerformIO $ modifyIORef r $ Accumulating . cons x . unAccumulating
           pure True
       <|> pure False
       )
@@ -200,7 +207,7 @@ instance {-# OVERLAPPABLE #-}
   makeParsers (r :&: rs)
     = SingleSuccessParser ( do
           x <- forward $ try $ iso @c @m @n @a
-          pure $ unsafePerformIO $ writeIORef r x
+          () <- pure $ unsafePerformIO $ writeIORef r x
           pure True
       <|> pure False
       )

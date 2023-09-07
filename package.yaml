@@ -5,10 +5,12 @@ dependencies:
   - name: base
     mixin:
       - hiding (Prelude)
-  - mtl
-  - mono-traversable
-  - transformers
+  - data-default
+  - extra
   - lens
+  - mono-traversable
+  - mtl
+  - transformers
 
 default-extensions:
   - BlockArguments
@@ -41,13 +43,11 @@ default-extensions:
 library:
   source-dirs: src/
   dependencies:
-    - profunctors
-    - extra
     - data-diverse
-    - safe
     - generic-data
-    - data-default
     - hvect
+    - profunctors
+    - safe
   other-modules:
     - Prelude
     #- Paths_biparsing
@@ -55,34 +55,32 @@ library:
     #- -Werror
     - -Weverything
 
-    - -Wno-missing-kind-signatures
-    - -Wno-missing-safe-haskell-mode
     - -Wno-implicit-prelude
+    - -Wno-missing-deriving-strategies
+    - -Wno-missing-kind-signatures
+    - -Wno-missing-local-signatures
+    - -Wno-missing-safe-haskell-mode
     - -Wno-safe
     - -Wno-unsafe
-    - -Wno-missing-deriving-strategies
-    - -Wno-missing-local-signatures
 
     - -Wno-unused-packages
-
-    #- -fdefer-type-errors
 
 tests:
   spec:
     main: Spec.hs
     source-dirs: tests/
     dependencies:
-      - biparsing
-      - hspec
-      - hspec-discover
       - QuickCheck
-      - quickcheck-instances
-      - text
+      - biparsing
       - bytestring
       - containers
-      - vector
-      - generic-random
       - generic-deriving
+      - generic-random
+      - hspec
+      - hspec-discover
+      - quickcheck-instances
+      - text
+      - vector
     default-extensions:
       - OverloadedStrings
       - OverloadedLists
@@ -92,17 +90,16 @@ tests:
       - -Weverything
       - -fprint-potential-instances
 
-      - -Wno-missing-kind-signatures
-      - -Wno-missing-safe-haskell-mode
       - -Wno-implicit-prelude
+      - -Wno-incomplete-uni-patterns
+      - -Wno-missing-deriving-strategies
+      - -Wno-missing-export-lists
+      - -Wno-missing-import-lists
+      - -Wno-missing-kind-signatures
+      - -Wno-missing-local-signatures
+      - -Wno-missing-safe-haskell-mode
+      - -Wno-orphans
       - -Wno-safe
       - -Wno-unsafe
-      - -Wno-missing-deriving-strategies
-      - -Wno-missing-local-signatures
-      - -Wno-missing-import-lists
-      - -Wno-missing-export-lists
-      - -Wno-incomplete-uni-patterns
-      - -Wno-orphans
 
       - -Wno-unused-packages
-

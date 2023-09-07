@@ -4,49 +4,74 @@ module Biparse.UnorderedSpec where
 import Biparse.Unordered
 import GHC.Generics (Generic)
 import Biparse.Text.Context.LineColumn (startLineColumn)
+import Data.Tuple.Extra (uncurry3)
+import Data.List (zip3)
+import Data.Coerce
+import Data.Default (Default(def))
 
 spec :: Spec
-spec = pure ()
+spec = do
+  fb @() "AllParserTypes"
+    (unorderedBiparserDef :: Iso LinesOnly (FM Ts) EitherString (Position Ts) AllParserTypes)
+    (\f -> do
+      it "in order" do
+        let result = AllParserTypes 1 (Accumulating ["Not Default"]) (Optional True)
+        result `shouldNotBe` def
+        singleSuccessParser result `shouldNotBe` singleSuccessParser def
+        accumulatingParser result `shouldNotBe` accumulatingParser def
+        optionalParser result `shouldNotBe` optionalParser def
+        f [One 1, Two "Not Default", Three True] `shouldBe` Right (result, Position 4 1 mempty)
+
+      prop "all given"
+        \(i, s, b) -> forAll (shuffle [One i, Two s, Three b])
+        \ts ->
+        f (startLineColumn ts) `shouldBe` Right
+          ( AllParserTypes i (Accumulating [s]) (Optional b)
+          , Position 4 1 mempty
+          )
+
+    )
+    \b -> do
+      prop "prints all"
+        \apt@(AllParserTypes i (Accumulating ss) (Optional b')) ->
+        b apt `shouldBe` EValue (apt, One i : (Two <$> ss) `snoc` Three b')
 
 
 
 
 
 -----------------------------------------------------
-data ABC = ABC
-  { def :: Int
-  , ghi :: Accumulating [String]
-  } deriving (Show, Generic)
+type T = TriSum Int String Bool
+type Ts = [T]
 
-added = unsafePerformIO $ addIORefs $ from $ ABC 1 (Accumulating ["abcdef"])
-type IntStringList = [Either Int String]
-parsers = makeParsers @IdentityState @(StateErrorT 'NewtypeInstance IntStringList IO) @(WriterT IntStringList IO) @IntStringList $ snd $ added
+data AllParserTypes = AllParserTypes
+  { singleSuccessParser :: Int
+  , accumulatingParser :: Accumulating [String]
+  , optionalParser :: Optional Bool
+  } deriving (Show, Eq, Generic)
+instance Default AllParserTypes where
+  def = AllParserTypes def (Accumulating def) (Optional False)
+instance Arbitrary AllParserTypes where
+  arbitrary = AllParserTypes <$> arbitrary <*> (Accumulating <$> arbitrary) <*> (Optional <$> arbitrary)
+  shrink (AllParserTypes i (Accumulating ss) (Optional b)) = uncurry3 AllParserTypes . coerce <$> zip3 (shrink i) (shrink ss) (shrink b)
 
-up = unorderdParser @IdentityState @(StateErrorT 'NewtypeInstance IntStringList IO) @(WriterT IntStringList IO) @IntStringList $ ABC 1 (Accumulating ["abcdef"])
-
-instance Accumulate [a] where
-  type AccumulateElement [a] = a
-  accumulate = cons
-
-instance
-  ( MonadState IntStringList m
-  , MonadFail m
-  , Alternative m
-  , MonadWriter IntStringList n
+type IsoConstraints c m n a ss =
+  ( T ~ SubElement c a
+  , One c a m n ss
   , MonadFail n
-  ) => IsoClass IdentityState m n IntStringList String where
-  iso = comap Right $ one >>= \case
-    Right x -> pure x
-    _ -> fail $ "Expected right"
+  )
 
-instance
-  ( MonadState IntStringList m
-  , MonadFail m
-  , Alternative m
-  , MonadWriter IntStringList n
-  , MonadFail n
-  ) => IsoClass IdentityState m n IntStringList Int where
-  iso = comap Left $ one >>= \case
-    Left x -> pure x
-    _ -> fail $ "Expected left"
+instance IsoConstraints c m n a ss => IsoClass c m n a Int where
+  iso = comap One $ one >>= \case
+    One x -> pure x
+    _ -> fail $ "Expected One"
 
+instance IsoConstraints c m n a ss => IsoClass c m n a String where
+  iso = comap Two $ one >>= \case
+    Two x -> pure x
+    _ -> fail $ "Expected Two"
+
+instance IsoConstraints c m n a ss => IsoClass c m n a Bool where
+  iso = comap Three $ one >>= \case
+    Three x -> pure x
+    _ -> fail $ "Expected Three"

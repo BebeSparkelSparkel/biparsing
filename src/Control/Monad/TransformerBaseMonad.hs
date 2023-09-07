@@ -3,8 +3,6 @@ module Control.Monad.TransformerBaseMonad
   , LiftBaseMonad(..)
   ) where
 
-import Control.Monad.Trans (lift)
-
 type TransformerBaseMonad :: (Type -> Type) -> (Type -> Type)
 type family TransformerBaseMonad a
 

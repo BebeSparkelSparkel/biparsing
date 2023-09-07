@@ -26,20 +26,16 @@ module Biparse.Constructor
   ) where
 
 import Control.Monad.ChangeMonad (ChangeMonad(ChangeFunction,changeMonad'))
-import Biparse.Biparser (Biparser(Biparser), SubState, SubElement, one, Iso, GetSubState, UpdateStateWithElement, One)
-import Biparse.Biparser qualified as B
+import Biparse.Biparser (Biparser(Biparser), SubState, SubElement, one, Iso, GetSubState, UpdateStateWithElement)
 import Biparse.Context.IdentityState (IdentityState)
 import Biparse.Biparser.StateWriter qualified as BSW
 import Control.Lens (Traversal', preview, assign)
 import Control.Monad.TransformerBaseMonad (TransformerBaseMonad, LiftBaseMonad, liftBaseMonad)
 import Control.Monad.Reader (ReaderT(ReaderT), ask)
 import Data.Default (Default, def)
-import Control.Monad.Trans (lift)
 import Control.Monad.StateError (runStateErrorT)
 import Control.Profunctor.FwdBwd (BwdMonad, Comap, FwdBwd, pattern FwdBwd, Fwd, Bwd)
 import Control.Profunctor.FwdBwd qualified as FB
-import GHC.Generics (Generic(from,to), Rep)
---import GHC.Generics qualified as G
 
 newtype Constructor s m n u v = Constructor' {deconstruct :: FwdBwd (ReaderT s m) (StateT s n) u v}
   deriving (Functor, Applicative, Alternative, Monad, MonadFail)
@@ -53,8 +49,8 @@ pattern ConstructorUnT fw bw <- Constructor (ReaderT fw) ((runStateT .) -> bw) w
 
 type Construct m n s = Constructor s m n s s
 
-mapS :: Functor n => (s' -> s) -> (s -> s') -> Constructor s m n u v -> Constructor s' m n u v
-mapS f g (ConstructorUnT fw bw) = ConstructorUnT (fw . f) \u s -> second g <$> bw u (f s)
+--mapS :: Functor n => (s' -> s) -> (s -> s') -> Constructor s m n u v -> Constructor s' m n u v
+--mapS f g (ConstructorUnT fw bw) = ConstructorUnT (fw . f) \u s -> second g <$> bw u (f s)
 
 runForwardC :: Constructor s m n u v -> s -> m v
 runForwardC (ConstructorUnT fw _) = fw

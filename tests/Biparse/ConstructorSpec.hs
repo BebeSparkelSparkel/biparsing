@@ -1,9 +1,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 module Biparse.ConstructorSpec where
 
-import Biparse.Text.Context.LineColumn (startLineColumn)
 import Biparse.Constructor
-import GHC.Generics (Generic)
 import GHC.Num ((+))
 import Control.Lens (_1, _2, (^.))
 import Control.Monad.ChangeMonad (Lift)
@@ -67,14 +65,7 @@ spec = do
 --
 --type Ts = [TriSum Int String Bool]
 --
---data TriSum a b c = One a | Two b | Three c deriving (Show, Eq)
 --
---instance (Arbitrary a, Arbitrary b, Arbitrary c) => Arbitrary (TriSum a b c) where
---  arbitrary = oneof [One <$> arbitrary, Two <$> arbitrary, Three <$> arbitrary]
---  shrink = \case
---    One x -> One <$> shrink x
---    Two x -> Two <$> shrink x
---    Three x -> Three <$> shrink x
 --
 --oneWU :: WrapUnwrap (TriSum a b c) a
 --oneWU = WrapUnwrap (\case One x -> pure x; _ -> empty;) (pure . One)

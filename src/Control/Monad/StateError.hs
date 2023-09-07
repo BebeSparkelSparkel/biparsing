@@ -15,7 +15,6 @@ import Biparse.Error.WrapError (WrapError(Error), wrapError)
 import Control.Monad.ChangeMonad (ChangeMonad(ChangeFunction,changeMonad'), ResultMonad(ResultingMonad,resultMonad), Lift)
 import Control.Monad.Except (catchError)
 import Control.Monad.TransformerBaseMonad (TransformerBaseMonad, LiftBaseMonad, liftBaseMonad)
-import Control.Monad.Trans (MonadTrans, lift)
 
 -- * Allow errors to be combined with state information.
 
