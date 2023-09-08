@@ -52,7 +52,7 @@ library:
     - Prelude
     #- Paths_biparsing
   ghc-options:
-    #- -Werror
+    - -Werror
     - -Weverything
 
     - -Wno-implicit-prelude

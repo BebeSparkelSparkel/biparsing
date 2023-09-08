@@ -5,9 +5,10 @@ import Biparse.Unordered
 import GHC.Generics (Generic)
 import Biparse.Text.Context.LineColumn (startLineColumn)
 import Data.Tuple.Extra (uncurry3)
-import Data.List (zip3)
+import Data.List (zip3, length)
 import Data.Coerce
 import Data.Default (Default(def))
+import GHC.Num ((+))
 
 spec :: Spec
 spec = do
@@ -15,7 +16,7 @@ spec = do
     (unorderedBiparserDef :: Iso LinesOnly (FM Ts) EitherString (Position Ts) AllParserTypes)
     (\f -> do
       it "in order" do
-        let result = AllParserTypes 1 (Accumulating ["Not Default"]) (Optional True)
+        let result = AllParserTypes 1 (Accumulating ["Not Default"]) (Optional $ Just True)
         result `shouldNotBe` def
         singleSuccessParser result `shouldNotBe` singleSuccessParser def
         accumulatingParser result `shouldNotBe` accumulatingParser def
@@ -26,21 +27,31 @@ spec = do
         \(i, s, b) -> forAll (shuffle [One i, Two s, Three b])
         \ts ->
         f (startLineColumn ts) `shouldBe` Right
-          ( AllParserTypes i (Accumulating [s]) (Optional b)
+          ( AllParserTypes i (Accumulating [s]) (Optional $ Just b)
           , Position 4 1 mempty
           )
+
+      it "only required given" $
+        f [One 5] `shouldBe` Right
+          ( AllParserTypes 5 (Accumulating []) (Optional Nothing)
+          , Position 2 1 mempty
+          )
+
+      prop "missing required" \(ss, b, ss') -> let
+        l = case (length ss, length ss') of
+          (0,0) -> 2
+          (0,x) -> x + 2
+          (x,0) -> x + 2
+          (x,y) -> x + y + 2
+        in f (startLineColumn $ (Two <$> ss) <> [Three b] <> (Two <$> ss')) `shouldSatisfy` errorPosition l 1
 
     )
     \b -> do
       prop "prints all"
         \apt@(AllParserTypes i (Accumulating ss) (Optional b')) ->
-        b apt `shouldBe` EValue (apt, One i : (Two <$> ss) `snoc` Three b')
+        b apt `shouldBe` EValue (apt, One i : (Two <$> ss) & maybe id (\x -> (`snoc` Three x)) b')
 
 
-
-
-
------------------------------------------------------
 type T = TriSum Int String Bool
 type Ts = [T]
 
@@ -50,7 +61,7 @@ data AllParserTypes = AllParserTypes
   , optionalParser :: Optional Bool
   } deriving (Show, Eq, Generic)
 instance Default AllParserTypes where
-  def = AllParserTypes def (Accumulating def) (Optional False)
+  def = AllParserTypes def (Accumulating def) (Optional def)
 instance Arbitrary AllParserTypes where
   arbitrary = AllParserTypes <$> arbitrary <*> (Accumulating <$> arbitrary) <*> (Optional <$> arbitrary)
   shrink (AllParserTypes i (Accumulating ss) (Optional b)) = uncurry3 AllParserTypes . coerce <$> zip3 (shrink i) (shrink ss) (shrink b)
