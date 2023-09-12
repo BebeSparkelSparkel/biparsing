@@ -13,7 +13,7 @@ import GHC.Num ((+))
 spec :: Spec
 spec = do
   fb @() "AllParserTypes"
-    (unorderedBiparserDef :: Iso LinesOnly (FM Ts) EitherString (Position Ts) AllParserTypes)
+    (unorderedDef :: Iso LinesOnly (FM Ts) EitherString (Position Ts) AllParserTypes)
     (\f -> do
       it "in order" do
         let result = AllParserTypes 1 (Accumulating ["Not Default"]) (Optional $ Just True)

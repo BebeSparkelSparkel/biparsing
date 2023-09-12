@@ -3,7 +3,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 module Biparse.Constructor
   ( Constructor(Constructor, ..)
-  , Construct
+  --, Construct
   , runForwardC
   , runBackwardC
   , comap
@@ -16,13 +16,9 @@ module Biparse.Constructor
   , Focus
   , focus
   , lensBiparse
-  , expectFwd
+  , expect
   , expose
   , exposes
-  --, WrapUnwrap(..)
-  --, wrappedOne
-  --, unordered
-  --, Unordered(..)
   ) where
 
 import Control.Monad.ChangeMonad (ChangeMonad(ChangeFunction,changeMonad'))
@@ -47,10 +43,7 @@ pattern ConstructorUnT fw bw <- Constructor (ReaderT fw) ((runStateT .) -> bw) w
   ConstructorUnT fw bw = Constructor (ReaderT fw) (StateT . bw)
 {-# COMPLETE ConstructorUnT #-}
 
-type Construct m n s = Constructor s m n s s
-
---mapS :: Functor n => (s' -> s) -> (s -> s') -> Constructor s m n u v -> Constructor s' m n u v
---mapS f g (ConstructorUnT fw bw) = ConstructorUnT (fw . f) \u s -> second g <$> bw u (f s)
+--type Construct m n s = Constructor s m n s s
 
 runForwardC :: Constructor s m n u v -> s -> m v
 runForwardC (ConstructorUnT fw _) = fw
@@ -181,7 +174,8 @@ lensBiparse t (Biparser fw bw) = Constructor
     assign t w
     pure v
 
-expectFwd ::
+-- | Expect 'x' at 't' forward and set 'x' at 't' backwards.
+expect :: forall s m n u v.
   ( MonadFail m
   , Alternative m
   , Eq v
@@ -191,11 +185,11 @@ expectFwd ::
   => Traversal' s v
   -> v
   -> Constructor s m n u ()
-expectFwd t x = Constructor
+expect t x = Constructor
   do
-    y <- preview t >>= maybe (fail $ "expectFwd could not preview when looking for: " <> show x) pure
+    y <- preview t >>= maybe (fail $ "expect could not preview when looking for: " <> show x) pure
     unless (x == y) $ fail $ "Expected '" <> show y <> "' to equal '" <> show x <> "'."
-  $ const $ assign t x
+  (const $ assign t x)
 
 expose :: forall s m n u.
   ( Monad m
@@ -210,31 +204,4 @@ exposes :: forall s m n u a.
   => (s -> a)
   -> Constructor s m n u a
 exposes = (<$> expose)
-
----- * Wrap and unwrap ADT Constructors
---
---data WrapUnwrap a b = WrapUnwrap (forall m. Alternative m => a -> m b) (forall n. Applicative n => b -> n a)
---
---wrappedOne :: forall c m n s a b ss.
---  ( Element ss ~ a
---  , MonadPlus m
---  , Alternative n
---  , One c s m n ss
---  )
---  => WrapUnwrap a b -> Iso c m n s b
---wrappedOne (WrapUnwrap f g) = do
---  x <- one `B.uponM` g
---  f x
---
---unordered :: forall s m n.
---  ( Generic s
---  , Unordered (Rep s) m n s s
---  , Monad n
---  ) => Construct m n s
---unordered = mapS from to $ unordered'
---
---class Unordered s m n u v where
---  unordered' :: Constructor (s a) m n u v
---
---instance Unordered => Unordered (D1 i (C1 i' sel)) where unordered' = m1 . m1 
 

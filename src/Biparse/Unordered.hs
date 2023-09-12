@@ -8,8 +8,8 @@ Parse the fields of type 'b' out of their order in the Constructor.
 {-# LANGUAGE ImpredicativeTypes #-}
 {-# LANGUAGE GADTs #-}
 module Biparse.Unordered
-  ( unorderedBiparserDef
-  , unorderedBiparser
+  ( unorderedDef
+  , unordered
   , Accumulating(..)
   , Optional(..)
   , MakeWriter
@@ -31,22 +31,22 @@ import GHC.TypeLits (Symbol, KnownSymbol, AppendSymbol, symbolVal)
 import Data.MonoTraversable.Unprefixed (all)
 import Data.Default (Default(def))
 
-unorderedBiparserDef :: forall c m n a b.
+unorderedDef :: forall c m n a b.
   ( MakeWriter c m n a (Rep b)
   , UnorderedParser c m n a b
   , Default b
   , Monad n
   ) => Iso c m n a b
-unorderedBiparserDef = unorderedBiparser def
+unorderedDef = unordered def
 
-unorderedBiparser :: forall c m n a b.
+unordered :: forall c m n a b.
   ( MakeWriter c m n a (Rep b)
   , UnorderedParser c m n a b
   , Monad n
   )
   => b
   -> Iso c m n a b
-unorderedBiparser x = Biparser
+unordered x = Biparser
   do
     y <- pure $ pure x
     unorderdParser @c @m @n @a @b y
