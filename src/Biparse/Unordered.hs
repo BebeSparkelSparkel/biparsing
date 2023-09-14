@@ -17,19 +17,19 @@ module Biparse.Unordered
   ) where
 
 import Biparse.Biparser (Iso, IsoClass(iso), SubState, upon, try, forward, backward, Biparser(Biparser))
-import Biparse.List (many, Many)
-import GHC.Generics (Rec0, (:*:)((:*:)), M1(M1,unM1), K1(K1,unK1), Generic(Rep,to,from), D1, Meta(MetaData))
 import Biparse.General (optional)
-import Data.Proxy (Proxy(Proxy))
-import Data.Kind (Constraint)
+import Biparse.List (many, Many)
+import Data.Default (Default(def))
 import Data.HVect (HVect((:&:)), Append, (<++>))
 import Data.HVect qualified as HV
-import GHC.IO (IO)
 import Data.IORef (IORef, newIORef, writeIORef, modifyIORef, readIORef)
-import System.IO.Unsafe (unsafePerformIO)
-import GHC.TypeLits (Symbol, KnownSymbol, AppendSymbol, symbolVal)
+import Data.Kind (Constraint)
 import Data.MonoTraversable.Unprefixed (all)
-import Data.Default (Default(def))
+import Data.Proxy (Proxy(Proxy))
+import GHC.Generics (Rec0, (:*:)((:*:)), M1(M1,unM1), K1(K1,unK1), Generic(Rep,to,from), D1, Meta(MetaData))
+import GHC.IO (IO)
+import GHC.TypeLits (Symbol, KnownSymbol, AppendSymbol, symbolVal)
+import System.IO.Unsafe (unsafePerformIO)
 
 unorderedDef :: forall c m n a b.
   ( MakeWriter c m n a (Rep b)
