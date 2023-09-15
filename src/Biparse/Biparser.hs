@@ -12,7 +12,7 @@ module Biparse.Biparser
   --, runBackward
   --, execBackward
   , Iso
-  , IsoClass(iso)
+  , IsoClass(..)
   --, iso
   , Unit
   , unit
@@ -57,6 +57,7 @@ module Biparse.Biparser
   , isNull
   , write
   , breakWhen'
+  , count
   , EmptyWrite
   , WriteConstructor
   , writeConstructor
@@ -70,6 +71,7 @@ import Control.Monad.Writer.Class (listen)
 import Control.Profunctor.FwdBwd (BwdMonad, Comap, FwdBwd, pattern FwdBwd)
 import Control.Profunctor.FwdBwd qualified as FB
 import Control.Monad.Writer (mapWriterT)
+import Biparse.Utils (convertIntegralUnsafe)
 
 -- | Product type for simultainously constructing forward and backward running programs.
 newtype Biparser context s m n u v = Biparser' {unBiparser :: FwdBwd m n u v}
@@ -432,7 +434,7 @@ type One c s m n ss =
   , ss ~ SubState c s
   )
 -- | Takes and writes one element. Updates the context and substate.
-one :: forall c s m n ss.  One c s m n ss => Iso c m n s (SubElement c s)
+one :: forall c s m n ss. One c s m n ss => Iso c m n s (SubElement c s)
 one = Biparser fw bw
   where
   fw = do
@@ -544,6 +546,32 @@ breakWhen' (Biparser fw bw) = Biparser fw' bw'
     tell x
     bw ()
     return x
+
+-- | Counts the number of elements consumed and written.
+-- DEV NOTE: Sucky slow implementation.
+count :: forall c s m n u v ss.
+  -- m
+  ( MonadState s m
+  -- n
+  , MonadWriter ss n
+  -- substate
+  , GetSubState c s
+  , MonoFoldable ss
+  -- assignments
+  , ss ~ SubState c s
+  )
+  => Biparser c s m n u v
+  -> Biparser c s m n u (Natural, v)
+count (Biparser fw bw) = Biparser
+  do
+    s <- get
+    x <- fw
+    s' <- get
+    let c = convertIntegralUnsafe $ length (getSubState @c @s s) - length (getSubState @c @s s')
+    pure (c, x)
+  \u -> do
+    (x,w) <- listen @ss $ bw u
+    pure (convertIntegralUnsafe $ length w, x)
 
 type WriteConstructor a b e n na nb ss m =
   ( MonadWriter a na

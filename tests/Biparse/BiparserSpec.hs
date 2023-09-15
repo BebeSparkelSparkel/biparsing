@@ -1,5 +1,8 @@
 module Biparse.BiparserSpec where
 
+import Biparse.List (takeElementsWhile)
+import Biparse.Text.Context.LineColumn (startLineColumn)
+
 spec :: Spec
 spec = do
   describe "one" do
@@ -236,4 +239,31 @@ spec = do
         it "only break" $ b "ab" >>= (`shouldBe` ("ab", "abab"))
 
         it "contains break" $ b "cdab" >>= (`shouldBe` ("cdab", "cdabab"))
+
+  describe "count" do
+    fb @() "ElementContext" 
+      (count $ takeElementsWhile (== 'a') :: Biparser LineColumn (Position Text) (FM Text) IO [Char] (Natural,[Char]))
+      (\f -> do
+        prop "correct count" \(NonNegative x, NonNegative y) -> let
+          as :: (IsSequence a, Element a ~ Char, Index a ~ Int) => a
+          as = replicate x 'a'
+          bs = replicate y 'b'
+          in f (startLineColumn $ as <> bs) `shouldBe` Right ((convertIntegralUnsafe x, as), Position 1 (x + 1) bs)
+      )
+      \b -> do
+        prop "correct count" \xs -> let
+          in b xs >>= (`shouldBe` ((convertIntegralUnsafe $ length xs, xs), fromString xs))
+
+    fb @() "SubStateContext" 
+      (count $ takeWhile (== 'a') :: Biparser LineColumn (Position Text) (FM Text) IO Text (Natural, Text))
+      (\f -> do
+        prop "correct count" \(NonNegative x, NonNegative y) -> let
+          as :: (IsSequence a, Element a ~ Char, Index a ~ Int) => a
+          as = replicate x 'a'
+          bs = replicate y 'b'
+          in f (startLineColumn $ as <> bs) `shouldBe` Right ((convertIntegralUnsafe x, as), Position 1 (x + 1) bs)
+      )
+      \b -> do
+        prop "correct count" \xs -> let
+          in b xs >>= (`shouldBe` ((convertIntegralUnsafe $ length xs, xs), xs))
 

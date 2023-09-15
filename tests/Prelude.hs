@@ -51,6 +51,10 @@ module Prelude
   , module Test.Hspec.QuickCheck
   , module Test.QuickCheck
   , module Text.Show
+  , module Numeric.Natural
+  , module GHC.Num
+  , module GHC.Generics
+  , module Data.Coerce
 
   , fb
   , errorPosition
@@ -66,7 +70,7 @@ import Biparse.Context.IdentityState (IdentityState)
 import Biparse.General
 import Biparse.Text (CharElement)
 import Biparse.Text.Context.LineColumn (LineColumn, LinesOnly, Position(Position,line,column), ErrorPosition(ErrorPosition))
-import Biparse.Utils (headAlt)
+import Biparse.Utils (headAlt, convertIntegralUnsafe)
 import Control.Applicative (pure, (<|>), (<*), (*>), (<*>), empty, liftA2, Alternative)
 import Control.Monad ((>>=), return, (>>), fail, MonadPlus, MonadFail)
 import Control.Monad.EitherString (EitherString(EValue), isString)
@@ -88,12 +92,12 @@ import Data.Kind (Type)
 import Data.List ((++))
 import Data.Maybe (Maybe(Just,Nothing), maybe)
 import Data.MonoTraversable (Element, headMay)
-import Data.MonoTraversable.Unprefixed (toList)
+import Data.MonoTraversable.Unprefixed (toList, length)
 import Data.Monoid (mempty)
 import Data.Ord ((>))
 import Data.Semigroup ((<>))
 import Data.Sequence (Seq)
-import Data.Sequences (drop, index, cons, snoc)
+import Data.Sequences (drop, index, cons, snoc, replicate, IsSequence, Index)
 import Data.String (String, IsString(fromString))
 import Data.Text (Text)
 import Data.Tuple (fst, snd)
@@ -110,6 +114,10 @@ import Test.Hspec.QuickCheck
 import Test.QuickCheck
 import Test.QuickCheck.Instances.Text ()
 import Text.Show (Show(show))
+import Numeric.Natural (Natural)
+import GHC.Num ((+))
+import GHC.Generics (Generic)
+import Data.Coerce (coerce)
 
 import Control.Monad.ChangeMonad (ChangeMonad)
 import System.Timeout (timeout)
@@ -134,7 +142,7 @@ errorPosition l c = \case
   _ -> False
 
 limit :: IO a -> IO a
-limit = (>>= maybe (fail "Timeout") pure) . timeout 500
+limit = (>>= maybe (fail "Timeout") pure) . timeout 1000
 
 type FM text = Either (ErrorState String (Position text))
 

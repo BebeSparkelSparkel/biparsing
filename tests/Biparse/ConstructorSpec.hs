@@ -2,7 +2,6 @@
 module Biparse.ConstructorSpec where
 
 import Biparse.Constructor
-import GHC.Num ((+))
 import Control.Lens (_1, _2, (^.))
 import Control.Monad.ChangeMonad (Lift)
 

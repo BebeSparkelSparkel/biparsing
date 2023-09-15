@@ -15,8 +15,8 @@ module Biparse.General
   , optionMaybe
   , optional
   , stripPrefix
-  , count
-  , countSome
+  , countElement
+  , countElementSome
   , FromNatural(..)
   , not
   , memptyWrite
@@ -25,8 +25,8 @@ module Biparse.General
   , failBackward
   ) where
 
-import Data.Bool qualified
 import Biparse.Biparser (Biparser, Iso, Unit, unit, one, try, SubState, SubElement, ElementContext, SubStateContext, split, Const, mapWrite, Unit, ignoreForward, mapMs, upon, uponM, comap, comapM)
+import Data.Bool qualified
 import Data.Sequences qualified
 
 identity :: forall c s m n ss.
@@ -135,24 +135,34 @@ dropWhile = fmap (const ()) . comap (const mempty) . takeWhile
 
 -- | Consumes the pad 'c' charcaters forward. Prepends the pad 'c' caracters backwards to ensure there are 'n' charcaters written.
 pad :: forall c s m n u v ss i se.
+  -- m
   ( MonadState s m
+  -- n
   , MonadWriter ss n
+  -- substate
   , IsSequence ss
   , SubStateContext c s
   , Eq se
+  -- i
   , Ord i
   , Num i
+  , ConvertIntegral Natural i
+  -- Assignments
   , ss ~ SubState c s
   , se ~ SubElement c s
   , i ~ Index ss
   )
-  => i
+  => Natural
   -> se
   -> Biparser c s m n u v
   -> Biparser c s m n u v
-pad n c x = do
+pad (convertIntegral -> n) c x = do
   dropWhile (== c)
-  mapWrite x \y -> let l = lengthIndex y in if l >= n then y else replicate (n - l) c <> y
+  mapWrite x \y ->
+    let l = lengthIndex y
+    in if l >= n
+      then y
+      else replicate (n - l) c <> y
 
 type BreakWhen c s m n ss =
   ( IsSequence ss
@@ -263,7 +273,7 @@ stripPrefix pre = unit $ void s `upon` const pre
     . Data.Sequences.stripPrefix pre
 
 -- | Counts 0 or more elements
-count :: forall c s m n se.
+countElement :: forall c s m n se.
   ( FromNatural (Index (SubState c s))
   , Eq se
   , TakeWhile c s m n
@@ -271,10 +281,10 @@ count :: forall c s m n se.
   )
   => se
   -> Iso c m n s Natural
-count x = toEnum . length <$> takeWhile (== x) `upon` flip replicate x . fromNatural
+countElement x = toEnum . length <$> takeWhile (== x) `upon` flip replicate x . fromNatural
 
 -- | Counts 1 or more elements
-countSome :: forall c s m n ss se.
+countElementSome :: forall c s m n ss se.
   ( FromNatural (Index ss)
   , SubStateContext c s
   , IsSequence ss
@@ -288,8 +298,8 @@ countSome :: forall c s m n ss se.
   )
   => SubElement c s
   -> Biparser c s m n Natural Natural
-countSome x = do
-  c <- count x
+countElementSome x = do
+  c <- countElement x
   unless (c > 0) empty
   return c
 

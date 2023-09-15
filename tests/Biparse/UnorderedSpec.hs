@@ -2,13 +2,10 @@
 module Biparse.UnorderedSpec where
 
 import Biparse.Unordered
-import GHC.Generics (Generic)
 import Biparse.Text.Context.LineColumn (startLineColumn)
 import Data.Tuple.Extra (uncurry3)
-import Data.List (zip3, length)
-import Data.Coerce
+import Data.List (zip3)
 import Data.Default (Default(def))
-import GHC.Num ((+))
 
 spec :: Spec
 spec = do

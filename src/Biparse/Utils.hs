@@ -11,14 +11,21 @@ module Biparse.Utils
   , tailAlt
   , initAlt
   , headTailAlt
+  , ConvertIntegral(..)
+  , convertIntegralUnsafe
   ) where
 
-import Data.Sequences (IsSequence, initMay, tailMay)
 import Control.Applicative (Applicative, Alternative((<|>)), pure, empty, liftA2)
-import Data.Functor (Functor, (<$), fmap)
-import Data.MonoTraversable (headMay, lastMay, MonoFoldable, Element)
-import Data.Maybe (maybe)
 import Data.Function ((.), flip)
+import Data.Functor (Functor, (<$), fmap)
+import Data.Maybe (maybe)
+import Data.MonoTraversable (headMay, lastMay, MonoFoldable, Element)
+import Data.Sequences (IsSequence, initMay, tailMay)
+import GHC.Num (Num, fromInteger)
+import GHC.Real (Integral, toInteger)
+import GHC.Integer (Integer)
+import GHC.Int (Int)
+import Numeric.Natural (Natural)
 
 (|>) :: Alternative f => f a -> a -> f a
 x |> y = x <|> pure y
@@ -53,4 +60,11 @@ initAlt = maybe empty pure . initMay
 
 headTailAlt :: (IsSequence b, Alternative m) => b -> m (Element b, b)
 headTailAlt x = liftA2 (,) (headAlt x) (tailAlt x)
+
+class ConvertIntegral a b where convertIntegral :: a -> b
+-- | Unsafe because not number types are compatable for confersion. Use do define appropriate instances of ConvertIntegral
+convertIntegralUnsafe :: forall a b. (Integral a, Num b) => a -> b
+convertIntegralUnsafe = fromInteger . toInteger
+instance ConvertIntegral Natural Int where convertIntegral = convertIntegralUnsafe
+instance ConvertIntegral Natural Integer where convertIntegral = convertIntegralUnsafe
 
