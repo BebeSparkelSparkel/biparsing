@@ -24,7 +24,7 @@ module Biparse.Biparser
   , fix
   --, fixWith
   , FixFail(..)
-  , mapFW
+  --, mapFW
   , comap
   , comapM
   --, comapMay
@@ -68,7 +68,7 @@ import Data.Profunctor (Profunctor(dimap))
 import Control.Monad.Extra (findM)
 import Control.Monad.ChangeMonad (ChangeMonad, ChangeFunction, changeMonad')
 import Control.Monad.Writer.Class (listen)
-import Control.Profunctor.FwdBwd (BwdMonad, Comap, FwdBwd, pattern FwdBwd)
+import Control.Profunctor.FwdBwd (BwdMonad, Comap, FwdBwd, pattern FwdBwd, MapMs(mapMs), DualMap)
 import Control.Profunctor.FwdBwd qualified as FB
 import Control.Monad.Writer (mapWriterT)
 import Biparse.Utils (convertIntegralUnsafe)
@@ -89,6 +89,7 @@ setBackward (Biparser fw _) bw = Biparser fw bw
 
 type instance BwdMonad () (Biparser _ _ _ n) = n
 deriving instance Monad n => Comap () (Biparser c s m n)
+deriving instance (Functor m, Functor n) => DualMap (Biparser c s m n u)
 --
 --data Biparser context s m n u v = Biparser
 --  { forward :: m v
@@ -108,15 +109,6 @@ deriving instance Monad n => Comap () (Biparser c s m n)
 --
 --execBackward :: forall c s m n u v. Functor n => Biparser c s m n u v -> u -> n (SubState c s)
 --execBackward = (fmap snd .) . runBackward
-
--- * Mapping Forward
-
-mapFW :: forall c s m n u v.
-  Functor m
-  => (v -> v)
-  -> Biparser c s m n u v
-  -> Biparser c s m n u v
-mapFW f (Biparser fw bw) = Biparser (f <$> fw) bw
 
 -- * Mapping Backward
 -- Used to converte @u@ to the correct type for the biparser.
@@ -275,12 +267,13 @@ type ConstU c s m n u v = Biparser c s m n u v
 -- * Monad Mapping
 -- Change the underlying monads.
 
-mapMs :: forall c s s' m m' n n' u v
-   . (forall a. m a -> m' a)
-  -> (forall a. n a -> n' a)
-  -> Biparser c s m n u v
-  -> Biparser c s' m' n' u v
-mapMs f g (Biparser fw bw) = Biparser (f fw) (g . bw)
+--mapMs :: forall c s s' m m' n n' u v
+--   . (forall a. m a -> m' a)
+--  -> (forall a. n a -> n' a)
+--  -> Biparser c s m n u v
+--  -> Biparser c s' m' n' u v
+instance MapMs (Biparser c s) where
+  mapMs f g (Biparser fw bw) = Biparser (f fw) (g . bw)
 
 -- {-# WARNING mapMs' "Exposes the internals of Biparser an you will probably use it incorrectly." #-} 
 -- mapMs' ::
@@ -336,6 +329,7 @@ fix (Biparser fw bw) = Biparser
 --  (StateT $ runStateT fw >=> \(s,s') -> runStateT fw' s >>= \(x, _) -> pure (x, s'))
 --  (\u -> WriterT $ runWriterT (bw' u) >>= \(x,w) -> runWriterT (bw w) >>= \(_,w) -> pure (x,w))
 -- | Use instead of 'empty' when only forward should fail but backward should continue
+
 emptyForward :: forall c s m n u.
   ( MonadPlus m
   , Applicative n

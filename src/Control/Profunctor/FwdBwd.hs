@@ -7,6 +7,8 @@ module Control.Profunctor.FwdBwd
   , Comap(..)
   , FwdBwd
   , pattern FwdBwd
+  , MapMs(..)
+  , DualMap(..)
   ) where
 
 import GHC.Generics (Generic, Generic1)
@@ -55,8 +57,38 @@ instance Monad n => Comap () (Fwd m :*: Bwd n) where
   comap f (Fwd fw :*: Bwd bw) = Fwd fw :*: Bwd (bw . f)
   comapM f (Fwd fw :*: Bwd bw) = Fwd fw :*: Bwd (bw <=< f)
 
-type FwdBwd m n u v = (Fwd m :*: Bwd n) u v
+type FwdBwd m n = Fwd m :*: Bwd n
 pattern FwdBwd :: m v -> (u -> n v) -> (Fwd m :*: Bwd n) u v
 pattern FwdBwd fw bw = Fwd fw :*: Bwd bw
 {-# COMPLETE FwdBwd #-}
+
+class MapMs p where
+  mapMs
+    :: (forall a. m a -> m' a)
+    -> (forall a. n a -> n' a)
+    -> p m  n  u v
+    -> p m' n' u v
+  firstM
+    :: (forall a. m a -> m' a)
+    -> p m  n u v
+    -> p m' n u v
+  firstM x = mapMs x id
+  secondM
+    :: (forall a. n a -> n' a)
+    -> p m n  u v
+    -> p m n' u v
+  secondM = mapMs id
+
+--instance MapMs (:*:) where
+--  mapMs f g (x :*: y) = f x :*: g y
+
+class DualMap f where
+  dualMap :: (a -> b) -> (a -> b) -> f a -> f b
+  endoFirst :: (a -> a) -> f a -> f a
+  endoFirst f = dualMap f id
+  endoSecond :: (a -> a) -> f a -> f a
+  endoSecond = dualMap id
+
+instance (Functor m, Functor n) => DualMap (FwdBwd m n u) where
+  dualMap f g (m :*: n) = fmap f m :*: fmap g n
 

@@ -159,6 +159,25 @@ spec = do
       it "no pad over" do
         b 12345 >>= (`shouldBe` (12345, "12345"))
 
+  describe "padCount" do
+    prop "forward" \(NonNegative (na :: Int), NonNegative (nb :: Int), NonNegative (nc :: Int), NonNegative (n :: Int)) -> let
+      as = replicate na 'a'
+      as' = case n - nb of
+        x | x >= 0 -> replicate x 'a'
+          | otherwise -> mempty
+      bs = replicate nb 'b'
+      cs = replicate nc 'c'
+      bp :: Biparser IdentityState (Seq Char) (FM (Seq Char)) (Either String) (Seq Char) (Natural, Seq Char)
+      bp = padCount n' 'a' $ takeWhile (== 'b')
+      f = runForward @() bp
+      b = runBackward bp
+      n' = convertIntegralUnsafe n
+      na' = convertIntegralUnsafe na
+      nb' = convertIntegralUnsafe nb
+      in do
+        f (as <> bs <> cs) `shouldBe` Right ((na' + nb', bs), cs)
+        b bs `shouldBe` Right ((n', bs), as' <> bs)
+
   fb @() "breakWhen"
     (breakWhen $ stripPrefix "ab" :: Iso LineColumn (FM (Seq Char)) IO (Position (Seq Char)) (Seq Char))
     (\f -> do

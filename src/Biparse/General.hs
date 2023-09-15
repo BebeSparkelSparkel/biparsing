@@ -10,6 +10,7 @@ module Biparse.General
   , takeWhile
   , dropWhile
   , pad
+  , padCount
   , BreakWhen
   , breakWhen
   , optionMaybe
@@ -25,7 +26,8 @@ module Biparse.General
   , failBackward
   ) where
 
-import Biparse.Biparser (Biparser, Iso, Unit, unit, one, try, SubState, SubElement, ElementContext, SubStateContext, split, Const, mapWrite, Unit, ignoreForward, mapMs, upon, uponM, comap, comapM)
+import Control.Profunctor.FwdBwd (endoSecond)
+import Biparse.Biparser (Biparser, Iso, Unit, unit, one, try, SubState, SubElement, ElementContext, SubStateContext, split, Const, mapWrite, Unit, ignoreForward, mapMs, upon, uponM, comap, comapM, count)
 import Data.Bool qualified
 import Data.Sequences qualified
 
@@ -133,8 +135,7 @@ dropWhile :: forall c s m n u.
   -> Const c s m n u
 dropWhile = fmap (const ()) . comap (const mempty) . takeWhile
 
--- | Consumes the pad 'c' charcaters forward. Prepends the pad 'c' caracters backwards to ensure there are 'n' charcaters written.
-pad :: forall c s m n u v ss i se.
+type Pad c s m n u v ss i se =
   -- m
   ( MonadState s m
   -- n
@@ -152,6 +153,10 @@ pad :: forall c s m n u v ss i se.
   , se ~ SubElement c s
   , i ~ Index ss
   )
+
+-- | Consumes the pad 'c' charcaters forward. Prepends the pad 'c' caracters backwards to ensure there are 'n' charcaters written.
+pad :: forall c s m n u v ss i se.
+  Pad c s m n u v ss i se
   => Natural
   -> se
   -> Biparser c s m n u v
@@ -163,6 +168,15 @@ pad (convertIntegral -> n) c x = do
     in if l >= n
       then y
       else replicate (n - l) c <> y
+
+-- | Gives the pad count found for forward (number of c + number consumed by x). Just returns n backwards.
+padCount :: forall c s m n u v ss i se.
+  Pad c s m n u v ss i se
+  => Natural
+  -> se
+  -> Biparser c s m n u v
+  -> Biparser c s m n u (Natural, v)
+padCount n c x = endoSecond (first $ const n) $ count $ pad n c x
 
 type BreakWhen c s m n ss =
   ( IsSequence ss
