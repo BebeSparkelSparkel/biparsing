@@ -108,12 +108,12 @@ instance ChangeMonad () (EESP text) (Either ErrorPosition) where
 data ElementToList
 instance ChangeMonad ElementToList (EEP e text) (EEP e [text]) where
   type ChangeFunction ElementToList (EEP e text) (EEP e [text]) = ()
-  changeMonad' () = first $ second $ fmap $ singleton
+  changeMonad' () = first $ second $ fmap singleton
 
 data ListToElement
 instance Monoid text => ChangeMonad ListToElement (EEP e [text]) (EEP e text) where
   type ChangeFunction ListToElement (EEP e [text]) (EEP e text) = ()
-  changeMonad' () = first $ second $ ($> mempty)
+  changeMonad' () = first $ second ($> mempty)
   
 type instance ErrorContext LineColumn = 'ErrorStateInstance
 type instance ErrorContext LinesOnly = 'ErrorStateInstance

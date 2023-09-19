@@ -47,7 +47,7 @@ unordered :: forall c m n a b.
   -> Iso c m n a b
 unordered x = Biparser
   do
-    y <- pure $ pure x
+    y <- pure $ pure x -- need this to initalize unsafe IO
     unorderdParser @c @m @n @a @b y
   (backward $ to <$> makeWriter @c @m @n @a `upon` from)
 
@@ -61,6 +61,7 @@ instance
   , Many c a m n
   ) => IsoClass c m n a (Accumulating b) where
   iso = Accumulating . fromList <$> many iso `upon` toList . unAccumulating
+instance Monoid a => Default (Accumulating a) where def = Accumulating mempty
 
 -- | Type wrapper used to signal that the field parser is not required to succeed for the type parse succeed.
 newtype Optional a = Optional {unOptional :: Maybe a} deriving (Show, Eq, Ord)
@@ -73,6 +74,7 @@ instance
   , Monoid (SubState c a)
   ) => IsoClass c m n a (Optional b) where
   iso = Optional <$> optional (iso @c @m @n @a @b) `upon` unOptional
+instance Default (Optional a) where def = Optional Nothing
 
 -- | Parser
 

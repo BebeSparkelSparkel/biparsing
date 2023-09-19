@@ -55,7 +55,7 @@ data StateInstance
 type instance BwdMonad StateInstance (_ FB.:*: Bwd (StateT _ n)) = n
 instance Monad n => Comap StateInstance (Fwd m FB.:*: Bwd (StateT s n)) where
   comap f (FwdBwd x y) = FwdBwd x (y . f)
-  comapM f (FwdBwd x y) = FwdBwd x \u -> StateT \s -> f u >>= (flip runStateT s) . y
+  comapM f (FwdBwd x y) = FwdBwd x \u -> StateT \s -> f u >>= flip runStateT s . y
 type instance BwdMonad StateInstance (Constructor _ _ n) = n
 deriving via (Fwd (ReaderT s m) FB.:*: Bwd (StateT s n)) instance Monad n => Comap StateInstance (Constructor s m n)
 
@@ -94,12 +94,22 @@ uponM = flip comapM
 -- When backward, run the 'Constructor' on the 'Default' value of 'se'.
 focusOneDef :: forall is m' n' se c s m n u v ss.
   ( Default se
-  --
   , FocusOne is c s m m' n n' ss se
   )
-  => Constructor se m' n' se v
+  => Constructor se m' n' u v
   -> Biparser c s m n u v
-focusOneDef = focusOne @is (const $ pure def)
+focusOneDef = focus @is pure (const def) one
+---- | 'focus' with 'one' and a 'Default' value.
+---- When forward, runs the 'Constructor' one the first sub-element.
+---- When backward, run the 'Constructor' on the 'Default' value of 'se' and ignore 'u'.
+--focusOneDef :: forall is m' n' se c s m n u v ss.
+--  ( Default se
+--  --
+--  , FocusOne is c s m m' n n' ss se
+--  )
+--  => Constructor se m' n' se v
+--  -> Biparser c s m n u v
+--focusOneDef = focusOne @is (const $ pure def)
 
 type FocusOne is c s m m' n n' ss se =
   ( IsSequence ss
@@ -117,7 +127,6 @@ type FocusOne is c s m m' n n' ss se =
   --
   , Focus is m m' n n'
   )
--- |
 focusOne :: forall is m' n' se c s m n u v ss.
   FocusOne is c s m m' n n' ss se
   => (u -> n' se)
@@ -166,7 +175,7 @@ lensBiparse :: forall s s' m n u v.
   -> Constructor s m n u v
 lensBiparse t (Biparser fw bw) = Constructor
   do
-    s <- preview t >>= maybe (fail $ "lensBiparse could not preview") pure
+    s <- preview t >>= maybe (fail "lensBiparse could not preview") pure
     (v, _) <- ReaderT $ const $ runStateT (runStateErrorT fw) s
     pure v
   $ \u -> do

@@ -45,7 +45,7 @@ replicateBiparserT :: forall c s m n u v.
   -> Biparser c s m n u v
   -> Biparser c s m n [u] [v]
 replicateBiparserT = \case
-  0 -> const $ return $ mempty
+  0 -> const $ return mempty
   n -> \x -> do
     v <- x `uponM` (emptyFail n . headAlt)
     vs <- replicateBiparserT (n - 1) x `uponM` (emptyFail n . tailAlt)

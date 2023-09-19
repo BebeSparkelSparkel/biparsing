@@ -20,11 +20,9 @@ module Biparse.Biparser
   , Const
   , ConstU
   --, mkConst
-  , mapMs
   , fix
   --, fixWith
   , FixFail(..)
-  --, mapFW
   , comap
   , comapM
   --, comapMay
@@ -78,37 +76,18 @@ newtype Biparser context s m n u v = Biparser' {unBiparser :: FwdBwd m n u v}
 pattern Biparser :: m v -> (u -> n v) -> Biparser c s m n u v
 pattern Biparser fw bw = Biparser' (FwdBwd fw bw)
 {-# COMPLETE Biparser #-}
-forward :: Biparser c s m n u v -> m v
+forward :: forall c s m n u v. Biparser c s m n u v -> m v
 forward (Biparser fw _) = fw
-setForward :: Biparser c s m n u v -> m' v -> Biparser c s m' n u v
+setForward :: forall c s m m' n u v. Biparser c s m n u v -> m' v -> Biparser c s m' n u v
 setForward (Biparser _ bw) fw = Biparser fw bw
-backward :: Biparser c s m n u v -> u -> n v
+backward :: forall c s m n u v. Biparser c s m n u v -> u -> n v
 backward (Biparser _ bw) = bw
-setBackward :: Biparser c s m n u v -> (u' -> n' v) -> Biparser c s m n' u' v
-setBackward (Biparser fw _) bw = Biparser fw bw
+setBackward :: forall c s m n n' u u' v. Biparser c s m n u v -> (u' -> n' v) -> Biparser c s m n' u' v
+setBackward (Biparser fw _) = Biparser fw
 
 type instance BwdMonad () (Biparser _ _ _ n) = n
 deriving instance Monad n => Comap () (Biparser c s m n)
 deriving instance (Functor m, Functor n) => DualMap (Biparser c s m n u)
---
---data Biparser context s m n u v = Biparser
---  { forward :: m v
---  , backward :: u -> n v
---  }
-
--- * Running
-
---runForward :: forall c s m n u v. Biparser c s m n u v -> s -> m (v, s)
---runForward = runStateT . forward
---
---evalForward :: forall c s m n u v. Functor m => Biparser c s m n u v -> s -> m v
---evalForward = (fmap fst .) . runForward
---
---runBackward :: forall c s m n u v. Biparser c s m n u v -> u -> n (v, SubState c s)
---runBackward = (runWriterT .) . backward
---
---execBackward :: forall c s m n u v. Functor n => Biparser c s m n u v -> u -> n (SubState c s)
---execBackward = (fmap snd .) . runBackward
 
 -- * Mapping Backward
 -- Used to converte @u@ to the correct type for the biparser.
@@ -267,11 +246,6 @@ type ConstU c s m n u v = Biparser c s m n u v
 -- * Monad Mapping
 -- Change the underlying monads.
 
---mapMs :: forall c s s' m m' n n' u v
---   . (forall a. m a -> m' a)
---  -> (forall a. n a -> n' a)
---  -> Biparser c s m n u v
---  -> Biparser c s' m' n' u v
 instance MapMs (Biparser c s) where
   mapMs f g (Biparser fw bw) = Biparser (f fw) (g . bw)
 

@@ -46,11 +46,11 @@ deriving instance (Monoid e, MonadError (ErrorState e s) m, MonadPlus m) => Mona
 
 deriving instance MonadFail m => MonadFail (StateErrorT 'NewtypeInstance s m)
 instance MonadError (ErrorState String s) m => MonadFail (StateErrorT 'ErrorStateInstance s m) where
-  fail msg = throwError msg
+  fail = throwError
 
 deriving instance MonadError e m => MonadError e (StateErrorT 'NewtypeInstance s m)
 instance MonadError (ErrorState e s) m => MonadError e (StateErrorT 'ErrorStateInstance s m) where
-  throwError e = stateErrorT \s -> throwError $ ErrorState e s
+  throwError e = stateErrorT $ throwError . ErrorState e
   catchError x eh = stateErrorT \s -> catchError (r x s) \(ErrorState e s') -> r (eh e) s'
     where r = runStateT . runStateErrorT
 

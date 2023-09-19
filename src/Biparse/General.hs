@@ -27,9 +27,10 @@ module Biparse.General
   ) where
 
 import Control.Profunctor.FwdBwd (endoSecond)
-import Biparse.Biparser (Biparser, Iso, Unit, unit, one, try, SubState, SubElement, ElementContext, SubStateContext, split, Const, mapWrite, Unit, ignoreForward, mapMs, upon, uponM, comap, comapM, count)
+import Biparse.Biparser (Biparser, Iso, Unit, unit, one, try, SubState, SubElement, ElementContext, SubStateContext, split, Const, mapWrite, Unit, ignoreForward, upon, uponM, comap, comapM, count)
 import Data.Bool qualified
 import Data.Sequences qualified
+import Control.Profunctor.FwdBwd (firstM)
 
 identity :: forall c s m n ss.
   ( MonadState s m
@@ -133,7 +134,7 @@ dropWhile :: forall c s m n u.
   TakeWhile c s m n
   => (SubElement c s -> Bool)
   -> Const c s m n u
-dropWhile = fmap (const ()) . comap (const mempty) . takeWhile
+dropWhile = void . comap (const mempty) . takeWhile
 
 type Pad c s m n u v ss i se =
   -- m
@@ -196,10 +197,10 @@ breakWhen :: forall c s m n ss.
   => Unit c s m n
   -> Iso c m n s ss
 breakWhen x
-  = bw <* (ignoreForward () $ unit x)
+  = bw <* ignoreForward () (unit x)
   where
   bw
-    =   mempty <$ (failBackward $ try $ unit x)
+    =   mempty <$ failBackward (try $ unit x)
     <|> do
           y <- one `uponM` headAlt
           cons y <$> bw `uponM` tailAlt
@@ -234,7 +235,7 @@ failForward :: forall c s m n u v.
   Alternative m
   => Biparser c s m n u v
   -> Biparser c s m n u v
-failForward = mapMs (const empty) id
+failForward = firstM $ const empty
 
 failBackward :: forall c s m n u v.
   ( Monad n
