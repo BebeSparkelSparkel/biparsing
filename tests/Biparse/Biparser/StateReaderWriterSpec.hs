@@ -1,6 +1,6 @@
-module Biparse.Biparser.StateWriterSpec where
+module Biparse.Biparser.StateReaderWriterSpec where
 
-import Biparse.Biparser.StateWriter 
+import Biparse.Biparser.StateReaderWriter
 import Biparse.List (all)
 import Biparse.Text (lines)
 import Biparse.Text.Context.LineColumn (ListToElement, ElementToList)
@@ -57,9 +57,10 @@ spec = do
     fb @() "[Text] -> Text, one line"
       (zoom @ElementToList @LinesOnly @LinesOnly @(Position [Text]) @(Position Text) @(FM [Text]) @(FM Text)
         --one
-        (one :: Iso LinesOnly (FM [Text]) IO (Position [Text]) Text)
+        (one :: Iso LinesOnly (FM [Text]) IO () (Position [Text]) Text)
         (naturalBaseTen' @Word)
       )
+      ()
       (\f -> do
         it "empty" $ f [] `shouldSatisfy` errorPosition 1 1
 
@@ -83,6 +84,7 @@ spec = do
           (naturalBaseTen' @Int)
         )
       )
+      ()
       (\f -> do
         it "empty" $ f "" `shouldBe` Right ([],"")
 
@@ -106,7 +108,7 @@ spec = do
           b [123,456] >>= (`shouldBe` ([123,456], "123\r\n456"))
 
   describe "runForward" do
-    let bp :: Unit LineColumn (Position String) (FM String) IO
+    let bp :: Unit LineColumn (Position String) (FM String) IO ()
         bp = take 'a' *> take 'b'
         f :: Position String -> Either ErrorPosition ((), Position String)
         f = runForward @() bp

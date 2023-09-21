@@ -24,7 +24,7 @@ module Biparse.Constructor
 import Control.Monad.ChangeMonad (ChangeMonad(ChangeFunction,changeMonad'))
 import Biparse.Biparser (Biparser(Biparser), SubState, SubElement, one, Iso, GetSubState, UpdateStateWithElement)
 import Biparse.Context.IdentityState (IdentityState)
-import Biparse.Biparser.StateWriter qualified as BSW
+import Biparse.Biparser.StateReaderWriter qualified as BSRW
 import Control.Lens (Traversal', preview, assign)
 import Control.Monad.TransformerBaseMonad (TransformerBaseMonad, LiftBaseMonad, liftBaseMonad)
 import Control.Monad.Reader (ReaderT(ReaderT), ask)
@@ -99,17 +99,6 @@ focusOneDef :: forall is m' n' se c s m n u v ss.
   => Constructor se m' n' u v
   -> Biparser c s m n u v
 focusOneDef = focus @is pure (const def) one
----- | 'focus' with 'one' and a 'Default' value.
----- When forward, runs the 'Constructor' one the first sub-element.
----- When backward, run the 'Constructor' on the 'Default' value of 'se' and ignore 'u'.
---focusOneDef :: forall is m' n' se c s m n u v ss.
---  ( Default se
---  --
---  , FocusOne is c s m m' n n' ss se
---  )
---  => Constructor se m' n' se v
---  -> Biparser c s m n u v
---focusOneDef = focusOne @is (const $ pure def)
 
 type FocusOne is c s m m' n n' ss se =
   ( IsSequence ss
@@ -171,7 +160,7 @@ lensBiparse :: forall s s' m n u v.
   , Monad n
   )
   => Traversal' s s'
-  -> BSW.Biparser IdentityState s' m n u v
+  -> BSRW.Biparser IdentityState s' m n () u v
   -> Constructor s m n u v
 lensBiparse t (Biparser fw bw) = Constructor
   do
@@ -179,7 +168,7 @@ lensBiparse t (Biparser fw bw) = Constructor
     (v, _) <- ReaderT $ const $ runStateT (runStateErrorT fw) s
     pure v
   $ \u -> do
-    (v,w) <- lift $ runWriterT $ bw u
+    (v,w) <- lift $ BSRW.runWriterT' $ bw u
     assign t w
     pure v
 

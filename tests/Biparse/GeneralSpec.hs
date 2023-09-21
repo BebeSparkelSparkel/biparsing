@@ -7,7 +7,8 @@ spec = do
   describe "take" do
     describe "IdentityState" do
       fb @() "uni"
-        (take 'a' :: Unit IdentityState Text IO IO)
+        (take 'a' :: Unit IdentityState Text IO IO ())
+        ()
         (\f -> do
           it "take matching" $ f "abc" >>= (`shouldBe` ((), "bc"))
 
@@ -20,7 +21,8 @@ spec = do
           it "print one" $ b () >>= (`shouldBe` ((), "a"))
 
       fb @() "di"
-        (take 'a' *> take 'b' :: Unit IdentityState Text IO IO)
+        (take 'a' *> take 'b' :: Unit IdentityState Text IO IO ())
+        ()
         (\f -> do
           it "take two matching" $ f "abc" >>= (`shouldBe` ((), "c"))
         )
@@ -29,7 +31,8 @@ spec = do
 
     describe "LineColumn" do
       fb @() "uni"
-        (take 'a' :: Unit LineColumn (Position Text) (FM Text) Maybe)
+        (take 'a' :: Unit LineColumn (Position Text) (FM Text) Maybe ())
+        ()
         (\f -> do
           it "take matching" $ f "abc" `shouldBe` Right ((), Position 1 2 "bc")
 
@@ -42,7 +45,8 @@ spec = do
           it "print one" $ b () `shouldBe` Just ((), "a")
 
       fb @() "di"
-        (take 'a' *> take 'b' :: Unit LineColumn (Position Text) (FM Text) Maybe)
+        (take 'a' *> take 'b' :: Unit LineColumn (Position Text) (FM Text) Maybe ())
+        ()
         (\f -> do
           it "take two matching" $ f "abc" `shouldBe` Right ((), Position 1 3 "c")
 
@@ -55,7 +59,8 @@ spec = do
           it "print two" $ b () `shouldBe` Just ((), "ab")
 
   fb @() "takeUni"
-   (takeUni 'a' :: Iso LineColumn (FM Text) Maybe (Position Text) Char)
+   (takeUni 'a' :: Iso LineColumn (FM Text) Maybe () (Position Text) Char)
+   ()
    (\f -> do
      it "fail positon is correct" $ f "bc" `shouldSatisfy` errorPosition 1 1
    )
@@ -63,7 +68,8 @@ spec = do
 
   describe "takeDi" do
     fb @() "IdentityState"
-      (takeDi 'x' 1 :: Iso IdentityState IO IO Text Int)
+      (takeDi 'x' 1 :: Iso IdentityState IO IO () Text Int)
+      ()
       (\f -> do
         it "matches" $ f "xabc" >>= (`shouldBe` (1,"abc"))
 
@@ -72,7 +78,8 @@ spec = do
       \_ -> pure ()
 
     fb @() "LineColumn"
-      (takeDi 'x' 1 :: Iso LineColumn (FM Text) Maybe (Position Text) Int)
+      (takeDi 'x' 1 :: Iso LineColumn (FM Text) Maybe () (Position Text) Int)
+      ()
       (\f -> do
         it "matches" $ f "xabc" `shouldBe` Right (1, Position 1 2 "abc")
 
@@ -82,7 +89,8 @@ spec = do
 
   describe "takeNot" do
     fb @() "IdentityState"
-      (takeNot 'A' :: Iso IdentityState IO IO String Char)
+      (takeNot 'A' :: Iso IdentityState IO IO () String Char)
+      ()
       (\f -> do
         it "takes non-matching element" $ f "bc" >>= (`shouldBe` ('b', "c"))
 
@@ -95,7 +103,8 @@ spec = do
           b 'A' `shouldThrow` isUserError
 
     fb @() "LineColumn"
-      (takeNot 'A' :: Iso LineColumn (FM String) Maybe (Position String) Char)
+      (takeNot 'A' :: Iso LineColumn (FM String) Maybe () (Position String) Char)
+      ()
       (\f -> do
         it "takes non-matching element" $ f "bc" `shouldBe` Right ('b', Position 1 2 "c")
 
@@ -108,7 +117,8 @@ spec = do
           b 'A' `shouldBe` Nothing
 
   fb @() "takeWhile"
-    (takeWhile (/= 'x') :: Iso LineColumn (FM Text) IO (Position Text) Text)
+    (takeWhile (/= 'x') :: Iso LineColumn (FM Text) IO () (Position Text) Text)
+    ()
     (\f -> do
       it "empty" do
         f "" `shouldBe` Right (mempty,"")
@@ -130,7 +140,8 @@ spec = do
       it "has x" $ b "axc" >>= (`shouldBe` ("axc", "axc"))
 
   fb @() "pad"
-    (pad 4 'x' naturalBaseTen :: Iso LineColumn (FM Text) IO (Position Text) Int)
+    (pad 4 'x' naturalBaseTen :: Iso LineColumn (FM Text) IO () (Position Text) Int)
+    ()
     (\f -> do
       it "no pad" do
         f "1" `shouldBe` Right (1, Position 1 2 mempty)
@@ -167,10 +178,10 @@ spec = do
           | otherwise -> mempty
       bs = replicate nb 'b'
       cs = replicate nc 'c'
-      bp :: Biparser IdentityState (Seq Char) (FM (Seq Char)) (Either String) (Seq Char) (Natural, Seq Char)
+      bp :: Biparser IdentityState (Seq Char) (FM (Seq Char)) (Either String) () (Seq Char) (Natural, Seq Char)
       bp = padCount n' 'a' $ takeWhile (== 'b')
       f = runForward @() bp
-      b = runBackward bp
+      b x = runBackward bp x ()
       n' = convertIntegralUnsafe n
       na' = convertIntegralUnsafe na
       nb' = convertIntegralUnsafe nb
@@ -179,7 +190,8 @@ spec = do
         b bs `shouldBe` Right ((n', bs), as' <> bs)
 
   fb @() "breakWhen"
-    (breakWhen $ stripPrefix "ab" :: Iso LineColumn (FM (Seq Char)) IO (Position (Seq Char)) (Seq Char))
+    (breakWhen $ stripPrefix "ab" :: Iso LineColumn (FM (Seq Char)) IO () (Position (Seq Char)) (Seq Char))
+    ()
     (\f -> do
       it "empty" do
         f "" `shouldBe` Right (mempty, "")
@@ -210,7 +222,8 @@ spec = do
   fb @() "optionMaybe"
     ((,) <$> optionMaybe (takeUni 1 `upon` mapBool $> "one")
          <*> optionMaybe (takeUni 2 `upon` mapBool $> "two")
-    :: Biparser IdentityState (Vector Int) IO IO Bool (Maybe String, Maybe String))
+    :: Biparser IdentityState (Vector Int) IO IO () Bool (Maybe String, Maybe String))
+    ()
     (\f -> do
       it "matches both" do
         f [1, 2] >>= (`shouldBe` ((Just "one", Just "two"), mempty))
@@ -231,7 +244,8 @@ spec = do
 
   describe "stripPrefix" do
     fb @() "IdentityState"
-      (stripPrefix "abc" :: Unit IdentityState Text IO IO)
+      (stripPrefix "abc" :: Unit IdentityState Text IO IO ())
+      ()
       (\f -> do
         it "match" $ f "abcdef" >>= (`shouldBe` ((), "def"))
 
@@ -243,7 +257,8 @@ spec = do
         it "prints prefix" $ b () >>= (`shouldBe` ((), "abc"))
     
     fb @() "LineColumn"
-      (stripPrefix "abc" :: Unit LineColumn (Position Text) (FM Text) IO)
+      (stripPrefix "abc" :: Unit LineColumn (Position Text) (FM Text) IO ())
+      ()
       (\f -> do
         it "match" $ f "abcdef" `shouldBe` Right ((), Position 1 4 "def")
 
@@ -255,7 +270,8 @@ spec = do
         it "prints prefix" $ b () >>= (`shouldBe` ((), "abc"))
 
   fb @() "not"
-    (not $ (== 'x') <$> one :: Biparser IdentityState String IO IO Char Bool)
+    (not $ (== 'x') <$> one :: Biparser IdentityState String IO IO () Char Bool)
+    ()
     (\f -> do
       it "true" $ f "ab" >>= (`shouldBe` (True,"b"))
 

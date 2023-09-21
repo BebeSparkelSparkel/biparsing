@@ -2,7 +2,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 module Prelude
   ( module Biparse.Biparser
-  , module Biparse.Biparser.StateWriter
+  , module Biparse.Biparser.StateReaderWriter
   , module Biparse.Context.IdentityState
   , module Biparse.General
   , module Biparse.Text
@@ -65,7 +65,7 @@ module Prelude
   ) where
 
 import Biparse.Biparser hiding (Biparser, Iso, Unit, Const, ConstU)
-import Biparse.Biparser.StateWriter (Biparser, Iso, Unit, Const, ConstU, runForward, runBackward, evalForward)
+import Biparse.Biparser.StateReaderWriter (Biparser, Iso, Unit, Const, ConstU, runForward, runBackward, evalForward)
 import Biparse.Context.IdentityState (IdentityState)
 import Biparse.General
 import Biparse.Text (CharElement)
@@ -122,19 +122,21 @@ import Data.Coerce (coerce)
 import Control.Monad.ChangeMonad (ChangeMonad)
 import System.Timeout (timeout)
 
-fb :: forall is c s m m' n u v.
+fb :: forall is c s m m' n r u v.
   ( m' ~ ResultingMonad m is
   , ChangeMonad is m m'
   , ResultMonad m is
+  , Functor n
   )
   => String
-  -> Biparser c s m n u v
+  -> Biparser c s m n r u v
+  -> r
   -> ((s -> m' (v, s)) -> Spec)
   -> ((u -> n (v, SubState c s)) -> Spec)
   -> Spec
-fb describeLabel bp fws bws = describe describeLabel do
+fb describeLabel bp r fws bws = describe describeLabel do
   describe "forward" $ fws $ runForward @is bp
-  describe "backward" $ bws $ runBackward bp
+  describe "backward" $ bws \u -> runBackward bp u r
 
 errorPosition :: Int -> Int -> Either ErrorPosition b -> Bool
 errorPosition l c = \case

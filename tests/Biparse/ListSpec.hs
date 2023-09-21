@@ -9,7 +9,8 @@ import Data.Text qualified as T
 spec :: Spec
 spec = do
   fb @() "takeElementsWhile"
-    (fmap w2c <$> takeElementsWhile (isDigit . w2c) `upon` fmap c2w :: Iso IdentityState IO IO ByteString String)
+    (fmap w2c <$> takeElementsWhile (isDigit . w2c) `upon` fmap c2w :: Iso IdentityState IO IO () ByteString String)
+    ()
     (\f -> do
       it "matches some digits" do
         f "123 abc" >>= (`shouldBe` ("123", " abc"))
@@ -30,7 +31,8 @@ spec = do
 
   describe "many" do
     fb @() "with takeUni"
-      (many $ takeUni 'a' :: Iso IdentityState IO IO Text [Char])
+      (many $ takeUni 'a' :: Iso IdentityState IO IO () Text [Char])
+      ()
       (\f -> do
         it "takes none" do
           f mempty >>= (`shouldBe` (mempty, mempty))
@@ -47,7 +49,8 @@ spec = do
       (   many
       $   try (takeTri "TRUE" True 1)
       <|>      takeTri "FALSE" False 0
-      :: Biparser IdentityState [String] Maybe Maybe [Bool] [Int])
+      :: Biparser IdentityState [String] Maybe Maybe () [Bool] [Int])
+      ()
       (\f -> do
         it "takes two" do
           f ["TRUE","FALSE","UNDEFINED"]
@@ -69,7 +72,8 @@ spec = do
             `shouldBe` Just (mempty, mempty)
 
   fb @() "some"
-    (some (takeUni 1) :: Iso IdentityState IO IO [Int] (NonEmpty Int))
+    (some (takeUni 1) :: Iso IdentityState IO IO () [Int] (NonEmpty Int))
+    ()
     (\f -> do
       it "fails on none" do
         f mempty `shouldThrow` isUserError
@@ -83,9 +87,9 @@ spec = do
     \b -> do
       it "prints all" $ b [1,1,1] >>= (`shouldBe` ([1,1,1], [1,1,1]))
 
-  fb @()
-    "all"
-    (all $ takeUni 'a' <|> takeUni 'b' :: Iso LineColumn (FM Text) IO (Position Text) [Char])
+  fb @() "all"
+    (all $ takeUni 'a' <|> takeUni 'b' :: Iso LineColumn (FM Text) IO () (Position Text) [Char])
+    ()
     (\f -> do
       it "empty" do
         f "" `shouldBe` Right (mempty, "")
@@ -111,10 +115,10 @@ spec = do
         b "abc" `shouldThrow` isUserError
 
   describe "splitElem" do
-    let bp :: Iso IdentityState IO IO Text [Text]
+    let bp :: Iso IdentityState IO IO () Text [Text]
         bp = splitElem ':'
         f = runForward @() bp
-        b = runBackward bp
+        b u = runBackward bp u ()
         t name f' b' = describe name do
           it "forward" $ limit do
             f f' >>= (`shouldBe` (b', mempty))
@@ -134,7 +138,8 @@ spec = do
       ef string >>= (`shouldNotBe` [mempty])
 
   fb @() "splitOn"
-    (splitOn $ stripPrefix "ab" :: Iso IdentityState IO IO Text [Text])
+    (splitOn $ stripPrefix "ab" :: Iso IdentityState IO IO () Text [Text])
+    ()
     (\f -> do
       it "empty" $ limit do
         f mempty >>= (`shouldBe` (mempty,mempty))
@@ -167,7 +172,8 @@ spec = do
         x `shouldBe` (xs,"abcdababefab")
 
   fb @() "whileM"
-    (whileM (peek (memptyWrite one >>= \x -> pure $ x /= 'x')) one :: Iso IdentityState IO IO Text [Char])
+    (whileM (peek (memptyWrite one >>= \x -> pure $ x /= 'x')) one :: Iso IdentityState IO IO () Text [Char])
+    ()
     (\f -> do
       it "empty" do
         f mempty >>= (`shouldBe` (mempty,mempty))
@@ -251,7 +257,8 @@ spec = do
   --    it "takes all" $ b ["a","b"] `shouldBe` Identity (["a","b"],"ab")
 
   fb @() "whileFwdAllBwd"
-    (whileFwdAllBwd (take 3 $> False <|> pure True) one :: Iso IdentityState EitherString EitherString [Int] [Int])
+    (whileFwdAllBwd (take 3 $> False <|> pure True) one :: Iso IdentityState EitherString EitherString () [Int] [Int])
+    ()
     (\f -> do
       it "empty success" $ f [3] `shouldBe` EValue (mempty,mempty)
       it "some success" $ f [0,1,2,3,4] `shouldBe` EValue ([0,1,2],[4])
@@ -262,7 +269,8 @@ spec = do
       it "some u" $ b [0,1,2] `shouldBe` EValue ([0,1,2],[0,1,2,3])
 
   fb @() "untilFwdSuccessBwdAll"
-    (one `untilFwdSuccessBwdAll` take 3 :: Iso IdentityState EitherString EitherString [Int] [Int])
+    (one `untilFwdSuccessBwdAll` take 3 :: Iso IdentityState EitherString EitherString () [Int] [Int])
+    ()
     (\f -> do
       it "empty success" $ f [3] `shouldBe` EValue (mempty,mempty)
       it "some success" $ f [0,1,2,3,4] `shouldBe` EValue ([0,1,2],[4])
@@ -273,7 +281,8 @@ spec = do
       it "some u" $ b [0,1,2] `shouldBe` EValue ([0,1,2],[0,1,2,3])
 
   fb @() "untilInclusive"
-    (untilInclusive (== 'c') one :: Iso LineColumn (FM (Seq Char)) IO (Position (Seq Char)) String)
+    (untilInclusive (== 'c') one :: Iso LineColumn (FM (Seq Char)) IO () (Position (Seq Char)) String)
+    ()
     (\f -> do
       it "empty" $ f "" `shouldSatisfy` errorPosition 1 1
       it "no match" $ f "ab" `shouldSatisfy` errorPosition 1 3
