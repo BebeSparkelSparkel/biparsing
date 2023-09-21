@@ -4,6 +4,7 @@
 module Biparse.Text.Context.LineColumn
   ( LineColumn
   , LinesOnly
+  , LineBreak(..)
   , Position(..)
   , startLineColumn
   , ErrorPosition(..)
@@ -26,8 +27,12 @@ import Control.Monad.Trans.Error qualified as E
 
 -- * Tracks line and column position
 
-data LineColumn
+data LineColumn (lineBreak :: LineBreak)
 data LinesOnly
+
+data LineBreak
+  = Unix -- \n
+  | Windows -- \r\n
 
 data Position text = Position
   { line :: Int
@@ -35,13 +40,13 @@ data Position text = Position
   , subState :: text
   } deriving (Show, Eq, Functor)
 
-type instance SubState LineColumn (Position text) = text
+type instance SubState (LineColumn _) (Position text) = text
 type instance SubState LinesOnly (Position text) = text
 
-instance GetSubState LineColumn (Position text) where getSubState = subState
+instance GetSubState (LineColumn lb) (Position text) where getSubState = subState
 instance GetSubState LinesOnly (Position text) where getSubState = subState
 
-instance Element text ~ Char => UpdateStateWithElement LineColumn (Position text) where
+instance Element text ~ Char => UpdateStateWithElement (LineColumn 'Unix) (Position text) where
   updateElementContext  s@(Position {line,column}) c ss = case c of
     '\n' -> s {line = line + 1, column = 1, subState = ss}
     _ -> s {column = column + 1, subState = ss}
@@ -50,7 +55,7 @@ instance UpdateStateWithElement LinesOnly (Position [text]) where
   updateElementContext (Position {line}) _ ss' =
     Position {line = line + 1, column = 1, subState = ss'}
 
-instance (Element text ~ Char, MonoFoldable text) => UpdateStateWithSubState LineColumn (Position text) where
+instance (Element text ~ Char, MonoFoldable text) => UpdateStateWithSubState (LineColumn 'Unix) (Position text) where
   updateSubStateContext s@(Position {line, column}) ss ss' = if ns == 0
     then s {column = column + cs, subState = ss'}
     else s {line = line + ns, column = cs, subState = ss'}
@@ -115,7 +120,7 @@ instance Monoid text => ChangeMonad ListToElement (EEP e [text]) (EEP e text) wh
   type ChangeFunction ListToElement (EEP e [text]) (EEP e text) = ()
   changeMonad' () = first $ second ($> mempty)
   
-type instance ErrorContext LineColumn = 'ErrorStateInstance
+type instance ErrorContext (LineColumn _) = 'ErrorStateInstance
 type instance ErrorContext LinesOnly = 'ErrorStateInstance
 
 type SE ss = StateErrorT 'ErrorStateInstance (Position ss) (EESP ss)

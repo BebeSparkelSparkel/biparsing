@@ -6,11 +6,15 @@ module Biparse.Biparser.StateReaderWriter
   , Const
   , ConstU
   , IsoClass
+  , M
+  , N
   , zoom
   , runForward
   , evalForward
   , runBackward
   , runWriterT'
+  , ask'
+  , ask''
   ) where
 
 import Control.Monad.ChangeMonad (ChangeMonad(ChangeFunction,changeMonad'))
@@ -18,14 +22,18 @@ import Control.Monad.StateError (StateErrorT, stateErrorT, runStateErrorT, runSE
 import Biparse.Biparser (SubState, forward, backward, ReplaceSubState(replaceSubState))
 import Biparse.Biparser qualified as B
 import Control.Monad.RWS (RWST(RWST), runRWST)
+import Control.Monad.Reader.Class (MonadReader(ask))
 
-type Biparser c s m n r u v = B.Biparser c s (StateErrorT (ErrorContext c) s m) (RWST r (SubState c s) () n) u v 
+type Biparser c s m n r u v = B.Biparser c s (M c s m) (N c s n r) u v 
 type Iso c m n r s v = Biparser c s m n r v v
 type Unit c s m n r = Biparser c s m n r () ()
 type Const c s m n r u = Biparser c s m n r u ()
 type ConstU c s m n r u v = Biparser c s m n r u v
 
-type IsoClass c m n r a b = B.IsoClass c (StateErrorT (ErrorContext c) a m) (RWST r (SubState c a) () n) a b
+type IsoClass c m n r a b = B.IsoClass c (M c a m) (N c a n r) a b
+
+type M c s m = StateErrorT (ErrorContext c) s m
+type N c s n r = RWST r (SubState c s) () n
 
 -- | Discards unused s' state to avoid commingling m and n monads.
 zoom  :: forall is c' c s s' m m' n r u v ss'.
@@ -72,9 +80,15 @@ evalForward :: forall is c s m m' n r u v.
   -> m' v
 evalForward = (fmap fst .) . runForward @is
 
-runBackward :: forall c s m n r u v. Functor n => Biparser c s m n r u v -> u -> r -> n (v, SubState c s)
-runBackward bp u r = runRWST (backward bp u) r () <&> \(x,_,y) -> (x,y)
+runBackward :: forall c s m n r u v. Functor n => Biparser c s m n r u v -> r -> u -> n (v, SubState c s)
+runBackward bp r u = runRWST (backward bp u) r () <&> \(x,_,y) -> (x,y)
 
 runWriterT' :: Functor m => RWST () w () m a -> m (a, w)
 runWriterT' x = runRWST x () () <&> \(y,_,z) -> (y,z)
+
+ask' :: (Monad m, Monad n, Monoid (SubState c s)) => r -> Biparser c s m n r u r
+ask' x = B.Biparser (pure x) (const ask)
+
+ask'' :: (Monad n, Monoid (SubState c s)) => M c s m r -> Biparser c s m n r u r
+ask'' = flip B.Biparser (const ask)
 

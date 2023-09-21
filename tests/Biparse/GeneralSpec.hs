@@ -181,7 +181,7 @@ spec = do
       bp :: Biparser IdentityState (Seq Char) (FM (Seq Char)) (Either String) () (Seq Char) (Natural, Seq Char)
       bp = padCount n' 'a' $ takeWhile (== 'b')
       f = runForward @() bp
-      b x = runBackward bp x ()
+      b = runBackward bp ()
       n' = convertIntegralUnsafe n
       na' = convertIntegralUnsafe na
       nb' = convertIntegralUnsafe nb

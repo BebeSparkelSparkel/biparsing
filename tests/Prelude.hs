@@ -55,6 +55,7 @@ module Prelude
   , module GHC.Num
   , module GHC.Generics
   , module Data.Coerce
+  , module Data.ByteString.Internal
 
   , fb
   , errorPosition
@@ -64,6 +65,7 @@ module Prelude
   , (>>>)
   ) where
 
+import Data.ByteString.Internal (w2c, c2w)
 import Biparse.Biparser hiding (Biparser, Iso, Unit, Const, ConstU)
 import Biparse.Biparser.StateReaderWriter (Biparser, Iso, Unit, Const, ConstU, runForward, runBackward, evalForward)
 import Biparse.Context.IdentityState (IdentityState)
@@ -136,7 +138,7 @@ fb :: forall is c s m m' n r u v.
   -> Spec
 fb describeLabel bp r fws bws = describe describeLabel do
   describe "forward" $ fws $ runForward @is bp
-  describe "backward" $ bws \u -> runBackward bp u r
+  describe "backward" $ bws \u -> runBackward bp r u
 
 errorPosition :: Int -> Int -> Either ErrorPosition b -> Bool
 errorPosition l c = \case

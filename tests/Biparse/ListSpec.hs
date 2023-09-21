@@ -2,7 +2,6 @@
 module Biparse.ListSpec where
 
 import Biparse.List
-import Data.ByteString.Internal (w2c, c2w)
 import Data.List.NonEmpty (NonEmpty)
 import Data.Text qualified as T
 
@@ -118,7 +117,7 @@ spec = do
     let bp :: Iso IdentityState IO IO () Text [Text]
         bp = splitElem ':'
         f = runForward @() bp
-        b u = runBackward bp u ()
+        b = runBackward bp ()
         t name f' b' = describe name do
           it "forward" $ limit do
             f f' >>= (`shouldBe` (b', mempty))

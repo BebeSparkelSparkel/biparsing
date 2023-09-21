@@ -129,7 +129,7 @@ spec = do
   describe "try" do
     let bp = (try $ one <* take 'b' :: Biparser IdentityState (Seq Char) IO IO () Char Char)
         f = runForward @() bp
-        b x = runBackward bp x ()
+        b = runBackward bp ()
 
     describe "forward" do
       it "success" do
@@ -147,7 +147,7 @@ spec = do
         it "prints correctly" $ b 'a' >>= (`shouldBe` ('a',"ab"))
 
         it "prints second if first fails (more of a test for the Biparser Alternative instance and should proabaly moved there)" do
-          x <- runBackward (setBackward bp (const empty) <|> bp) 'z' ()
+          x <- runBackward (setBackward bp (const empty) <|> bp) () 'z'
           x `shouldBe` ('z',"zb")
       
   describe "isNull" do
