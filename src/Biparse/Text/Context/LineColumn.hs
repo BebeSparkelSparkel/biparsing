@@ -3,8 +3,8 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Biparse.Text.Context.LineColumn
   ( LineColumn
+  , UnixLC
   , LinesOnly
-  , LineBreak(..)
   , Position(..)
   , startLineColumn
   , ErrorPosition(..)
@@ -14,6 +14,7 @@ module Biparse.Text.Context.LineColumn
   , ListToElement
   ) where
 
+import Biparse.Text.LineBreak (LineBreakType(Unix))
 import Biparse.Error.WrapError (WrapError(Error,StateForError,wrapError',stateForError))
 import Biparse.Biparser (SubState, GetSubState(getSubState), UpdateStateWithElement(updateElementContext), UpdateStateWithSubState(updateSubStateContext), ReplaceSubState(replaceSubState))
 import Control.Monad.StateError (StateErrorT, ErrorState, ErrorContext, ErrorInstance(ErrorStateInstance))
@@ -27,12 +28,10 @@ import Control.Monad.Trans.Error qualified as E
 
 -- * Tracks line and column position
 
-data LineColumn (lineBreak :: LineBreak)
-data LinesOnly
+data LineColumn (lineBreak :: LineBreakType)
+type UnixLC = LineColumn 'Unix
 
-data LineBreak
-  = Unix -- \n
-  | Windows -- \r\n
+data LinesOnly
 
 data Position text = Position
   { line :: Int

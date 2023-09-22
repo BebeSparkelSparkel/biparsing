@@ -33,7 +33,7 @@ spec = do
           it "used twice" $ b ('a','b') >>= (`shouldBe` (('a','b'),"ab"))
 
     fb @() "LineColumn"
-      (one :: Iso LineColumn (FM Text) IO () (Position Text) Char)
+      (one :: Iso UnixLC (FM Text) IO () (Position Text) Char)
       ()
       (\f -> do
         it "empty" do
@@ -112,7 +112,7 @@ spec = do
           it "prints second" $ b 'a' >>= (`shouldBe` ('a',"a"))
 
       fb @() "LineColumn"
-        (peek (takeUni 'x') <|> takeUni 'a' :: Iso LineColumn (FM String) IO () (Position String) Char)
+        (peek (takeUni 'x') <|> takeUni 'a' :: Iso UnixLC (FM String) IO () (Position String) Char)
         ()
         (\f -> do
           it "take first" $ f "xa" `shouldBe` Right ('x', Position 1 1 "xa")
@@ -165,7 +165,7 @@ spec = do
         it "false" $ b [()] `shouldBe` Identity (False,mempty)
 
     fb @() "LineColumn"
-      (isNull :: ConstU LineColumn (Position String) Identity Identity () [()] Bool)
+      (isNull :: ConstU UnixLC (Position String) Identity Identity () [()] Bool)
       ()
       (\f -> do
         it "true" $ f "" `shouldBe` Identity (True,"")
@@ -179,7 +179,7 @@ spec = do
 
   describe "breakWhen'" do
     fb @() "LineColumn"
-      (breakWhen' $ stripPrefix "ab" :: Iso LineColumn (FM String) IO () (Position String) String)
+      (breakWhen' $ stripPrefix "ab" :: Iso UnixLC (FM String) IO () (Position String) String)
       ()
       (\f -> do
         it "empty" $ limit $
@@ -236,7 +236,7 @@ spec = do
 
   describe "count" do
     fb @() "ElementContext" 
-      (count $ takeElementsWhile (== 'a') :: Biparser LineColumn (Position Text) (FM Text) IO () [Char] (Natural,[Char]))
+      (count $ takeElementsWhile (== 'a') :: Biparser UnixLC (Position Text) (FM Text) IO () [Char] (Natural,[Char]))
       ()
       (\f -> do
         prop "correct count" \(NonNegative x, NonNegative y) -> let
@@ -250,7 +250,7 @@ spec = do
           in b xs >>= (`shouldBe` ((convertIntegralUnsafe $ length xs, xs), fromString xs))
 
     fb @() "SubStateContext" 
-      (count $ takeWhile (== 'a') :: Biparser LineColumn (Position Text) (FM Text) IO () Text (Natural,Text))
+      (count $ takeWhile (== 'a') :: Biparser UnixLC (Position Text) (FM Text) IO () Text (Natural,Text))
       ()
       (\f -> do
         prop "correct count" \(NonNegative x, NonNegative y) -> let

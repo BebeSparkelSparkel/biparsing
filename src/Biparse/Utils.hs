@@ -1,4 +1,5 @@
 {-# LANGUAGE NoImplicitPrelude #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
 module Biparse.Utils
   ( (|>)
   , (^:^)
@@ -13,10 +14,13 @@ module Biparse.Utils
   , headTailAlt
   , ConvertIntegral(..)
   , convertIntegralUnsafe
+  , symbol
+  , char
+  , shouldBe
   ) where
 
 import Control.Applicative (Applicative, Alternative((<|>)), pure, empty, liftA2)
-import Data.Function ((.), flip)
+import Data.Function ((.), flip, ($))
 import Data.Functor (Functor, (<$), fmap)
 import Data.Maybe (maybe)
 import Data.MonoTraversable (headMay, lastMay, MonoFoldable, Element)
@@ -26,6 +30,11 @@ import GHC.Real (Integral, toInteger)
 import GHC.Integer (Integer)
 import GHC.Int (Int)
 import Numeric.Natural (Natural)
+import GHC.TypeLits (KnownSymbol, symbolVal, KnownChar, charVal)
+import Data.String (IsString(fromString))
+import Data.Proxy (Proxy(Proxy))
+import Data.Eq (Eq((==)))
+import Text.Printf (IsChar(fromChar))
 
 (|>) :: Alternative f => f a -> a -> f a
 x |> y = x <|> pure y
@@ -67,4 +76,13 @@ convertIntegralUnsafe :: forall a b. (Integral a, Num b) => a -> b
 convertIntegralUnsafe = fromInteger . toInteger
 instance ConvertIntegral Natural Int where convertIntegral = convertIntegralUnsafe
 instance ConvertIntegral Natural Integer where convertIntegral = convertIntegralUnsafe
+
+symbol :: forall s a. (KnownSymbol s, IsString a) => a
+symbol = fromString $ symbolVal $ Proxy @s
+
+char :: forall c a. (KnownChar c, IsChar a) => a
+char = fromChar $ charVal $ Proxy @c
+
+shouldBe :: (Eq a, Alternative m) => a -> a -> m a
+shouldBe x y = if x == y then pure x else empty
 

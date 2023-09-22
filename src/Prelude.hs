@@ -39,10 +39,14 @@ module Prelude
   , module Text.Read
   , module Text.Show
   , module Control.Monad.RWS
+  , module GHC.TypeLits
+  , module Text.Printf
   ) where
 
+import Text.Printf (IsChar)
 import Control.Monad.RWS (RWST)
-import Biparse.Utils (headAlt, tailAlt, initAlt, headTailAlt, lastAlt, (^:^), (<$$>), ConvertIntegral(convertIntegral))
+import GHC.TypeLits (KnownSymbol, Symbol, KnownChar)
+import Biparse.Utils (headAlt, tailAlt, initAlt, headTailAlt, lastAlt, (^:^), (<$$>), ConvertIntegral(convertIntegral), shouldBe, symbol)
 import Control.Applicative (Applicative((<*>),pure), (*>), (<*), liftA2, Alternative(empty,(<|>)))
 import Control.Monad (Monad((>>=),return), when, unless, MonadFail(fail), MonadPlus, guard, (=<<), (>=>), (<=<))
 import Control.Monad.EitherString (EitherString)
@@ -57,7 +61,7 @@ import Data.Bifunctor (Bifunctor, first, second)
 import Data.Bool (Bool(True,False), otherwise, bool, (&&))
 import Data.Char (Char)
 import Data.Coerce (Coercible, coerce)
-import Data.Either (Either(Left), fromRight, either)
+import Data.Either (Either(Left,Right), fromRight, either)
 import Data.Eq (Eq((==)))
 import Data.Function (($), (.), (&), id, const, flip)
 import Data.Functor (Functor(fmap), (<$), ($>), (<$>), (<&>), void)

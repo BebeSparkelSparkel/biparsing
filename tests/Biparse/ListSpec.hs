@@ -87,7 +87,7 @@ spec = do
       it "prints all" $ b [1,1,1] >>= (`shouldBe` ([1,1,1], [1,1,1]))
 
   fb @() "all"
-    (all $ takeUni 'a' <|> takeUni 'b' :: Iso LineColumn (FM Text) IO () (Position Text) [Char])
+    (all $ takeUni 'a' <|> takeUni 'b' :: Iso UnixLC (FM Text) IO () (Position Text) [Char])
     ()
     (\f -> do
       it "empty" do
@@ -136,8 +136,8 @@ spec = do
     prop "forward should never return [\"\"]" $ forAll (T.pack <$> listOf (elements "ab:")) \string -> do
       ef string >>= (`shouldNotBe` [mempty])
 
-  fb @() "splitOn"
-    (splitOn $ stripPrefix "ab" :: Iso IdentityState IO IO () Text [Text])
+  fb @() "splitWith"
+    (splitWith $ stripPrefix "ab" :: Iso IdentityState IO IO () Text [Text])
     ()
     (\f -> do
       it "empty" $ limit do
@@ -280,7 +280,7 @@ spec = do
       it "some u" $ b [0,1,2] `shouldBe` EValue ([0,1,2],[0,1,2,3])
 
   fb @() "untilInclusive"
-    (untilInclusive (== 'c') one :: Iso LineColumn (FM (Seq Char)) IO () (Position (Seq Char)) String)
+    (untilInclusive (== 'c') one :: Iso UnixLC (FM (Seq Char)) IO () (Position (Seq Char)) String)
     ()
     (\f -> do
       it "empty" $ f "" `shouldSatisfy` errorPosition 1 1

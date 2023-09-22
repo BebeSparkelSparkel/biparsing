@@ -24,10 +24,9 @@ import Data.HVect (HVect((:&:)), Append, (<++>))
 import Data.HVect qualified as HV
 import Data.IORef (IORef, newIORef, writeIORef, modifyIORef, readIORef)
 import Data.MonoTraversable.Unprefixed (all)
-import Data.Proxy (Proxy(Proxy))
 import GHC.Generics (Rec0, (:*:)((:*:)), M1(M1,unM1), K1(K1,unK1), Generic(Rep,to,from), D1, Meta(MetaData))
 import GHC.IO (IO)
-import GHC.TypeLits (Symbol, KnownSymbol, AppendSymbol, symbolVal)
+import GHC.TypeLits (AppendSymbol)
 import System.IO.Unsafe (unsafePerformIO)
 
 unorderedDef :: forall c m n a b.
@@ -131,7 +130,7 @@ runParsers = \case
   [] -> pure Nothing
 
 typeName :: forall a. KnownSymbol (TypeName (Rep a)) => String
-typeName = symbolVal $ Proxy @(TypeName (Rep a))
+typeName = symbol @(TypeName (Rep a))
 type (++) :: Symbol -> Symbol -> Symbol
 type family (++) a b where a ++ b = AppendSymbol a b
 type TypeName :: (Type -> Type) -> Symbol

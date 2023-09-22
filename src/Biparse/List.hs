@@ -11,6 +11,7 @@ module Biparse.List
   , all
   , splitElem
   , splitOn
+  , splitWith
   , whileM
   , whileM'
   , whileFwdAllBwd
@@ -30,7 +31,7 @@ module Biparse.List
   ) where
 
 import Biparse.Biparser (Biparser(Biparser), forward, backward, Iso, SubElement, SubState, emptyForward, one, try, mono, ElementContext, FixFail, fix, peek, Unit, UpdateStateWithSubState, isNull, breakWhen', GetSubState, upon, uponM)
-import Biparse.General (take, takeNot, Take, memptyWrite, BreakWhen, rest)
+import Biparse.General (take, takeNot, Take, memptyWrite, BreakWhen, rest, stripPrefix)
 import Data.List.NonEmpty (NonEmpty, nonEmpty)
 
 replicateBiparserT :: forall c s m n u v.
@@ -150,12 +151,11 @@ all x = ifM isNull (pure mempty) do
   cons y <$> all x `uponM` tailAlt
 
 -- | Splits the substate on given element
-splitElem :: forall c s m n ss.
-  ( Take c s m n
+splitElem :: forall c s m n ss se.
+  ( Take c s m n ss se
   , Many c s m n
-  , ss ~ SubState c s
   )
-  => SubElement c s
+  => se
   -> Iso c m n s [ss]
 splitElem x = correctEmpty splitter
   where
@@ -163,7 +163,6 @@ splitElem x = correctEmpty splitter
   splitter = do
     y <- fromList <$> manyIso (takeNot x) `uponM` fmap toList . headAlt
     take x *> (cons y <$> splitter `uponM` tailAlt) <|> pure (singleton y)
-
   correctEmpty :: Iso c m n s [ss] -> Iso c m n s [ss]
   correctEmpty = mono \case
     [y] | null y -> mempty
@@ -173,10 +172,20 @@ splitElem x = correctEmpty splitter
 splitOn :: forall c s m n ss.
   ( BreakWhen c s m n ss
   , UpdateStateWithSubState c s
+  , Eq (Element ss)
+  , Show ss
+  )
+  => ss
+  -> Iso c m n s [ss]
+splitOn = splitWith . stripPrefix
+
+splitWith :: forall c s m n ss.
+  ( BreakWhen c s m n ss
+  , UpdateStateWithSubState c s
   )
   => Unit c s m n
   -> Iso c m n s [ss]
-splitOn x
+splitWith x
   =   ifM isNull (pure mempty)
   $   do
         hs <- so `uponM` initAlt 

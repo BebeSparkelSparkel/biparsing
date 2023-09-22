@@ -71,7 +71,7 @@ import Biparse.Biparser.StateReaderWriter (Biparser, Iso, Unit, Const, ConstU, r
 import Biparse.Context.IdentityState (IdentityState)
 import Biparse.General
 import Biparse.Text (CharElement)
-import Biparse.Text.Context.LineColumn (LineColumn, LinesOnly, Position(Position,line,column), ErrorPosition(ErrorPosition))
+import Biparse.Text.Context.LineColumn (LineColumn, UnixLC, LinesOnly, Position(Position,line,column), ErrorPosition(ErrorPosition))
 import Biparse.Utils (headAlt, convertIntegralUnsafe)
 import Control.Applicative (pure, (<|>), (<*), (*>), (<*>), empty, liftA2, Alternative)
 import Control.Monad ((>>=), return, (>>), fail, MonadPlus, MonadFail)

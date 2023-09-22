@@ -2,7 +2,7 @@ module Biparse.Biparser.StateReaderWriterSpec where
 
 import Biparse.Biparser.StateReaderWriter
 import Biparse.List (all)
-import Biparse.Text (lines)
+import Biparse.Text.LineBreak (lines, LineBreakType(Unix))
 import Biparse.Text.Context.LineColumn (ListToElement, ElementToList)
 import Biparse.Text.Numeric (naturalBaseTen')
 
@@ -13,12 +13,12 @@ spec = do
   --  "translate mantains shared state Line and Column"
   --  ( translate
   --    _
-  --    (splitOn $ stripPrefix "\r\n")
+  --    (splitWith $ stripPrefix "\r\n")
   --  $ all 
   --    ( comap runIdentity $ fmap Identity
   --    $ takeUni "abc" <|> takeUni "def"
   --    :: Iso IdentityState (Except String) IO [String] (Identity String))
-  --  :: Iso LineColumn (FM String) IO (Position String) [Identity String])
+  --  :: Iso UnixLC (FM String) IO (Position String) [Identity String])
   --  (\f -> do
   --    it "empty" do
   --      f "" `shouldBe` Right (mempty, Position 1 1 mempty)
@@ -76,10 +76,10 @@ spec = do
           b 456 >>= (`shouldBe` (456, ["456"]))
 
     fb @() "Text -> [Text], all lines"
-      (zoom @ListToElement @LinesOnly @LineColumn @(Position Text) @(Position [Text]) @(FM Text) @(FM [Text])
-        lines
+      (zoom @ListToElement @LinesOnly @UnixLC @(Position Text) @(Position [Text]) @(FM Text) @(FM [Text])
+        (lines @'Unix)
         ( all
-        $ zoom @ElementToList @LineColumn @_ @_ @_ @_ @(FM Text)
+        $ zoom @ElementToList @UnixLC @_ @_ @_ @_ @(FM Text)
           one
           (naturalBaseTen' @Int)
         )
@@ -105,10 +105,10 @@ spec = do
       )
       \b -> do
         it "prints all" $
-          b [123,456] >>= (`shouldBe` ([123,456], "123\r\n456"))
+          b [123,456] >>= (`shouldBe` ([123,456], "123\n456"))
 
   describe "runForward" do
-    let bp :: Unit LineColumn (Position String) (FM String) IO ()
+    let bp :: Unit UnixLC (Position String) (FM String) IO ()
         bp = take 'a' *> take 'b'
         f :: Position String -> Either ErrorPosition ((), Position String)
         f = runForward @() bp

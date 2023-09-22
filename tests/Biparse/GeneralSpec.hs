@@ -31,7 +31,7 @@ spec = do
 
     describe "LineColumn" do
       fb @() "uni"
-        (take 'a' :: Unit LineColumn (Position Text) (FM Text) Maybe ())
+        (take 'a' :: Unit UnixLC (Position Text) (FM Text) Maybe ())
         ()
         (\f -> do
           it "take matching" $ f "abc" `shouldBe` Right ((), Position 1 2 "bc")
@@ -45,7 +45,7 @@ spec = do
           it "print one" $ b () `shouldBe` Just ((), "a")
 
       fb @() "di"
-        (take 'a' *> take 'b' :: Unit LineColumn (Position Text) (FM Text) Maybe ())
+        (take 'a' *> take 'b' :: Unit UnixLC (Position Text) (FM Text) Maybe ())
         ()
         (\f -> do
           it "take two matching" $ f "abc" `shouldBe` Right ((), Position 1 3 "c")
@@ -59,7 +59,7 @@ spec = do
           it "print two" $ b () `shouldBe` Just ((), "ab")
 
   fb @() "takeUni"
-   (takeUni 'a' :: Iso LineColumn (FM Text) Maybe () (Position Text) Char)
+   (takeUni 'a' :: Iso UnixLC (FM Text) Maybe () (Position Text) Char)
    ()
    (\f -> do
      it "fail positon is correct" $ f "bc" `shouldSatisfy` errorPosition 1 1
@@ -78,7 +78,7 @@ spec = do
       \_ -> pure ()
 
     fb @() "LineColumn"
-      (takeDi 'x' 1 :: Iso LineColumn (FM Text) Maybe () (Position Text) Int)
+      (takeDi 'x' 1 :: Iso UnixLC (FM Text) Maybe () (Position Text) Int)
       ()
       (\f -> do
         it "matches" $ f "xabc" `shouldBe` Right (1, Position 1 2 "abc")
@@ -103,7 +103,7 @@ spec = do
           b 'A' `shouldThrow` isUserError
 
     fb @() "LineColumn"
-      (takeNot 'A' :: Iso LineColumn (FM String) Maybe () (Position String) Char)
+      (takeNot 'A' :: Iso UnixLC (FM String) Maybe () (Position String) Char)
       ()
       (\f -> do
         it "takes non-matching element" $ f "bc" `shouldBe` Right ('b', Position 1 2 "c")
@@ -117,7 +117,7 @@ spec = do
           b 'A' `shouldBe` Nothing
 
   fb @() "takeWhile"
-    (takeWhile (/= 'x') :: Iso LineColumn (FM Text) IO () (Position Text) Text)
+    (takeWhile (/= 'x') :: Iso UnixLC (FM Text) IO () (Position Text) Text)
     ()
     (\f -> do
       it "empty" do
@@ -140,7 +140,7 @@ spec = do
       it "has x" $ b "axc" >>= (`shouldBe` ("axc", "axc"))
 
   fb @() "pad"
-    (pad 4 'x' naturalBaseTen :: Iso LineColumn (FM Text) IO () (Position Text) Int)
+    (pad 4 'x' naturalBaseTen :: Iso UnixLC (FM Text) IO () (Position Text) Int)
     ()
     (\f -> do
       it "no pad" do
@@ -190,7 +190,7 @@ spec = do
         b bs `shouldBe` Right ((n', bs), as' <> bs)
 
   fb @() "breakWhen"
-    (breakWhen $ stripPrefix "ab" :: Iso LineColumn (FM (Seq Char)) IO () (Position (Seq Char)) (Seq Char))
+    (breakWhen $ stripPrefix "ab" :: Iso UnixLC (FM (Seq Char)) IO () (Position (Seq Char)) (Seq Char))
     ()
     (\f -> do
       it "empty" do
@@ -257,7 +257,7 @@ spec = do
         it "prints prefix" $ b () >>= (`shouldBe` ((), "abc"))
     
     fb @() "LineColumn"
-      (stripPrefix "abc" :: Unit LineColumn (Position Text) (FM Text) IO ())
+      (stripPrefix "abc" :: Unit UnixLC (Position Text) (FM Text) IO ())
       ()
       (\f -> do
         it "match" $ f "abcdef" `shouldBe` Right ((), Position 1 4 "def")
