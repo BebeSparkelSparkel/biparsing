@@ -55,11 +55,11 @@ spec = do
 
   describe "zoom" do
     fb @() "[Text] -> Text, one line"
-      (zoom @ElementToList @LinesOnly @LinesOnly @(Position [Text]) @(Position Text) @(FM [Text]) @(FM Text)
+      (zoom @ElementToList @LinesOnly @(FM Text)
         --one
         (one :: Iso LinesOnly (FM [Text]) IO () (Position [Text]) Text)
         (naturalBaseTen' @Word)
-      )
+      :: Iso LinesOnly (FM [Text]) IO () (Position [Text]) Word)
       ()
       (\f -> do
         it "empty" $ f [] `shouldSatisfy` errorPosition 1 1
@@ -76,14 +76,14 @@ spec = do
           b 456 >>= (`shouldBe` (456, ["456"]))
 
     fb @() "Text -> [Text], all lines"
-      (zoom @ListToElement @LinesOnly @UnixLC @(Position Text) @(Position [Text]) @(FM Text) @(FM [Text])
+      (zoom @ListToElement @LinesOnly @(FM [Text])
         (lines @'Unix)
         ( all
-        $ zoom @ElementToList @UnixLC @_ @_ @_ @_ @(FM Text)
+        $ zoom @ElementToList @UnixLC @(FM Text)
           one
           (naturalBaseTen' @Int)
         )
-      )
+      :: Iso UnixLC (FM Text) IO () (Position Text) [Int])
       ()
       (\f -> do
         it "empty" $ f "" `shouldBe` Right ([],"")

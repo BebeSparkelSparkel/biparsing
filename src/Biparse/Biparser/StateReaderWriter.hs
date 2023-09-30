@@ -13,8 +13,6 @@ module Biparse.Biparser.StateReaderWriter
   , evalForward
   , runBackward
   , runWriterT'
-  , ask'
-  , ask''
   ) where
 
 import Control.Monad.ChangeMonad (ChangeMonad(ChangeFunction,changeMonad'))
@@ -22,7 +20,6 @@ import Control.Monad.StateError (StateErrorT, stateErrorT, runStateErrorT, runSE
 import Biparse.Biparser (SubState, forward, backward, ReplaceSubState(replaceSubState))
 import Biparse.Biparser qualified as B
 import Control.Monad.RWS (RWST(RWST), runRWST)
-import Control.Monad.Reader.Class (MonadReader(ask))
 
 type Biparser c s m n r u v = B.Biparser c s (M c s m) (N c s n r) u v 
 type Iso c m n r s v = Biparser c s m n r v v
@@ -36,7 +33,8 @@ type M c s m = StateErrorT (ErrorContext c) s m
 type N c s n r = RWST r (SubState c s) () n
 
 -- | Discards unused s' state to avoid commingling m and n monads.
-zoom  :: forall is c' c s s' m m' n r u v ss'.
+-- c' m'
+zoom  :: forall is c' m' c s s' m n r u v ss'.
   ( Monad m
   , Monad n
   , ReplaceSubState s ss' s'
@@ -85,10 +83,4 @@ runBackward bp r u = runRWST (backward bp u) r () <&> \(x,_,y) -> (x,y)
 
 runWriterT' :: Functor m => RWST () w () m a -> m (a, w)
 runWriterT' x = runRWST x () () <&> \(y,_,z) -> (y,z)
-
-ask' :: (Monad m, Monad n, Monoid (SubState c s)) => r -> Biparser c s m n r u r
-ask' x = B.Biparser (pure x) (const ask)
-
-ask'' :: (Monad n, Monoid (SubState c s)) => M c s m r -> Biparser c s m n r u r
-ask'' = flip B.Biparser (const ask)
 
