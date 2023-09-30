@@ -13,7 +13,6 @@ module Prelude
   , module Control.Monad.Trans.Class
   , module Data.Bifunctor
   , module Data.Bool
-  , module Data.Char
   , module Data.Coerce
   , module Data.Either
   , module Data.Eq
@@ -43,7 +42,7 @@ module Prelude
   , module Text.Printf
   ) where
 
-import Text.Printf (IsChar)
+import Text.Printf (IsChar, fromChar, toChar)
 import Control.Monad.RWS (RWST)
 import GHC.TypeLits (KnownSymbol, Symbol, KnownChar)
 import Biparse.Utils (headAlt, tailAlt, initAlt, headTailAlt, lastAlt, (^:^), (<$$>), ConvertIntegral(convertIntegral), shouldBe, symbol)
@@ -59,7 +58,6 @@ import Control.Monad.Writer (WriterT(WriterT,runWriterT))
 import Control.Monad.Writer.Class (MonadWriter(tell,pass))
 import Data.Bifunctor (Bifunctor, first, second)
 import Data.Bool (Bool(True,False), otherwise, bool, (&&))
-import Data.Char (Char)
 import Data.Coerce (Coercible, coerce)
 import Data.Either (Either(Left,Right), fromRight, either)
 import Data.Eq (Eq((==)))

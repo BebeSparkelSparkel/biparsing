@@ -4,66 +4,60 @@
 module Biparse.Text.LineBreak
   ( LineBreakType(..)
   , lines
-  , lineBreak
-  --, LineBreakText(..)
+  , lineBreakType
+  , LineBreaker
+  , LineSplitter
   ) where
 
 import Biparse.Biparser (Iso, SubState, UpdateStateWithSubState)
 import Biparse.List (splitElem, splitOn)
 import Biparse.General (takeDi, takeDi', Take, Take', BreakWhen)
 import Biparse.Utils (char)
-import Text.Printf (fromChar)
+import Data.Char (Char)
 
 data LineBreakType
-  = Unix -- \n
-  | Windows -- \r\n
+  = Unix
+  | Windows
   deriving (Show, Eq, Ord)
 
---type WhichLineBreak :: Type -> LineBreakType
---type family WhichLineBreak a
---type instance WhichLineBreak (LineColumn lb) = lb
-
-type family LineBreaker (a :: LineBreakType) where
+type LineBreaker :: LineBreakType -> Either Char Symbol
+type family LineBreaker a where
   LineBreaker 'Unix = 'Left '\n'
   LineBreaker 'Windows = 'Right "\r\n"
 
---class LineBreakText (lb :: LineBreakType) where lineBreakText :: IsString a => a
---instance LineBreakText 'Unix where lineBreakText = "\n"
---instance LineBreakText 'Windows where lineBreakText = "\r\n"
-
-lineBreak :: forall c m n text ss se.
-  ( Take c text m n ss se
-  , Take' c text m n ss se
+lineBreakType :: forall c m n a text se.
+  ( Take c a m n text se
+  , Take' c a m n text se
   , IsChar se
   , Alternative n
-  , IsString ss
-  ) => Iso c m n text LineBreakType
-lineBreak
-  =   takeDi  (fromChar '\n')   Unix
-  <|> takeDi' "\r\n" Windows
+  , IsString text
+  ) => Iso c m n a LineBreakType
+lineBreakType
+  =   takeDi  (fromChar '\n') Unix
+  <|> takeDi' "\r\n"          Windows
 
-lines :: forall (lb :: LineBreakType) c m n s text.
-  ( LineSplitter (LineBreaker lb) c s m n
-  , text ~ SubState c s
+lines :: forall (lb :: LineBreakType) c m n a text.
+  ( LineSplitter (LineBreaker lb) c m n a
+  , text ~ SubState c a
   )
-  => Iso c m n s [text]
-lines = lineSplitter @(LineBreaker lb) -- splitWith $ string $ lineBreakText @lb
+  => Iso c m n a [text]
+lines = lineSplitter @(LineBreaker lb)
 
-class LineSplitter (a :: Either Char Symbol) c s m n where lineSplitter :: Iso c m n s [SubState c s]
+class LineSplitter (lb :: Either Char Symbol) c m n a where lineSplitter :: Iso c m n a [SubState c a]
 instance
   ( KnownChar char
   , IsChar se
   , Alternative n
-  , Take c s m n text se
-  ) => LineSplitter ('Left char) c s m n where
-  lineSplitter = splitElem @c @s @m @n (char @char)
+  , Take c a m n text se
+  ) => LineSplitter ('Left char) c m n a where
+  lineSplitter = splitElem @c @a @m @n (char @char)
 instance
   ( KnownSymbol sym
   , IsString ss
-  , BreakWhen c s m n ss
-  , UpdateStateWithSubState c s
+  , BreakWhen c a m n ss
+  , UpdateStateWithSubState c a
   , Eq (Element ss)
   , Show ss
-  ) => LineSplitter ('Right sym) c s m n where
+  ) => LineSplitter ('Right sym) c m n a where
   lineSplitter = splitOn (symbol @sym)
 

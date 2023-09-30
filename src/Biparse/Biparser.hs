@@ -7,28 +7,19 @@ module Biparse.Biparser
   , setForward
   , backward
   , setBackward
-  --, runForward
-  --, evalForward
-  --, runBackward
-  --, execBackward
   , Iso
   , IsoClass(..)
-  --, iso
   , Unit
   , unit
   , mono
   , Const
   , ConstU
-  --, mkConst
   , fix
-  --, fixWith
   , FixFail(..)
   , comap
   , comapM
-  --, comapMay
   , upon
   , uponM
-  --, uponMay
   , mapWrite
   , emptyForward
   , ignoreForward
@@ -37,11 +28,6 @@ module Biparse.Biparser
   , GetSubState(..)
   , UpdateStateWithSubState(..)
   , SubStateContext
-  --, WrappedState(..)
-  --, wrapState
-  --, WrappedContext(..)
-  --, wrapContext
-  --, unwrapContext
   , SubElement
   , UpdateStateWithElement(..)
   , ElementContext
@@ -56,20 +42,20 @@ module Biparse.Biparser
   , write
   , breakWhen'
   , count
-  , EmptyWrite
-  , WriteConstructor
-  , writeConstructor
+  , ask'
+  , asks'
   ) where
 
 import Biparse.FixFail (FixFail(fixFail))
-import Data.Profunctor (Profunctor(dimap))
+import Biparse.Utils (convertIntegralUnsafe)
+--import Control.Monad.ChangeMonad (ChangeMonad, ChangeFunction, changeMonad')
 import Control.Monad.Extra (findM)
-import Control.Monad.ChangeMonad (ChangeMonad, ChangeFunction, changeMonad')
+import Control.Monad.Reader.Class (MonadReader(ask), asks)
+--import Control.Monad.Writer (mapWriterT)
 import Control.Monad.Writer.Class (listen)
 import Control.Profunctor.FwdBwd (BwdMonad, Comap, FwdBwd, pattern FwdBwd, MapMs(mapMs), DualMap)
 import Control.Profunctor.FwdBwd qualified as FB
-import Control.Monad.Writer (mapWriterT)
-import Biparse.Utils (convertIntegralUnsafe)
+import Data.Profunctor (Profunctor(dimap))
 
 -- | Product type for simultainously constructing forward and backward running programs.
 newtype Biparser context s m n u v = Biparser' {unBiparser :: FwdBwd m n u v}
@@ -106,16 +92,6 @@ comapM :: forall c s m n u u' v.
   -> Biparser c s m n u v
 comapM = FB.comapM @()
 
---comapMay :: forall c s m n u u' v.
---  ( Applicative n
---  )
---  => v
---  -> (u -> Maybe u')
---  -> Biparser c s m n u' v
---  -> Biparser c s m n u  v
---comapMay x f (Biparser fw bw) = Biparser fw $
---  maybe (pure x) bw . f
-
 infix 8 `upon`
 upon :: forall c s m n u u' v.
   Monad n
@@ -132,15 +108,6 @@ uponM :: forall c s m n u u' v.
   -> Biparser c s m n u v
 uponM = flip comapM
 
---infix 8 `uponMay`
---uponMay :: forall c s m n u u' v.
---  Applicative n
---  => Biparser c s m n u' v
---  -> v
---  -> (u -> Maybe u')
---  -> Biparser c s m n u  v
---uponMay x y z = comapMay y z x
-
 -- * Map Backwards Write
 
 infix 8 `mapWrite`
@@ -156,21 +123,10 @@ mapWrite (Biparser fw bw) f = Biparser fw $
 -- * Constrained Subtypes
 -- More constrained subtypes of Biparser
 
-
 -- | Iso when @u ~ v@
 type Iso c m n a b = Biparser c a m n b b
 
 class IsoClass c m n a b where iso :: Iso c m n a b
-
---iso :: forall c m n a b.
---  ( Monad m
---  , Monad n
---  , a ~ SubState c a
---  )
---  => (a -> b)
---  -> (b -> a)
---  -> Iso c m n a b
---iso f g = dimap g f identity
 
 -- ** Unit
 -- Unit when @u@ and @v@ are @()@
@@ -202,64 +158,11 @@ type Const c s m n u = Biparser c s m n u ()
 -- | Discards @u@
 type ConstU c s m n u v = Biparser c s m n u v
 
--- | If forward succeds return @v@
--- If backward does not pass an equal @v@ then fail.
---mkConst :: forall c s m n v.
---  ( Eq v
---  , Monad m
---  , Monad n
---  , Alternative n
---  )
---  => v
---  -> Unit c s m n
---  -> Iso c m n s v
---mkConst x = ($> x) . comapM (bool empty (pure ()) . (== x))
-
--- * State Mapping
-
--- | Maps the state with an Iso
--- DEV NOTE: The context for the Iso and Biparser should probably be different and the constraints @s ~ SubState c s@ and s@ ~ SubState c s@ should be removed.
---mapState
---  :: forall c s s' m.
---   ( Monoid s
---   , Monoid s'
---   , Eq s'
---   , Monad m
---   , s ~ SubState c s
---   , s' ~ SubState c s'
---   )
---  =>  Iso c m m s s'
---  ->  Biparser c s' m m
---  :-> Biparser c s  m m
---mapState (Biparser fw' bw') (Biparser fw'' bw'') = Biparser
---  (   StateT
---  $   runStateT fw'
---  >=> \(ns,s) -> runStateT fw'' ns
---  >>= \(x,ns') -> execWriterT (iterateUntilM (== mempty) bw' ns')
---  >>= \s' -> pure (x, s' <> s)
---  )
---  (\u -> WriterT $ runWriterT (bw'' u) >>= \(x,w) -> runWriterT $ iterateUntilM (== mempty) bw' w $> x)
-
---switchContext :: forall c c' s m n.  Biparser c' s m n :-> Biparser c s m n
---switchContext = coerce
-
 -- * Monad Mapping
 -- Change the underlying monads.
 
 instance MapMs (Biparser c s) where
   mapMs f g (Biparser fw bw) = Biparser (f fw) (g . bw)
-
--- {-# WARNING mapMs' "Exposes the internals of Biparser an you will probably use it incorrectly." #-} 
--- mapMs' ::
---   ( Monoid (SubState c s)
---   )
---   => (forall s'. s' -> m (v,s') -> m' (v',s'))
---   -> (forall w. w -> n (v,w) -> n' (v',w))
---   -> Biparser c s m n u v
---   -> Biparser c s m' n' u v'
--- mapMs' f g (Biparser fw bw) = Biparser
---   (StateT \s -> f s $ runStateT fw s)
---   (mapWriterT (g mempty) . bw)
 
 fix :: forall c s m m' n n' u v.
   ( FixFail m
@@ -276,33 +179,7 @@ fix (Biparser fw bw) = Biparser
   (\u -> pure $ mempty `fixFail` bw u)
   --(\u -> WriterT . pure $ mempty `fixFail` runWriterT (bw u))
 
---fixWith :: forall c s m n u v.
---  ( FixFail m
---  , FixFail n
---  )
---  => Biparser c s Identity Identity u v
---  -> Biparser c s m n u v
---  -> Biparser c s Identity Identity u v
---fixWith (Biparser (runStateT -> fw) bw) (Biparser (runStateT -> fw') bw') = Biparser
---  (StateT $ Identity . \s -> runIdentity (fw s) `fixFail` fw' s)
---  (\u -> WriterT . Identity $ (runIdentity $ runWriterT $ bw u) `fixFail` runWriterT (bw' u))
-
 -- * Forward and Backward Divergence
-
-
----- | Discards unused s' state to avoid commingling m and n monads.
---mapState'
---  :: forall c s s' m n.
---   ( MonadFail m
---   , Monad n
---   )
---  =>  Iso c m n s s'
---  ->  Biparser c s' m n
---  :-> Biparser c s  m n
---mapState' (Biparser fw bw) (Biparser fw' bw') = Biparser
---  (StateT $ runStateT fw >=> \(s,s') -> runStateT fw' s >>= \(x, _) -> pure (x, s'))
---  (\u -> WriterT $ runWriterT (bw' u) >>= \(x,w) -> runWriterT (bw w) >>= \(_,w) -> pure (x,w))
--- | Use instead of 'empty' when only forward should fail but backward should continue
 
 emptyForward :: forall c s m n u.
   ( MonadPlus m
@@ -335,20 +212,6 @@ type family SubState context state
 -- | Getter for the substate.
 class GetSubState context state where
   getSubState :: state -> SubState context state
-
---data WrappedState a s = WrappedState a s
---wrapState :: MapState m' m => Biparser c s m' n u v -> Biparser c (WrappedState a s) m n u v
---wrapState = mapState mapState'
---unwrapState :: Biparser c (WrappedState a s) m n u v -> Biparser c s m n u (a, v)
---unwrapState = mapState _
---newtype WrappedContext c = WrappedContext c
---wrapContext :: Biparser c s m n u v -> Biparser (WrappedContext c) s m n u v
---wrapContext = coerce
---unwrapContext :: Biparser (WrappedContext c) s m n u v -> Biparser c s m n u v
---unwrapContext = coerce
---type instance SubState (WrappedContext c) (WrappedState _ s) = SubState c s
---instance GetSubState c s => GetSubState (WrappedContext c) (WrappedState a s) where
---  getSubState (WrappedState _ x) = getSubState @c x
 
 -- | Update the state's context and substate.
 -- Used when more than one element at a time should be consumed and written.
@@ -541,37 +404,14 @@ count (Biparser fw bw) = Biparser
     (x,w) <- listen @ss $ bw u
     pure (convertIntegralUnsafe $ length w, x)
 
-type WriteConstructor a b e n na nb ss m =
-  ( MonadWriter a na
-  , MonadWriter b nb
-  , MonadWriter ss n
-  , MonadError e n
-  , ChangeMonad EmptyWrite na n
-  , ChangeFunction EmptyWrite na n ~ ()
-  , ChangeMonad EmptyWrite nb n
-  , ChangeFunction EmptyWrite nb n ~ ()
-  , Monad m
-  )
-data EmptyWrite
-writeConstructor :: forall c s m n na nb a b e ss u v w.
-  WriteConstructor a b e n na nb ss m
-  => (a -> Either e (b -> Either e ss))
-  -> Biparser c s m na u v
-  -> (v -> Biparser c s m nb u w)
-  -> Biparser c s m n u w
-writeConstructor c (Biparser fw bw) bp = Biparser
-  do
-    x <- fw
-    forward $ bp x
-  \u -> do
-    (x,x') <- changeMonad' @EmptyWrite () $ listen $ bw u
-    c' <- either throwError pure $ c x'
-    (y,y') <- changeMonad' @EmptyWrite () $ listen $ backward (bp x) u
-    either throwError tell $ c' y'
-    return y
-instance (Monoid b, Monad n) => ChangeMonad EmptyWrite (WriterT a n) (WriterT b n) where
-  type ChangeFunction EmptyWrite (WriterT a n) (WriterT b n) = ()
-  changeMonad' () = mapWriterT (>>= \(x,_) -> pure (x,mempty))
+ask' :: (Monad m, MonadReader r n) => r -> Biparser c s m n u r
+ask' x = Biparser (pure x) (const ask)
+
+asks' :: (Monad m, MonadReader r n) => a -> (r -> a) -> Biparser c s m n u a
+asks' x f = Biparser (pure x) (const $ asks f)
+
+--ask'' :: (Monad n, Monoid (SubState c s)) => M c s m r -> Biparser c s m n r u r
+--ask'' = flip Biparser (const ask)
 
 instance (Monoid (SubState c s), Monad m, Applicative n) => Applicative (Biparser c s m n u) where
   pure v = Biparser (pure v) (const $ pure v)

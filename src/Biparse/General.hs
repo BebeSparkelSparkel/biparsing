@@ -168,22 +168,24 @@ takeTri' takeWrite toMatch toReturn = try do
 
 -- * Take while predicate
 
-type TakeWhile c s m n = 
+type TakeWhile c s m n se =
   ( SubStateContext c s
   , IsSequence (SubState c s)
   , MonadState s m
   , MonadWriter (SubState c s) n
+  , se ~ SubElement c s
   )
 
-takeWhile :: forall c s m n.
-  TakeWhile c s m n
-  => (SubElement c s -> Bool)
+takeWhile :: forall c s m n se.
+  TakeWhile c s m n se
+  => (se -> Bool)
   -> Iso c m n s (SubState c s)
 takeWhile = split . state . span
 
-dropWhile :: forall c s m n u.
-  TakeWhile c s m n
-  => (SubElement c s -> Bool)
+-- | Drop forward elements while predicate is true.
+dropWhile :: forall c s m n u se.
+  TakeWhile c s m n se
+  => (se -> Bool)
   -> Const c s m n u
 dropWhile = void . comap (const mempty) . takeWhile
 
@@ -354,8 +356,7 @@ stripPrefix pre = unit $ void s `upon` const pre
 countElement :: forall c s m n se.
   ( FromNatural (Index (SubState c s))
   , Eq se
-  , TakeWhile c s m n
-  , se ~ SubElement c s
+  , TakeWhile c s m n se
   )
   => se
   -> Iso c m n s Natural

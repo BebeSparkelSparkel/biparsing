@@ -10,13 +10,19 @@ module Biparse.Text
 
 import Biparse.Biparser (Biparser, upon, one, SubElement, SubState, ElementContext, Const, SubStateContext)
 import Biparse.General (stripPrefix)
+import Data.Char (Char)
 
-type CharElement c s = SubElement c s ~ Char
+type CharElement c s char =
+  ( IsChar char
+  , Show char
+  , Eq char
+  , SubElement c s ~ char
+  )
 
-char :: forall c s m n u text.
-  ( CharElement c s
-  , IsSequence text
+char :: forall c s m n u text char.
+  ( IsSequence text
   , ElementContext c s
+  , CharElement c s char
   -- m
   , MonadState s m
   , MonadFail m
@@ -30,11 +36,12 @@ char :: forall c s m n u text.
   => Char
   -> Biparser c s m n u ()
 char c = do
-  c' <- one `upon` const c
-  unless (c == c') $ fail $ "Did not find expected character " <> show c <> " and instead found " <> show c'
+  let c' = fromChar @char c
+  c'' <- one `upon` const c'
+  unless (c' == c'') $ fail $ "Did not find expected character " <> show c <> " and instead found " <> show c''
 
-string :: forall c s m n u text.
-  ( CharElement c s
+string :: forall c s m n u text char.
+  ( CharElement c s char
   , IsSequence text
   , Show text
   , MonadState s m
