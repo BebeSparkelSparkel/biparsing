@@ -14,7 +14,7 @@ module Biparse.Text.Context.LineColumn
   , ListToElement
   ) where
 
-import Biparse.Text.LineBreak (LineBreakType(Unix))
+import Biparse.Text.LineBreak (LineBreakType(Unix,Windows))
 import Biparse.Error.WrapError (WrapError(Error,StateForError,wrapError',stateForError))
 import Biparse.Biparser (SubState, GetSubState(getSubState), UpdateStateWithElement(updateElementContext), UpdateStateWithSubState(updateSubStateContext), ReplaceSubState(replaceSubState))
 import Control.Monad.StateError (StateErrorT, ErrorState, ErrorContext, ErrorInstance(ErrorStateInstance))
@@ -45,23 +45,37 @@ type instance SubState LinesOnly (Position text) = text
 instance GetSubState (LineColumn lb) (Position text) where getSubState = subState
 instance GetSubState LinesOnly (Position text) where getSubState = subState
 
-instance Element text ~ Char => UpdateStateWithElement (LineColumn 'Unix) (Position text) where
-  updateElementContext  s@(Position {line,column}) c ss = case c of
-    '\n' -> s {line = line + 1, column = 1, subState = ss}
+type CharCs text char =
+  ( Eq char
+  , IsChar char
+  , char ~ Element text
+  )
+
+instance CharCs text char => UpdateStateWithElement (LineColumn 'Unix) (Position text) where
+  updateElementContext s@(Position {line,column}) c ss =
+    if c == fromChar '\n'
+    then s {line = line + 1, column = 1, subState = ss}
+    else s {column = column + 1, subState = ss}
+
+instance (CharCs text char, IsSequence text) => UpdateStateWithElement (LineColumn 'Windows) (Position text) where
+  updateElementContext s@(Position {line,column}) c ss = case headTailAlt ss of
+    Just (c',ss') | c == fromChar '\r' && c' == fromChar '\n' -> s {line = line + 1, column = 1, subState = ss'}
     _ -> s {column = column + 1, subState = ss}
 
 instance UpdateStateWithElement LinesOnly (Position [text]) where
   updateElementContext (Position {line}) _ ss' =
     Position {line = line + 1, column = 1, subState = ss'}
 
-instance (Element text ~ Char, MonoFoldable text) => UpdateStateWithSubState (LineColumn 'Unix) (Position text) where
+instance (CharCs text char, MonoFoldable text) => UpdateStateWithSubState (LineColumn lb) (Position text) where
   updateSubStateContext s@(Position {line, column}) ss ss' = if ns == 0
     then s {column = column + cs, subState = ss'}
     else s {line = line + ns, column = cs, subState = ss'}
     where
-    (ns, cs) = flip execState (0, 0) $ for_ ss \case
-      '\n' -> modify \(l,_) -> (l + 1, 1)
-      _ -> modify $ second (+ 1)
+    (ns, cs) = flip execState (0, 0) $ for_ ss
+      $ bool
+        (modify $ second (+ 1))
+        (modify \(l,_) -> (l + 1, 1))
+      . (== fromChar '\n')
 
 instance MonoFoldable text => UpdateStateWithSubState LinesOnly (Position text) where
   updateSubStateContext s@(Position {column}) ss ss' =
