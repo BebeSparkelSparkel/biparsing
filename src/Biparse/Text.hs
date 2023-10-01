@@ -54,21 +54,3 @@ string :: forall c s m n u text char.
   -> Const c s m n u
 string = stripPrefix
 
---lines :: forall c s m n text.
---  ( CharElement c s
---  , IsSequence text
---  , MonadState s m
---  , IsString text
---  , Show text
---  , MonadPlus m
---  , MonadFail m
---  , MonadFail n
---  , MonadWriter text n
---  , Alternative n
---  , SubStateContext c s
---  , ElementContext c s
---  , text ~ SubState c s
---  )
---  => Iso c m n s [text]
---lines = splitWith $ string "\r\n" <|> char '\n'
-

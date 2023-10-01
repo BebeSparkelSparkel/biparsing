@@ -89,16 +89,7 @@ uponM :: forall s m n u u' v.
   -> Constructor s m n u v
 uponM = flip comapM
 
--- | 'focus' with 'one' and a 'Default' value.
--- When forward, runs the 'Constructor' one the first sub-element.
--- When backward, run the 'Constructor' on the 'Default' value of 'se'.
-focusOneDef :: forall is m' n' se c s m n u v ss.
-  ( Default se
-  , FocusOne is c s m m' n n' ss se
-  )
-  => Constructor se m' n' u v
-  -> Biparser c s m n u v
-focusOneDef = focus @is pure (const def) one
+-- * Focus on the head element
 
 type FocusOne is c s m m' n n' ss se =
   ( IsSequence ss
@@ -116,6 +107,18 @@ type FocusOne is c s m m' n n' ss se =
   --
   , Focus is m m' n n'
   )
+
+-- | 'focus' with 'one' and a 'Default' value.
+-- When forward, runs the 'Constructor' one the first sub-element.
+-- When backward, run the 'Constructor' on the 'Default' value of 'se'.
+focusOneDef :: forall is m' n' se c s m n u v ss.
+  ( Default se
+  , FocusOne is c s m m' n n' ss se
+  )
+  => Constructor se m' n' u v
+  -> Biparser c s m n u v
+focusOneDef = focus @is pure (const def) one
+
 focusOne :: forall is m' n' se c s m n u v ss.
   FocusOne is c s m m' n n' ss se
   => (u -> n' se)
@@ -153,6 +156,8 @@ focus f g (Biparser fw bw) (ConstructorUnT fw' bw') = Biparser
       bw' x $ g x
     _ <- bw s'
     pure v
+
+-- * Constructor helper functions
 
 lensBiparse :: forall s s' m n u v.
   ( MonadFail m
