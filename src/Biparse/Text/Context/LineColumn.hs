@@ -47,8 +47,6 @@ type instance SubState LinesOnly (Position text) = text
 type instance SubState ColumnsOnly (Position text) = text
 
 instance text ~ SubState c (Position text) => GetSubState c (Position text) where getSubState = subState
---instance GetSubState (LineColumn lb) (Position text) where getSubState  subState
---instance GetSubState LinesOnly (Position text) where getSubState = subState
 
 type CharCs text char =
   ( Eq char
