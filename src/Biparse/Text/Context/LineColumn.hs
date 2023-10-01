@@ -5,6 +5,7 @@ module Biparse.Text.Context.LineColumn
   ( LineColumn
   , UnixLC
   , LinesOnly
+  , ColumnsOnly
   , Position(..)
   , startLineColumn
   , ErrorPosition(..)
@@ -33,6 +34,8 @@ type UnixLC = LineColumn 'Unix
 
 data LinesOnly
 
+data ColumnsOnly
+
 data Position text = Position
   { line :: Int
   , column :: Int
@@ -41,9 +44,11 @@ data Position text = Position
 
 type instance SubState (LineColumn _) (Position text) = text
 type instance SubState LinesOnly (Position text) = text
+type instance SubState ColumnsOnly (Position text) = text
 
-instance GetSubState (LineColumn lb) (Position text) where getSubState = subState
-instance GetSubState LinesOnly (Position text) where getSubState = subState
+instance text ~ SubState c (Position text) => GetSubState c (Position text) where getSubState = subState
+--instance GetSubState (LineColumn lb) (Position text) where getSubState  subState
+--instance GetSubState LinesOnly (Position text) where getSubState = subState
 
 type CharCs text char =
   ( Eq char
@@ -63,8 +68,10 @@ instance (CharCs text char, IsSequence text) => UpdateStateWithElement (LineColu
     _ -> s {column = column + 1, subState = ss}
 
 instance UpdateStateWithElement LinesOnly (Position [text]) where
-  updateElementContext (Position {line}) _ ss' =
-    Position {line = line + 1, column = 1, subState = ss'}
+  updateElementContext (Position {line}) _ ss = Position {line = line + 1, column = 1, subState = ss}
+
+instance UpdateStateWithElement ColumnsOnly (Position text) where
+  updateElementContext p@(Position {column}) _ ss = p {column = column + 1, subState = ss}
 
 instance (CharCs text char, MonoFoldable text) => UpdateStateWithSubState (LineColumn lb) (Position text) where
   updateSubStateContext s@(Position {line, column}) ss ss' = if ns == 0
@@ -78,6 +85,10 @@ instance (CharCs text char, MonoFoldable text) => UpdateStateWithSubState (LineC
       . (== fromChar '\n')
 
 instance MonoFoldable text => UpdateStateWithSubState LinesOnly (Position text) where
+  updateSubStateContext s@(Position {column}) ss ss' =
+    s {column = column + length ss, subState = ss'}
+
+instance MonoFoldable text => UpdateStateWithSubState ColumnsOnly (Position text) where
   updateSubStateContext s@(Position {column}) ss ss' =
     s {column = column + length ss, subState = ss'}
 
@@ -135,6 +146,7 @@ instance Monoid text => ChangeMonad ListToElement (EEP e [text]) (EEP e text) wh
   
 type instance ErrorContext (LineColumn _) = 'ErrorStateInstance
 type instance ErrorContext LinesOnly = 'ErrorStateInstance
+type instance ErrorContext ColumnsOnly = 'ErrorStateInstance
 
 type SE ss = StateErrorT 'ErrorStateInstance (Position ss) (EESP ss)
 instance ChangeMonad () EitherString (SE ss) where
