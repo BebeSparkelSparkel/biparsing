@@ -5,7 +5,8 @@ import Biparse.Text.Numeric
 spec :: Spec
 spec = do
   fb @() "naturalBaseTen"
-    (naturalBaseTen :: Iso UnixLC (FM Text) IO () (Position Text) Word)
+    (naturalBaseTen :: Iso UnixLC (FM Text) IO () () (Position Text) Word)
+    ()
     ()
     (\f -> do
       it "success" do
@@ -24,7 +25,8 @@ spec = do
         b 123 >>= (`shouldBe` (123, "123"))
 
   fb @() "intBaseTen"
-    (intBaseTen :: Iso UnixLC (FM Text) IO () (Position Text) Int)
+    (intBaseTen :: Iso UnixLC (FM Text) IO () () (Position Text) Int)
+    ()
     ()
     (\f -> do
       it "success" do
@@ -48,7 +50,8 @@ spec = do
         b (-123) >>= (`shouldBe` (-123, "-123"))
 
   fb @() "realBaseTen"
-    (realBaseTen :: Iso UnixLC (FM String) IO () (Position String) Double)
+    (realBaseTen :: Iso UnixLC (FM String) IO () () (Position String) Double)
+    ()
     ()
     (\f -> do
       it "whole" do

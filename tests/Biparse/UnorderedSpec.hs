@@ -10,7 +10,8 @@ import Data.Default (Default(def))
 spec :: Spec
 spec = do
   fb @() "AllParserTypes"
-    (unorderedDef :: Iso LinesOnly (FM Ts) EitherString () (Position Ts) AllParserTypes)
+    (unorderedDef :: Iso LinesOnly (FM Ts) EitherString () () (Position Ts) AllParserTypes)
+    ()
     ()
     (\f -> do
       it "in order" do

@@ -165,7 +165,7 @@ lensBiparse :: forall s s' m n u v.
   , Monad n
   )
   => Traversal' s s'
-  -> BSRW.Biparser IdentityState s' m n () u v
+  -> BSRW.Biparser IdentityState s' m n () () u v
   -> Constructor s m n u v
 lensBiparse t (Biparser fw bw) = Constructor
   do

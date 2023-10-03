@@ -8,7 +8,8 @@ spec = do
   describe "one" do
     describe "IdentityState" do
       fb @() "id"
-        (one :: Iso IdentityState IO IO () String Char)
+        (one :: Iso IdentityState IO IO () () String Char)
+        ()
         ()
         (\f -> do
           it "one use" do
@@ -22,7 +23,8 @@ spec = do
           it "typical use" $ b 'a' >>= (`shouldBe` ('a',"a"))
 
       fb @() "tuple"
-        ((,) <$> one `upon` fst <*> one `upon` snd :: Iso IdentityState IO IO () String (Char,Char))
+        ((,) <$> one `upon` fst <*> one `upon` snd :: Iso IdentityState IO IO () () String (Char,Char))
+        ()
         ()
         (\f -> do
           it "used twice" do
@@ -33,7 +35,8 @@ spec = do
           it "used twice" $ b ('a','b') >>= (`shouldBe` (('a','b'),"ab"))
 
     fb @() "LineColumn"
-      (one :: Iso UnixLC (FM Text) IO () (Position Text) Char)
+      (one :: Iso UnixLC (FM Text) IO () () (Position Text) Char)
+      ()
       ()
       (\f -> do
         it "empty" do
@@ -47,7 +50,8 @@ spec = do
         it "write char" $ b 'd' >>= (`shouldBe` ('d', "d"))
 
     fb @() "LineColumn [Text]"
-      (one :: Iso LinesOnly (FM [Text]) IO () (Position [Text]) Text)
+      (one :: Iso LinesOnly (FM [Text]) IO () () (Position [Text]) Text)
+      ()
       ()
       (\f -> do
         it "empty" $ f [] `shouldSatisfy` errorPosition 1 1
@@ -58,7 +62,7 @@ spec = do
         it "print string" $ b "abc" >>= (`shouldBe` ("abc", ["abc"]))
 
   describe "split" do
-    let takeTwo :: Iso IdentityState IO IO () String String
+    let takeTwo :: Iso IdentityState IO IO () () String String
         takeTwo = split do
           x <- get
           y <- maybe empty (pure . \(f,s) -> f:s:[]) $
@@ -68,6 +72,7 @@ spec = do
 
     fb @() "IdentityState"
       takeTwo
+      ()
       ()
       (\f -> do
         it "succeeds" $ f "abc" >>= (`shouldBe` ("ab", "c"))
@@ -81,7 +86,8 @@ spec = do
 
   describe "peek" do
     fb @() "simple"
-      (peek one :: Iso IdentityState IO IO () String Char)
+      (peek one :: Iso IdentityState IO IO () () String Char)
+      ()
       ()
       (\f -> do
         it "none consumed" do
@@ -93,7 +99,8 @@ spec = do
 
     describe "Alternative" do
       fb @() "IdentityState"
-        (peek (takeUni 'x') <|> takeUni 'a' :: Iso IdentityState IO IO () String Char)
+        (peek (takeUni 'x') <|> takeUni 'a' :: Iso IdentityState IO IO () () String Char)
+        ()
         ()
         (\f -> do
           it "take first" do
@@ -112,7 +119,8 @@ spec = do
           it "prints second" $ b 'a' >>= (`shouldBe` ('a',"a"))
 
       fb @() "LineColumn"
-        (peek (takeUni 'x') <|> takeUni 'a' :: Iso UnixLC (FM String) IO () (Position String) Char)
+        (peek (takeUni 'x') <|> takeUni 'a' :: Iso UnixLC (FM String) IO () () (Position String) Char)
+        ()
         ()
         (\f -> do
           it "take first" $ f "xa" `shouldBe` Right ('x', Position 1 1 "xa")
@@ -127,9 +135,9 @@ spec = do
           it "prints second" $ b 'a' >>= (`shouldBe` ('a',"a"))
 
   describe "try" do
-    let bp = (try $ one <* take 'b' :: Biparser IdentityState (Seq Char) IO IO () Char Char)
+    let bp = (try $ one <* take 'b' :: Biparser IdentityState (Seq Char) IO IO () () Char Char)
         f = runForward @() bp
-        b = runBackward bp ()
+        b = runBackward bp () ()
 
     describe "forward" do
       it "success" do
@@ -147,12 +155,13 @@ spec = do
         it "prints correctly" $ b 'a' >>= (`shouldBe` ('a',"ab"))
 
         it "prints second if first fails (more of a test for the Biparser Alternative instance and should proabaly moved there)" do
-          x <- runBackward (setBackward bp (const empty) <|> bp) () 'z'
+          x <- runBackward (setBackward bp (const empty) <|> bp) () () 'z'
           x `shouldBe` ('z',"zb")
       
   describe "isNull" do
     fb @() "IdentityState"
-      (isNull :: ConstU IdentityState String Identity Identity () [()] Bool)
+      (isNull :: ConstU IdentityState String Identity Identity () () [()] Bool)
+      ()
       ()
       (\f -> do
         it "true" $ f mempty `shouldBe` Identity (True,mempty)
@@ -165,7 +174,8 @@ spec = do
         it "false" $ b [()] `shouldBe` Identity (False,mempty)
 
     fb @() "LineColumn"
-      (isNull :: ConstU UnixLC (Position String) Identity Identity () [()] Bool)
+      (isNull :: ConstU UnixLC (Position String) Identity Identity () () [()] Bool)
+      ()
       ()
       (\f -> do
         it "true" $ f "" `shouldBe` Identity (True,"")
@@ -179,7 +189,8 @@ spec = do
 
   describe "breakWhen'" do
     fb @() "LineColumn"
-      (breakWhen' $ stripPrefix "ab" :: Iso UnixLC (FM String) IO () (Position String) String)
+      (breakWhen' $ stripPrefix "ab" :: Iso UnixLC (FM String) IO () () (Position String) String)
+      ()
       ()
       (\f -> do
         it "empty" $ limit $
@@ -207,7 +218,8 @@ spec = do
         it "contains break" $ b "cdab" >>= (`shouldBe` ("cdab", "cdabab"))
 
     fb @() "IdentityState"
-      (breakWhen' $ stripPrefix "ab" :: Iso IdentityState IO IO () String String)
+      (breakWhen' $ stripPrefix "ab" :: Iso IdentityState IO IO () () String String)
+      ()
       ()
       (\f -> do
         it "empty" $ limit $
@@ -236,7 +248,8 @@ spec = do
 
   describe "count" do
     fb @() "ElementContext" 
-      (count $ takeElementsWhile (== 'a') :: Biparser UnixLC (Position Text) (FM Text) IO () [Char] (Natural,[Char]))
+      (count $ takeElementsWhile (== 'a') :: Biparser UnixLC (Position Text) (FM Text) IO () () [Char] (Natural,[Char]))
+      ()
       ()
       (\f -> do
         prop "correct count" \(NonNegative x, NonNegative y) -> let
@@ -250,7 +263,8 @@ spec = do
           in b xs >>= (`shouldBe` ((convertIntegralUnsafe $ length xs, xs), fromString xs))
 
     fb @() "SubStateContext" 
-      (count $ takeWhile (== 'a') :: Biparser UnixLC (Position Text) (FM Text) IO () Text (Natural,Text))
+      (count $ takeWhile (== 'a') :: Biparser UnixLC (Position Text) (FM Text) IO () () Text (Natural,Text))
+      ()
       ()
       (\f -> do
         prop "correct count" \(NonNegative x, NonNegative y) -> let

@@ -48,10 +48,8 @@ module Biparse.Biparser
 
 import Biparse.FixFail (FixFail(fixFail))
 import Biparse.Utils (convertIntegralUnsafe)
---import Control.Monad.ChangeMonad (ChangeMonad, ChangeFunction, changeMonad')
 import Control.Monad.Extra (findM)
 import Control.Monad.Reader.Class (MonadReader(ask), asks)
---import Control.Monad.Writer (mapWriterT)
 import Control.Monad.Writer.Class (listen)
 import Control.Profunctor.FwdBwd (BwdMonad, Comap, FwdBwd, pattern FwdBwd, MapMs(mapMs), DualMap)
 import Control.Profunctor.FwdBwd qualified as FB
@@ -117,7 +115,6 @@ mapWrite :: forall c s m n u v ss.
   -> (ss -> ss)
   -> Biparser c s m n u v
 mapWrite (Biparser fw bw) f = Biparser fw $
-  --(mapWriterT $ fmap $ fmap f) . bw
   pass . fmap (,f) . bw
 
 -- * Constrained Subtypes
@@ -140,7 +137,6 @@ unit = comap $ const ()
 
 -- ** Monomorphism
 -- DEV NOTE: Unsure if this is the correct name.
-
 mono :: forall c s m n a.
   ( Monad m
   , Monad n

@@ -124,21 +124,22 @@ import Data.Coerce (coerce)
 import Control.Monad.ChangeMonad (ChangeMonad)
 import System.Timeout (timeout)
 
-fb :: forall is c s m m' n r u v.
+fb :: forall is c s m m' n r ws u v.
   ( m' ~ ResultingMonad m is
   , ChangeMonad is m m'
   , ResultMonad m is
   , Functor n
   )
   => String
-  -> Biparser c s m n r u v
+  -> Biparser c s m n r ws u v
   -> r
+  -> ws
   -> ((s -> m' (v, s)) -> Spec)
   -> ((u -> n (v, SubState c s)) -> Spec)
   -> Spec
-fb describeLabel bp r fws bws = describe describeLabel do
+fb describeLabel bp r ws fws bws = describe describeLabel do
   describe "forward" $ fws $ runForward @is bp
-  describe "backward" $ bws \u -> runBackward bp r u
+  describe "backward" $ bws \u -> runBackward bp r ws u
 
 errorPosition :: Int -> Int -> Either ErrorPosition b -> Bool
 errorPosition l c = \case
