@@ -278,7 +278,7 @@ split :: forall c s m n ss.
   , MonadState s m
   , MonadWriter ss n
   )
-  => (StateT ss m ss)
+  => StateT ss m ss
   -> Iso c m n s ss
 split splitSubState = Biparser fw bw
   where

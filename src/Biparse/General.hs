@@ -288,7 +288,7 @@ rest :: forall c s m n ss.
   => Iso c m n s ss
 rest = split $ get <* put mempty
 
--- failure
+-- * failure
 
 failForward :: forall c s m n u v.
   Alternative m
@@ -304,7 +304,7 @@ failBackward :: forall c s m n u v.
   -> Biparser c s m n u v
 failBackward = comapM $ const empty
 
--- Optional parsing
+-- * Optional parsing
 
 optionMaybe :: forall c s m n u v.
   ( Monoid (SubState c s)
@@ -316,6 +316,7 @@ optionMaybe :: forall c s m n u v.
   -> Biparser c s m n u (Maybe v)
 optionMaybe x = Just <$> try x <|> pure Nothing
 
+-- | Allows a parser to fail and return Maybe instead. Allows writer to optionally run or not.
 optional :: forall c s m n u v.
   ( MonadPlus m
   , MonadState s m

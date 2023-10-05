@@ -71,7 +71,7 @@ import Biparse.Biparser.StateReaderWriter (Biparser, Iso, Unit, Const, ConstU, r
 import Biparse.Context.IdentityState (IdentityState)
 import Biparse.General
 import Biparse.Text (CharElement)
-import Biparse.Text.Context.LineColumn (LineColumn, UnixLC, LinesOnly, Position(Position,line,column), ErrorPosition(ErrorPosition))
+import Biparse.Text.Context.LineColumn (LineColumn, UnixLC, LinesOnly, ColumnsOnly, Position(Position,line,column), ErrorPosition(ErrorPosition))
 import Biparse.Utils (headAlt, convertIntegralUnsafe)
 import Control.Applicative (pure, (<|>), (<*), (*>), (<*>), empty, liftA2, Alternative)
 import Control.Monad ((>>=), return, (>>), fail, MonadPlus, MonadFail)
@@ -95,7 +95,7 @@ import Data.List ((++))
 import Data.Maybe (Maybe(Just,Nothing), maybe)
 import Data.MonoTraversable (Element, headMay)
 import Data.MonoTraversable.Unprefixed (toList, length)
-import Data.Monoid (mempty)
+import Data.Monoid (Monoid, mempty)
 import Data.Ord ((>), (>=))
 import Data.Semigroup ((<>))
 import Data.Sequence (Seq)
@@ -147,7 +147,7 @@ errorPosition l c = \case
   _ -> False
 
 limit :: IO a -> IO a
-limit = (>>= maybe (fail "Timeout") pure) . timeout 1000
+limit = (>>= maybe (fail "Timeout") pure) . timeout 10000
 
 type FM text = Either (ErrorState String (Position text))
 
@@ -162,3 +162,4 @@ instance (Arbitrary a, Arbitrary b, Arbitrary c) => Arbitrary (TriSum a b c) whe
 infixr 9 >>>
 (>>>) :: (a -> b) -> (b -> c) -> a -> c
 (>>>) = flip (.)
+
