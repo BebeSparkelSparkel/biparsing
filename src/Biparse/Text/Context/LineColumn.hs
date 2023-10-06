@@ -27,7 +27,7 @@ import Control.Monad.ChangeMonad (ChangeMonad(ChangeFunction,changeMonad'), Resu
 import GHC.Err (undefined)
 import Control.Monad.Trans.Error qualified as E
 
--- * Tracks line and column position
+-- * Contexts
 
 data LineColumn (lineBreak :: LineBreakType)
 type UnixLC = LineColumn 'Unix
@@ -35,6 +35,8 @@ type UnixLC = LineColumn 'Unix
 data LinesOnly
 
 data ColumnsOnly
+
+-- * Postion state
 
 data Position text = Position
   { line :: Int
@@ -101,16 +103,14 @@ startLineColumn = Position 1 1
 instance IsString text => IsString (Position text) where
   fromString = startLineColumn . fromString
 
-instance IsList text => IsList (Position text) where
-  type Item (Position text) = Item text
+instance IsList ss => IsList (Position ss) where
+  type Item (Position ss) = Item ss
   fromList = startLineColumn . GE.fromList
   toList = GE.toList . subState
 
 -- * Positional Errors
 
-data ErrorPosition
-  = ErrorPosition Int Int String
-  deriving (Show, Eq)
+data ErrorPosition = ErrorPosition Int Int String deriving (Show, Eq)
 
 instance E.Error ErrorPosition where strMsg = undefined
 instance E.Error (ErrorState String (Position text)) where strMsg = undefined
@@ -125,12 +125,11 @@ instance ResultMonad (Either ErrorPosition) () where
   type ResultingMonad (Either ErrorPosition) () = Either ErrorPosition
   resultMonad = ()
 
-type EEP e ss = Either (ErrorState e (Position ss))
-type EESP ss = EEP String ss
+type EEP e text = Either (ErrorState e (Position text))
 
-instance ChangeMonad () (EESP text) (Either ErrorPosition) where
-  type ChangeFunction () (EESP text) (Either ErrorPosition) =
-    ErrorState String (Position text) -> ErrorPosition
+instance ChangeMonad () (EEP e text) (Either ErrorPosition) where
+  type ChangeFunction () (EEP e text) (Either ErrorPosition) =
+    ErrorState e (Position text) -> ErrorPosition
   changeMonad' = first
 
 -- | "This instance is not sound and is a hack for zoom. The monad conversion in zoom should be more complete or throw away the text entirely but 'catch' in 'MonadError e (StateErrorT s m)' makes this difficult.
@@ -148,9 +147,10 @@ type instance ErrorContext (LineColumn _) = 'ErrorStateInstance
 type instance ErrorContext LinesOnly = 'ErrorStateInstance
 type instance ErrorContext ColumnsOnly = 'ErrorStateInstance
 
-type SE ss = StateErrorT 'ErrorStateInstance (Position ss) (EESP ss)
-instance ChangeMonad () EitherString (SE ss) where
-  type ChangeFunction () EitherString (SE ss) = ()
+type EESP text = EEP String text
+type SE text = StateErrorT 'ErrorStateInstance (Position text) (EESP text)
+instance ChangeMonad () EitherString (SE text) where
+  type ChangeFunction () EitherString (SE text) = ()
   changeMonad' () = \case
     EValue x -> pure x
     EString msg -> fail msg
