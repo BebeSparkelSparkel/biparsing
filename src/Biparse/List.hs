@@ -2,6 +2,7 @@
 module Biparse.List
   ( replicateBiparserT
   , takeElementsWhile
+  , takeN
   , Many
   , many
   , manyId
@@ -30,7 +31,7 @@ module Biparse.List
   , tailAlt
   ) where
 
-import Biparse.Biparser (Biparser(Biparser), forward, backward, Iso, SubElement, SubState, emptyForward, one, try, mono, ElementContext, FixFail, fix, peek, Unit, UpdateStateWithSubState, isNull, breakWhen', GetSubState, upon, uponM)
+import Biparse.Biparser (Biparser(Biparser), forward, backward, Iso, SubElement, SubState, emptyForward, one, try, mono, ElementContext, FixFail, fix, peek, Unit, UpdateStateWithSubState, isNull, breakWhen', GetSubState, upon, uponM, UpdateStateWithElement)
 import Biparse.General (take, takeNot, Take, memptyWrite, BreakWhen, rest, stripPrefix)
 import Data.List.NonEmpty (NonEmpty, nonEmpty)
 
@@ -56,7 +57,7 @@ replicateBiparserT = \case
   emptyFail n = (<|> (fail $ "Expected " <> show n <> " more elements but there are none left."))
 
 -- | Takes
-takeElementsWhile :: forall c s m n ss.
+takeElementsWhile :: forall c s m n ss se.
    ( IsSequence ss
    , MonadFail m
    , MonadPlus m
@@ -64,16 +65,42 @@ takeElementsWhile :: forall c s m n ss.
    , MonadWriter ss n
    , Alternative n
    , ElementContext c s
+   -- assignments
    , ss ~ SubState c s
+   , se ~ SubElement c s
    )
-  => (SubElement c s -> Bool)
-  -> Iso c m n s [SubElement c s]
+  => (se -> Bool)
+  -> Iso c m n s [se]
 takeElementsWhile f =
   try do
     x <- one `uponM` headAlt
     unless (f x) emptyForward
     cons x <$> takeElementsWhile f `uponM` tailAlt
   <|> return mempty
+
+-- | Take N elements
+takeN :: forall c m n a ss se.
+  ( ()
+  -- m
+  , MonadFail m
+  , Alternative m
+  , MonadState a m
+  -- n
+  , MonadWriter ss n
+  , Alternative n
+  -- substate
+  , IsSequence ss
+  , GetSubState c a
+  , UpdateStateWithElement c a
+  -- assignments
+  , ss ~ SubState c a
+  , se ~ SubElement c a
+  )
+  => Natural
+  -> Iso c m n a [se]
+takeN n = if n > 0
+  then cons <$> one `uponM` headAlt <*> takeN (pred n) `uponM` tailAlt
+  else pure mempty
 
 type Many c s m n =
   ( Monoid (SubState c s)

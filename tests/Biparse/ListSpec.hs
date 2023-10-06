@@ -29,6 +29,28 @@ spec = do
 
       it "prints none" $ b mempty >>= (`shouldBe` (mempty, mempty))
 
+  fb @() "takeN"
+    (takeN 2 :: Iso IndexContext (EISP [Int]) EitherString () () (IndexPosition [Int]) [Int])
+    ()
+    ()
+    (\f -> do
+      it "success" do
+        f [1,2] `shouldBe` Right ([1,2], IndexPosition 2 mempty)
+        f [1,2,3] `shouldBe` Right ([1,2], IndexPosition 2 [3])
+
+      it "fail" do
+        f [] `shouldSatisfy` errorIndex 0
+        f [1] `shouldSatisfy` errorIndex 1
+    )
+    \b -> do
+      it "success" do
+        b [1,2] `shouldBe` EValue ([1,2], [1,2])
+        b [1,2,3] `shouldBe` EValue ([1,2], [1,2])
+
+      it "fail" do
+        b mempty `shouldSatisfy` isString
+        b [1] `shouldSatisfy` isString
+
   describe "many" do
     fb @() "with takeUni"
       (many $ takeUni 'a' :: Iso IdentityState IO IO () () Text [Char])

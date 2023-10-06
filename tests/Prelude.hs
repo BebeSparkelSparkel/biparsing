@@ -56,9 +56,11 @@ module Prelude
   , module GHC.Generics
   , module Data.Coerce
   , module Data.ByteString.Internal
+  , module Biparse.Context.Index
 
   , fb
   , errorPosition
+  , errorIndex
   , limit
   , FM
   , TriSum(..)
@@ -72,6 +74,7 @@ import Biparse.Context.IdentityState (IdentityState)
 import Biparse.General
 import Biparse.Text (CharElement)
 import Biparse.Text.Context.LineColumn (LineColumn, UnixLC, LinesOnly, ColumnsOnly, Position(Position,line,column), ErrorPosition(ErrorPosition))
+import Biparse.Context.Index (IndexContext, IndexPosition(IndexPosition), ErrorIndex(ErrorIndex), EISP)
 import Biparse.Utils (headAlt, convertIntegralUnsafe)
 import Control.Applicative (pure, (<|>), (<*), (*>), (<*>), empty, liftA2, Alternative)
 import Control.Monad ((>>=), return, (>>), fail, MonadPlus, MonadFail)
@@ -144,6 +147,11 @@ fb describeLabel bp r ws fws bws = describe describeLabel do
 errorPosition :: Int -> Int -> Either ErrorPosition b -> Bool
 errorPosition l c = \case
   Left (ErrorPosition l' c' _) -> l == l' && c == c'
+  _ -> False
+
+errorIndex :: (Eq i, i ~ Index ss) => i -> Either (ErrorIndex ss) b -> Bool
+errorIndex i = \case
+  Left (ErrorIndex i' _) -> i == i'
   _ -> False
 
 limit :: IO a -> IO a
