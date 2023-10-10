@@ -11,6 +11,7 @@ dependencies:
   - mono-traversable
   - mtl
   - transformers
+  - containers
 
 default-extensions:
   - BlockArguments
@@ -73,7 +74,6 @@ tests:
       - QuickCheck
       - biparsing
       - bytestring
-      - containers
       - generic-deriving
       - generic-random
       - hspec

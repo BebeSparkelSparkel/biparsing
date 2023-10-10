@@ -1,8 +1,14 @@
 module Biparse.Text.NumericSpec where
 
+import Biparse.Text.Context.LineColumn
 import Biparse.Text.Numeric
+import Control.Monad (sequence)
+import Data.Word (Word8)
+import GHC.Bits (Bits)
+import GHC.Enum (Enum)
 import GHC.Num (Num)
-import GHC.Real (Fractional)
+import GHC.Real (Fractional, Integral, Real)
+import Numeric (showHex)
 
 spec :: Spec
 spec = do
@@ -54,6 +60,26 @@ spec = do
     ()
     realForward
     realBackward
+
+  fb @() "hex"
+    (hex @'LowerCase 2 :: Iso UnixLC (FM String) IO () () (Position String) HexWord8)
+    ()
+    ()
+    (\f -> do
+      it "zero" $ f "00" `shouldBe` Right (0, Position 1 3 mempty)
+
+      describe "bit order" do
+        it "right" $ f "0f" `shouldBe` Right (0xf,  Position 1 3 mempty)
+        it "left"  $ f "F0" `shouldBe` Right (0xF0, Position 1 3 mempty)
+
+      let hexChars = elements $ fst <$> (digitsHexList <> capitalHexList <> lowerHexList :: [(Char,Word8)])
+      prop "success" $ forAll (sequence [hexChars, hexChars]) \cs ->
+        f (startLineColumn cs) `shouldSatisfy` isRight
+    )
+    \b -> do
+      describe "bit order" do
+        it "right" $ b 0xf  >>= (`shouldBe` (0xf,  "0f"))
+        it "left"  $ b 0xF0 >>= (`shouldBe` (0xF0, "f0"))
 
 naturalsForward :: (Show a1, Show a2, Show text, Eq a1, Eq a2, Eq text, Num a2, Monoid text, IsString t, IsString text) => (t -> Either a1 (a2, Position text)) -> SpecWith ()
 naturalsForward f = it "naturals" do
@@ -115,4 +141,7 @@ realBackward b = do
     b (-123)    >>= (`shouldBe` (-123,    "-123.0"))
     b (-1.23)   >>= (`shouldBe` (-1.23,   "-1.23"))
     b (-123.45) >>= (`shouldBe` (-123.45, "-123.45"))
+
+newtype HexWord8 = HexWord8 Word deriving (Eq, Bits, Num, Integral, Real, Enum, Ord)
+instance Show HexWord8 where show = ("0x" <>) . ($ mempty) . showHex
 

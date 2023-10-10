@@ -16,6 +16,7 @@ type CharElement c s char =
   ( IsChar char
   , Show char
   , Eq char
+  , Ord char
   , SubElement c s ~ char
   )
 
