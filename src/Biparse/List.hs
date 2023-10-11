@@ -373,28 +373,35 @@ untilClusive f p bp = uncurry f <$> uc
     then pure (id, x)
     else first (cons x .) <$> uc `uponM` tailAlt
 
-intersperse :: forall c s m n u v v' ss.
+intersperse :: forall c s m n u fu v fv v' ss.
   -- m
   ( MonadPlus m
   , MonadState s m
   -- n
   , MonadWriter ss n
   , Alternative n
+  -- lists
+  , MonoFoldable fu
+  , Element fu ~ u
+  , IsSequence fv
+  , Element fv ~ v
   -- assignments
   , ss ~ SubState c s
   )
   => Biparser c s m n u v
   -> (forall u'. Biparser c s m n u' v')
-  -> Biparser c s m n [u] [v]
-intersperse x y =
-  do
-    x' <- x `uponM` headAlt
-    xs <- try
-      do
-        _ <- y
-        xs' <- intersperse x y `uponM` tailAlt
-        bool (pure xs') empty $ null xs'
-      <|> pure mempty
-    pure $ cons x' xs
-  <|> pure mempty
+  -> Biparser c s m n fu fv
+intersperse x y = fromList <$> intersperse' `upon` toList
+  where 
+  intersperse' =
+    do
+      x' <- x `uponM` headAlt
+      xs <- try
+        do
+          _ <- y
+          xs' <- intersperse' `uponM` tailAlt
+          bool (pure xs') empty $ null xs'
+        <|> pure mempty
+      pure $ cons x' xs
+    <|> pure mempty
 
