@@ -3,6 +3,7 @@
 {-# LANGUAGE DataKinds #-}
 module Control.Monad.StateError
   ( StateErrorT(..)
+  , M
   , ErrorState(..)
   , ErrorInstance(..)
   , ErrorContext
@@ -20,6 +21,7 @@ import Control.Monad.TransformerBaseMonad (TransformerBaseMonad, LiftBaseMonad, 
 
 newtype StateErrorT (i :: ErrorInstance) s m a = StateErrorT {runStateErrorT :: StateT s m a}
   deriving (Functor, Applicative, Monad, MonadTrans)
+type M c a m = StateErrorT (ErrorContext c) a m
 
 -- | Used to determine the instances to use for error handling from the context
 data ErrorInstance
@@ -80,3 +82,4 @@ instance Monad m => ChangeMonad Lift m (StateErrorT 'NewtypeInstance s m) where
 type instance TransformerBaseMonad (StateErrorT _ _ m) = m
 
 instance Monad m => LiftBaseMonad (StateErrorT c s m) where liftBaseMonad = lift
+

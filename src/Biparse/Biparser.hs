@@ -400,10 +400,12 @@ count (Biparser fw bw) = Biparser
     (x,w) <- listen @ss $ bw u
     pure (convertIntegralUnsafe $ length w, x)
 
-ask' :: (Monad m, MonadReader r n) => r -> Biparser c s m n u r
+-- | Return provided value forward and return reader value backward.
+ask' :: (Applicative m, MonadReader r n) => r -> Biparser c s m n u r
 ask' x = Biparser (pure x) (const ask)
 
-asks' :: (Monad m, MonadReader r n) => a -> (r -> a) -> Biparser c s m n u a
+-- | Return provided value forward and return the modified reader value backward.
+asks' :: (Applicative m, MonadReader r n) => a -> (r -> a) -> Biparser c s m n u a
 asks' x f = Biparser (pure x) (const $ asks f)
 
 --ask'' :: (Monad n, Monoid (SubState c s)) => M c s m r -> Biparser c s m n r u r

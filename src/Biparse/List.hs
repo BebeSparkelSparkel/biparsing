@@ -27,6 +27,7 @@ module Biparse.List
   , untilExclusive'
   , UntilClusive
   , untilClusive
+  , intersperse
   , headAlt
   , tailAlt
   ) where
@@ -80,9 +81,8 @@ takeElementsWhile f =
 
 -- | Take N elements
 takeN :: forall c m n a ss se.
-  ( ()
   -- m
-  , MonadFail m
+  ( MonadFail m
   , Alternative m
   , MonadState a m
   -- n
@@ -372,4 +372,29 @@ untilClusive f p bp = uncurry f <$> uc
     if p x
     then pure (id, x)
     else first (cons x .) <$> uc `uponM` tailAlt
+
+intersperse :: forall c s m n u v v' ss.
+  -- m
+  ( MonadPlus m
+  , MonadState s m
+  -- n
+  , MonadWriter ss n
+  , Alternative n
+  -- assignments
+  , ss ~ SubState c s
+  )
+  => Biparser c s m n u v
+  -> (forall u'. Biparser c s m n u' v')
+  -> Biparser c s m n [u] [v]
+intersperse x y =
+  do
+    x' <- x `uponM` headAlt
+    xs <- try
+      do
+        _ <- y
+        xs' <- intersperse x y `uponM` tailAlt
+        bool (pure xs') empty $ null xs'
+      <|> pure mempty
+    pure $ cons x' xs
+  <|> pure mempty
 

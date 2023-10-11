@@ -328,5 +328,25 @@ spec = do
       it "no match" $ b "ab" `shouldThrow` isUserError
       it "middle match" $ b "abcd" >>= (`shouldBe` ("abc","abc"))
 
+  fb @() "intersperse"
+    --( intersperse (takeUni 'x') (take ',') :: Iso ColumnsOnly (FM String) EitherString () () (Position String) [Char])
+    (intersperse (one >>= \x -> if x == 'x' then pure x else empty) (one `upon` const ',' >>= \x -> if x == ',' then pure x else empty)
+      :: Iso ColumnsOnly (FM String) EitherString () () (Position String) [Char])
+    ()
+    ()
+    (\f -> do
+      it "empty" $ f "" `shouldBe` Right ([], Position 1 1 "")
+      it "parse none" $ f "y" `shouldBe` Right ([], Position 1 1 "y")
+      it "single" $ f "x" `shouldBe` Right ("x", Position 1 2 "")
+      it "single with fail on seperator" $ f "xy" `shouldBe` Right ("x", Position 1 2 "y")
+      it "single with seperator" $ f "x," `shouldBe` Right ("x", Position 1 2 ",")
+      it "double" $ f "x,x" `shouldBe` Right ("xx", Position 1 4 "")
+      it "double with fail on seperator" $ f "x,xy" `shouldBe` Right ("xx", Position 1 4 "y")
+    )
+    \b -> do
+      it "empty" $ b "" `shouldBe` EValue ("", "")
+      it "single" $ b "x" `shouldBe` EValue ("x", "x")
+      it "double" $ b "xx" `shouldBe` EValue ("xx", "x,x")
+
 instance {-# OVERLAPS #-} IsString [Maybe Char] where fromString = fmap pure
 

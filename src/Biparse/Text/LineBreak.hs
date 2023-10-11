@@ -10,8 +10,8 @@ module Biparse.Text.LineBreak
   ) where
 
 import Biparse.Biparser (Iso, SubState, UpdateStateWithSubState)
-import Biparse.List (splitElem, splitOn)
 import Biparse.General (takeDi, takeDi', Take, Take', BreakWhen)
+import Biparse.List (splitElem, splitOn)
 import Biparse.Utils (char)
 import Data.Char (Char)
 
