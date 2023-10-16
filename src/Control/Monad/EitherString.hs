@@ -10,15 +10,21 @@ module Control.Monad.EitherString
 import Data.Bool (Bool)
 import Data.Either (Either(Left,Right), fromLeft, fromRight, isLeft)
 import Data.String (String)
-import Text.Show (Show)
+import Text.Show (Show, show)
 import Data.Ord (Ord)
 import Data.Eq (Eq)
 import Data.Functor (Functor)
 import Data.Function ((.), ($))
 import Control.Applicative (Applicative, Alternative((<|>),empty))
 import Control.Monad (Monad, MonadFail(fail), MonadPlus)
+import Data.Monoid ((<>))
 
-newtype EitherString a = EitherString {runEitherString :: Either String a} deriving (Show, Eq, Ord, Functor, Applicative, Monad)
+newtype EitherString a = EitherString {runEitherString :: Either String a} deriving (Eq, Ord, Functor, Applicative, Monad)
+
+instance Show a => Show (EitherString a) where
+  show = \case
+    EitherString (Right x) -> "EValue (" <> show x <> ")"
+    EitherString (Left x) -> "EString " <> show x
 
 pattern EString :: String -> EitherString a
 pattern EString x = EitherString (Left x)
