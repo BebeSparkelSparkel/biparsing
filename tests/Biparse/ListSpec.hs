@@ -329,7 +329,6 @@ spec = do
       it "middle match" $ b "abcd" >>= (`shouldBe` ("abc","abc"))
 
   fb @() "intersperse"
-    --( intersperse (takeUni 'x') (take ',') :: Iso ColumnsOnly (FM String) EitherString () () (Position String) [Char])
     (intersperse (one >>= \x -> if x == 'x' then pure x else empty) (one `upon` const ',' >>= \x -> if x == ',' then pure x else empty)
       :: Iso ColumnsOnly (FM String) EitherString () () (Position String) [Char])
     ()

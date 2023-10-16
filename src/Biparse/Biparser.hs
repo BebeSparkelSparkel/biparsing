@@ -92,14 +92,14 @@ comapM :: forall c s m n u u' v.
   -> Biparser c s m n u  v
 comapM = FB.comapM @()
 
-comapPred :: forall c s m n u u' v.
+comapPred :: forall c s m n u v.
   ( Monad n
   , Alternative n
   )
   => (u -> Bool)
   -> Biparser c s m n u v
   -> Biparser c s m n u v
-comapPred pred = comapM (\u -> if pred u then empty else pure u)
+comapPred p = comapM \u -> if p u then empty else pure u
 
 infix 8 `upon`
 upon :: forall c s m n u u' v.
@@ -118,7 +118,7 @@ uponM :: forall c s m n u u' v.
 uponM = flip comapM
 
 infix 8 `uponPred`
-uponPred :: forall c s m n u u' v.
+uponPred :: forall c s m n u v.
   ( Monad n
   , Alternative n
   )
