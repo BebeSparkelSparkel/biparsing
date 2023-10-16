@@ -18,8 +18,10 @@ module Biparse.Biparser
   , FixFail(..)
   , comap
   , comapM
+  , comapPred
   , upon
   , uponM
+  , uponPred
   , mapWrite
   , emptyForward
   , ignoreForward
@@ -80,15 +82,24 @@ comap :: forall c s m n u u' v.
   Monad n
   => (u -> u')
   -> Biparser c s m n u' v
-  -> Biparser c s m n u v
+  -> Biparser c s m n u  v
 comap = FB.comap @()
 
 comapM :: forall c s m n u u' v.
   Monad n
   => (u -> n u')
   -> Biparser c s m n u' v
-  -> Biparser c s m n u v
+  -> Biparser c s m n u  v
 comapM = FB.comapM @()
+
+comapPred :: forall c s m n u u' v.
+  ( Monad n
+  , Alternative n
+  )
+  => (u -> Bool)
+  -> Biparser c s m n u v
+  -> Biparser c s m n u v
+comapPred pred = comapM (\u -> if pred u then empty else pure u)
 
 infix 8 `upon`
 upon :: forall c s m n u u' v.
@@ -105,6 +116,16 @@ uponM :: forall c s m n u u' v.
   -> (u -> n u')
   -> Biparser c s m n u v
 uponM = flip comapM
+
+infix 8 `uponPred`
+uponPred :: forall c s m n u u' v.
+  ( Monad n
+  , Alternative n
+  )
+  => Biparser c s m n u v
+  -> (u -> Bool)
+  -> Biparser c s m n u v
+uponPred = flip comapPred
 
 -- * Map Backwards Write
 
