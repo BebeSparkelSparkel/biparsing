@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE UndecidableInstances #-}
 module Control.Profunctor.FwdBwd
   ( (:*:)(..)
   , Fwd(..)
@@ -13,6 +14,7 @@ module Control.Profunctor.FwdBwd
 
 import GHC.Generics (Generic, Generic1)
 import Generic.Data (gpure, gap, gempty, galt)
+import Control.Monad.Unrecoverable (MonadUnrecoverable, throwUnrecoverable)
 
 data (:*:) p q u v = (:*:) {pfst :: p u v, psnd :: q u v} deriving (Functor, Generic, Generic1)
 {-# COMPLETE (:*:) #-}
@@ -26,8 +28,15 @@ instance (Monad (p u), Monad (q u)) => Monad ((:*:) p q u) where
   (fw :*: bw) >>= f = (fw >>= pfst . f) :*: (bw >>= psnd . f)
 instance (MonadFail (p u), MonadFail (q u)) => MonadFail ((:*:) p q u) where
   fail msg = fail msg :*: fail msg
+instance (MonadError e (p u), MonadError e (q u)) => MonadError e ((:*:) p q u) where
+  throwError e = throwError e :*: throwError e
+  catchError (fw :*: bw) eh = catchError fw (pfst . eh) :*: catchError bw (psnd . eh)
+instance (MonadUnrecoverable e (p u), MonadUnrecoverable e (q u)) => MonadUnrecoverable e ((:*:) p q u) where
+  throwUnrecoverable e = throwUnrecoverable e :*: throwUnrecoverable e
 
 newtype Fwd m u v = Fwd {unFwd :: m v} deriving (Functor, Applicative, Alternative, Monad, MonadFail)
+deriving instance MonadError e m => MonadError e (Fwd m u)
+deriving instance MonadUnrecoverable e m => MonadUnrecoverable e (Fwd m u)
 
 newtype Bwd m u v = Bwd {unBwd :: u -> m v} deriving (Functor, Generic1)
 instance Applicative m => Applicative (Bwd m u) where
@@ -40,6 +49,11 @@ instance Alternative m => Alternative (Bwd m u) where
   Bwd x <|> Bwd y = Bwd \u -> x u <|> y u
 instance MonadFail m => MonadFail (Bwd m u) where
   fail = Bwd . const . fail
+instance MonadError e m => MonadError e (Bwd m u) where
+  throwError = Bwd . const . throwError
+  catchError (Bwd x) f = Bwd \u -> catchError (x u) $ ($ u) . unBwd . f
+instance MonadUnrecoverable e m => MonadUnrecoverable e (Bwd m u) where
+  throwUnrecoverable = Bwd . const . throwUnrecoverable
 
 type BwdMonad :: Type -> (Type -> Type -> Type) -> Type -> Type
 type family BwdMonad instanceSelector m

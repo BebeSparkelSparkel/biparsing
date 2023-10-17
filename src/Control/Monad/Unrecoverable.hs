@@ -5,8 +5,6 @@ module Control.Monad.Unrecoverable
   , MonadUnrecoverable(..)
   ) where
 
-import Control.Monad.Error.Class (catchError)
-
 -- * UnrecoverableT
 
 newtype UnrecoverableT e m a = UnrecoverableT {runUnrecoverableT :: m (Either e a)}
@@ -23,6 +21,8 @@ instance Monad m => Applicative (UnrecoverableT e m) where
 instance (Monad m, Alternative m) => Alternative (UnrecoverableT e m) where
   empty = UnrecoverableT empty
   UnrecoverableT x <|> UnrecoverableT y = UnrecoverableT $ x <|> y
+
+instance (Monad m, Alternative m) => MonadPlus (UnrecoverableT e m)
 
 instance Monad m => Monad (UnrecoverableT e m) where
   UnrecoverableT x >>= f = UnrecoverableT $ x >>= \case
@@ -47,6 +47,9 @@ class MonadUnrecoverable e m | m -> e where throwUnrecoverable :: e -> m a
 
 instance Applicative m => MonadUnrecoverable e (UnrecoverableT e m) where throwUnrecoverable = UnrecoverableT . pure . Left
 
-instance MonadUnrecoverable e m => MonadUnrecoverable e (StateT s m) where
-  throwUnrecoverable e = StateT $ const $ throwUnrecoverable e
+instance (MonadUnrecoverable e m, Monad m) => MonadUnrecoverable e (StateT s m) where
+  throwUnrecoverable = lift . throwUnrecoverable
+
+instance (MonadUnrecoverable e m, Monoid w, Monad m) => MonadUnrecoverable e (RWST r w s m) where
+  throwUnrecoverable = lift . throwUnrecoverable
 

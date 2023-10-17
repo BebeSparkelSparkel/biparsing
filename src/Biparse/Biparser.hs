@@ -56,6 +56,7 @@ import Control.Monad.Writer.Class (listen)
 import Control.Profunctor.FwdBwd (BwdMonad, Comap, FwdBwd, pattern FwdBwd, MapMs(mapMs), DualMap)
 import Control.Profunctor.FwdBwd qualified as FB
 import Data.Profunctor (Profunctor(dimap))
+import Control.Monad.Unrecoverable (MonadUnrecoverable)
 
 -- | Product type for simultainously constructing forward and backward running programs.
 newtype Biparser context s m n u v = Biparser' {unBiparser :: FwdBwd m n u v}
@@ -74,6 +75,8 @@ setBackward (Biparser fw _) = Biparser fw
 type instance BwdMonad () (Biparser _ _ _ n) = n
 deriving instance Monad n => Comap () (Biparser c s m n)
 deriving instance (Functor m, Functor n) => DualMap (Biparser c s m n u)
+deriving instance (MonadError e m, MonadError e n, Monoid (SubState c s)) => MonadError e (Biparser c s m n u)
+deriving instance (MonadUnrecoverable e m, MonadUnrecoverable e n) => MonadUnrecoverable e (Biparser c s m n u)
 
 -- * Mapping Backward
 -- Used to converte @u@ to the correct type for the biparser.

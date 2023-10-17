@@ -6,7 +6,6 @@ module Biparse.Error.WrapError
   ) where
 
 import Control.Exception (IOException)
-import Control.Monad.Except (catchError)
 
 wrapError :: forall e s. WrapError e s => e -> s -> Error e s
 wrapError e s = wrapError' @e @s e $ stateForError @e s

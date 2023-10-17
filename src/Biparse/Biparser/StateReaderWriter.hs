@@ -16,7 +16,7 @@ module Biparse.Biparser.StateReaderWriter
   ) where
 
 import Control.Monad.ChangeMonad (ChangeMonad(ChangeFunction,changeMonad'))
-import Control.Monad.StateError (StateErrorT, stateErrorT, runStateErrorT, runSET, ResultMonad(ResultingMonad), ErrorContext)
+import Control.Monad.StateError (StateErrorT(StateErrorT), runStateErrorT, runSET, ResultMonad(ResultingMonad), ErrorContext)
 import Biparse.Biparser (SubState, forward, backward, ReplaceSubState(replaceSubState))
 import Biparse.Biparser qualified as B
 import Control.Monad.RWS (RWST(RWST), runRWST)
@@ -45,9 +45,9 @@ zoom  :: forall is c' m' c s s' m n r ws u v ss'.
   -> Biparser c' s' m' n r ws u v
   -> Biparser c  s  m n r ws u v
 zoom (B.Biparser fw bw) (B.Biparser fw' bw') = B.Biparser
-  (stateErrorT \s -> do
-    (ss,s') <- (runStateT . runStateErrorT) fw s
-    (x,_) <- changeMonad' @is () $ (runStateT . runStateErrorT) fw' $ replaceSubState s ss
+  (StateErrorT \s -> do
+    (ss,s') <- runStateErrorT fw s
+    (x,_) <- changeMonad' @is () $ runStateErrorT fw' $ replaceSubState s ss
     pure (x,s')
   )
   \u -> RWST \r s -> do

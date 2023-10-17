@@ -49,7 +49,7 @@ import Biparse.Utils (headAlt, tailAlt, initAlt, headTailAlt, lastAlt, (^:^), (<
 import Control.Applicative (Applicative((<*>),pure), (*>), (<*), liftA2, Alternative(empty,(<|>)))
 import Control.Monad (Monad((>>=),return), when, unless, MonadFail(fail), MonadPlus, guard, (=<<), (>=>), (<=<))
 import Control.Monad.EitherString (EitherString)
-import Control.Monad.Except (MonadError(throwError))
+import Control.Monad.Except (MonadError(throwError, catchError))
 import Control.Monad.Extra (ifM)
 import Control.Monad.Trans.Class (MonadTrans, lift)
 import Control.Monad.State (StateT(StateT,runStateT), execState, execStateT)
