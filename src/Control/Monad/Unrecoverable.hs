@@ -43,13 +43,19 @@ evalUnrecoverableT = either throwError pure <=< runUnrecoverableT
 
 -- * MonadUnrecoverable
 
-class MonadUnrecoverable e m | m -> e where throwUnrecoverable :: e -> m a
+class MonadUnrecoverable m where
+  type UnrecoverableError m :: Type
+  throwUnrecoverable :: UnrecoverableError m -> m a
 
-instance Applicative m => MonadUnrecoverable e (UnrecoverableT e m) where throwUnrecoverable = UnrecoverableT . pure . Left
+instance Applicative m => MonadUnrecoverable (UnrecoverableT e m) where
+  type UnrecoverableError (UnrecoverableT e _) = e
+  throwUnrecoverable = UnrecoverableT . pure . Left
 
-instance (MonadUnrecoverable e m, Monad m) => MonadUnrecoverable e (StateT s m) where
+instance (MonadUnrecoverable m, Monad m) => MonadUnrecoverable (StateT s m) where
+  type UnrecoverableError (StateT _ m) = UnrecoverableError m
   throwUnrecoverable = lift . throwUnrecoverable
 
-instance (MonadUnrecoverable e m, Monoid w, Monad m) => MonadUnrecoverable e (RWST r w s m) where
+instance (MonadUnrecoverable m, Monoid w, Monad m) => MonadUnrecoverable (RWST r w s m) where
+  type UnrecoverableError (RWST _ _ _ m) = UnrecoverableError m
   throwUnrecoverable = lift . throwUnrecoverable
 

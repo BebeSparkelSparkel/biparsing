@@ -40,9 +40,10 @@ spec = do
     let x :: StateErrorT 'ErrorStateInstance Int (UnrecoverableT (ErrorState String Int) (Either (ErrorState String Int))) String
         x = do
           i <- get
-          when (i > 0) (throwUnrecoverable "greater") <|> fail "should not error"
+          when (i > 0) (throwUnrecoverable ("greater" :: String)) <|> fail "should not error"
           when (i == 0) $ fail "zero"
+          put $ i + 1
           pure $ show i
 
-    it "-1" $ (evalUnrecoverableT $ runStateErrorT x (-1)) `shouldBe` Right "-1"
+    it "-1" $ (evalUnrecoverableT $ runStateErrorT x (-1)) `shouldBe` Right ("-1", 0)
 

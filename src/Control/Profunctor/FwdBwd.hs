@@ -14,7 +14,7 @@ module Control.Profunctor.FwdBwd
 
 import GHC.Generics (Generic, Generic1)
 import Generic.Data (gpure, gap, gempty, galt)
-import Control.Monad.Unrecoverable (MonadUnrecoverable, throwUnrecoverable)
+import Control.Monad.Unrecoverable (MonadUnrecoverable, UnrecoverableError, throwUnrecoverable)
 
 data (:*:) p q u v = (:*:) {pfst :: p u v, psnd :: q u v} deriving (Functor, Generic, Generic1)
 {-# COMPLETE (:*:) #-}
@@ -31,12 +31,13 @@ instance (MonadFail (p u), MonadFail (q u)) => MonadFail ((:*:) p q u) where
 instance (MonadError e (p u), MonadError e (q u)) => MonadError e ((:*:) p q u) where
   throwError e = throwError e :*: throwError e
   catchError (fw :*: bw) eh = catchError fw (pfst . eh) :*: catchError bw (psnd . eh)
-instance (MonadUnrecoverable e (p u), MonadUnrecoverable e (q u)) => MonadUnrecoverable e ((:*:) p q u) where
+instance (MonadUnrecoverable (p u), MonadUnrecoverable (q u), UnrecoverableError (p u) ~ UnrecoverableError (q u)) => MonadUnrecoverable ((:*:) p q u) where
+  type UnrecoverableError ((:*:) p q u) = UnrecoverableError (p u)
   throwUnrecoverable e = throwUnrecoverable e :*: throwUnrecoverable e
 
 newtype Fwd m u v = Fwd {unFwd :: m v} deriving (Functor, Applicative, Alternative, Monad, MonadFail)
 deriving instance MonadError e m => MonadError e (Fwd m u)
-deriving instance MonadUnrecoverable e m => MonadUnrecoverable e (Fwd m u)
+deriving instance MonadUnrecoverable m => MonadUnrecoverable (Fwd m u)
 
 newtype Bwd m u v = Bwd {unBwd :: u -> m v} deriving (Functor, Generic1)
 instance Applicative m => Applicative (Bwd m u) where
@@ -52,7 +53,8 @@ instance MonadFail m => MonadFail (Bwd m u) where
 instance MonadError e m => MonadError e (Bwd m u) where
   throwError = Bwd . const . throwError
   catchError (Bwd x) f = Bwd \u -> catchError (x u) $ ($ u) . unBwd . f
-instance MonadUnrecoverable e m => MonadUnrecoverable e (Bwd m u) where
+instance MonadUnrecoverable m => MonadUnrecoverable (Bwd m u) where
+  type UnrecoverableError (Bwd m u) = UnrecoverableError m
   throwUnrecoverable = Bwd . const . throwUnrecoverable
 
 type BwdMonad :: Type -> (Type -> Type -> Type) -> Type -> Type
