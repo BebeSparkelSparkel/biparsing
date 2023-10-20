@@ -1,7 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE DataKinds #-}
-{-# OPTIONS_GHC -Wno-deprecations #-}
+{-# OPTIONS_GHC -Wno-deprecations -Wno-orphans #-}
 module Control.Monad.StateError
   ( StateErrorT(StateErrorT)
   , runStateErrorT
@@ -10,13 +10,15 @@ module Control.Monad.StateError
   , ErrorInstance(..)
   , ErrorContext
   , runSET
+  , wrapErrorWithState
+  , WrapErrorWithState(..)
   ) where
 
-import Biparse.Error.WrapError (WrapError(StateForError, wrapError', stateForError))
 import Control.Monad.ChangeMonad (ChangeMonad(ChangeFunction,changeMonad'), ResultMonad(ResultingMonad,resultMonad), Lift)
 import Control.Monad.Unrecoverable (MonadUnrecoverable, throwUnrecoverable, UnrecoverableError)
 import Control.Monad.TransformerBaseMonad (TransformerBaseMonad, LiftBaseMonad, liftBaseMonad)
 
+import Control.Exception (IOException)
 import GHC.Err (undefined)
 import Control.Monad.Trans.Error (Error, noMsg)
 
@@ -47,9 +49,9 @@ data ErrorState e s = ErrorState {error :: e, state :: s} deriving (Show, Eq)
 instance Bifunctor ErrorState where
   first f (ErrorState e s) = ErrorState (f e) s
   second f (ErrorState e s) = ErrorState e (f s)
-instance WrapError (ErrorState e s) s (ErrorState e s) where
+instance WrapErrorWithState (ErrorState e s) s (ErrorState e s) where
   type StateForError (ErrorState e s) s (ErrorState e s) = s
-  wrapError' = ErrorState . error
+  wrapErrorWithState' = ErrorState . error
   stateForError = id
 instance Error (ErrorState e p) where
   noMsg = undefined
@@ -107,4 +109,35 @@ instance
   ) => MonadUnrecoverable (StateErrorT i s m) where
   type UnrecoverableError (StateErrorT i s m) = SubError (UnrecoverableError m)
   throwUnrecoverable e = StateErrorT \s -> throwUnrecoverable $ ErrorState e s
+
+
+-- * Wrapping an error with state information.
+
+wrapErrorWithState :: forall e s er. WrapErrorWithState e s er => e -> s -> er
+wrapErrorWithState e s = wrapErrorWithState' @e @s e $ stateForError @e @_ @er s
+
+type WrapErrorWithState :: Type -> Type -> Type -> Constraint
+class WrapErrorWithState e s er where
+  type StateForError e s er :: Type
+  wrapErrorWithState' :: e -> StateForError e s er -> er
+  stateForError :: s -> StateForError e s er
+
+instance WrapErrorWithState IOException s IOException where
+  type StateForError IOException s IOException = ()
+  wrapErrorWithState' = const
+  stateForError = const ()
+
+instance WrapErrorWithState Void s Void where
+  type StateForError Void s Void = ()
+  wrapErrorWithState' = absurd
+  stateForError = const ()
+
+instance WrapErrorWithState () s () where
+  type StateForError () s () = ()
+  wrapErrorWithState' = const
+  stateForError = const ()
+
+instance MonadError Void Identity where
+  throwError = absurd
+  catchError = const
 

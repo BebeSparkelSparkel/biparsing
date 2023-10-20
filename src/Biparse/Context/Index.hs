@@ -9,8 +9,7 @@ module Biparse.Context.Index
   , EISP
   ) where
 
-import Control.Monad.StateError (ErrorContext, ErrorState(ErrorState))
-import Biparse.Error.WrapError (WrapError(StateForError,wrapError',stateForError))
+import Control.Monad.StateError (ErrorContext, ErrorState(ErrorState), WrapErrorWithState(StateForError,wrapErrorWithState',stateForError))
 import Biparse.Biparser (SubState, GetSubState(getSubState), UpdateStateWithElement(updateElementContext), UpdateStateWithSubState(updateSubStateContext))
 import Control.Monad.StateError (ErrorInstance(ErrorStateInstance))
 import GHC.Exts (IsList(Item))
@@ -59,9 +58,9 @@ data ErrorIndex ss = ErrorIndex (Index ss) String
 deriving instance Show (Index ss) => Show (ErrorIndex ss)
 deriving instance Eq (Index ss) => Eq (ErrorIndex ss)
 
-instance WrapError String (IndexPosition ss) (ErrorIndex ss) where
+instance WrapErrorWithState String (IndexPosition ss) (ErrorIndex ss) where
   type StateForError String (IndexPosition ss) (ErrorIndex ss) = Index ss
-  wrapError' msg i = ErrorIndex i msg
+  wrapErrorWithState' msg i = ErrorIndex i msg
   stateForError = index
 
 instance ResultMonad (Either (ErrorIndex ss)) () where

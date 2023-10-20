@@ -2,7 +2,6 @@ module Control.Monad.StateErrorSpec where
 
 import Control.Monad.StateError
 import Control.Monad.ChangeMonad
-import Biparse.Error.WrapError
 
 spec :: Spec
 spec = do
@@ -28,8 +27,8 @@ instance ChangeMonad () (Either (ErrorState String Int)) (Either String) where
     ErrorState String Int -> String
   changeMonad' = first
 
-instance WrapError String Int String where
+instance WrapErrorWithState String Int String where
   type StateForError String Int String = ()
-  wrapError' = const
+  wrapErrorWithState' = const
   stateForError = const ()
 
