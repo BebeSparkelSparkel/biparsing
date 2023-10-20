@@ -15,8 +15,8 @@ module Biparse.Biparser.StateReaderWriter
   , runWriterT'
   ) where
 
-import Control.Monad.ChangeMonad (ChangeMonad(ChangeFunction,changeMonad'))
-import Control.Monad.StateError (StateErrorT(StateErrorT), runStateErrorT, runSET, ResultMonad(ResultingMonad), ErrorContext)
+import Control.Monad.ChangeMonad (ChangeMonad(ChangeFunction,changeMonad'), ResultMonad(ResultingMonad))
+import Control.Monad.StateError (StateErrorT(StateErrorT), runStateErrorT, runSET, ErrorContext)
 import Biparse.Biparser (SubState, forward, backward, ReplaceSubState(replaceSubState))
 import Biparse.Biparser qualified as B
 import Control.Monad.RWS (RWST(RWST), runRWST)

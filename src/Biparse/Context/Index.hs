@@ -1,4 +1,5 @@
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Biparse.Context.Index
   ( IndexContext
@@ -8,16 +9,15 @@ module Biparse.Context.Index
   , EISP
   ) where
 
-import Control.Monad.StateError (ErrorContext, ErrorState)
-import Biparse.Error.WrapError (WrapError(Error,StateForError,wrapError',stateForError))
+import Control.Monad.StateError (ErrorContext, ErrorState(ErrorState))
+import Biparse.Error.WrapError (WrapError(StateForError,wrapError',stateForError))
 import Biparse.Biparser (SubState, GetSubState(getSubState), UpdateStateWithElement(updateElementContext), UpdateStateWithSubState(updateSubStateContext))
 import Control.Monad.StateError (ErrorInstance(ErrorStateInstance))
 import GHC.Exts (IsList(Item))
 import GHC.Exts qualified as GE
 import Control.Monad.ChangeMonad (ChangeMonad(ChangeFunction,changeMonad'), ResultMonad(ResultingMonad,resultMonad))
 
-import GHC.Err (undefined)
-import Control.Monad.Trans.Error qualified as E
+--import Control.Monad.Trans.Error qualified as E
 
 -- * Identity Context
 -- Use as the context if @state ~ SubState IdentityState state@ basically if there is no context outside the 
@@ -59,12 +59,8 @@ data ErrorIndex ss = ErrorIndex (Index ss) String
 deriving instance Show (Index ss) => Show (ErrorIndex ss)
 deriving instance Eq (Index ss) => Eq (ErrorIndex ss)
 
-instance E.Error (ErrorIndex ss) where strMsg = undefined
-instance E.Error (ErrorState String (IndexPosition text)) where strMsg = undefined
-
-instance WrapError String (IndexPosition ss) where
-  type Error String (IndexPosition ss) = ErrorIndex ss
-  type StateForError String (IndexPosition ss) = Index ss
+instance WrapError String (IndexPosition ss) (ErrorIndex ss) where
+  type StateForError String (IndexPosition ss) (ErrorIndex ss) = Index ss
   wrapError' msg i = ErrorIndex i msg
   stateForError = index
 
@@ -72,11 +68,15 @@ instance ResultMonad (Either (ErrorIndex ss)) () where
   type ResultingMonad (Either (ErrorIndex ss)) () = Either (ErrorIndex ss)
   resultMonad = ()
 
+instance ResultMonad (EISP ss) () where
+  type ResultingMonad (EISP ss) () = Either (ErrorIndex ss)
+  resultMonad (ErrorState e (IndexPosition {index}))  = ErrorIndex index e
+
 type EIP e ss = Either (ErrorState e (IndexPosition ss))
 type EISP ss = EIP String ss
 
-instance ChangeMonad () (Either (ErrorState e (IndexPosition ss))) (Either (ErrorIndex ss)) where
-  type ChangeFunction () (Either (ErrorState e (IndexPosition ss))) (Either (ErrorIndex ss)) =
+instance ChangeMonad () (EIP e ss) (Either (ErrorIndex ss)) where
+  type ChangeFunction () (EIP e ss) (Either (ErrorIndex ss)) =
     ErrorState e (IndexPosition ss) -> ErrorIndex ss
   changeMonad' = first
 

@@ -81,7 +81,7 @@ import Control.Monad ((>>=), return, (>>), fail, MonadPlus, MonadFail)
 import Control.Monad.EitherString (EitherString(EValue), isString)
 import Control.Monad.Except (MonadError(throwError,catchError))
 import Control.Monad.State (MonadState, get, put) --(StateT(runStateT), get, put)
-import Control.Monad.StateError (StateErrorT, ErrorInstance(NewtypeInstance,ErrorStateInstance), ResultMonad(ResultingMonad), ErrorState)
+import Control.Monad.StateError (StateErrorT, ErrorInstance(NewtypeInstance,ErrorStateInstance), ErrorState)
 import Control.Monad.Writer (WriterT(runWriterT), MonadWriter)
 import Data.Bifunctor (first)
 import Data.Bool (Bool(True,False), otherwise, (&&))
@@ -124,7 +124,7 @@ import GHC.Num ((+), (-))
 import GHC.Generics (Generic)
 import Data.Coerce (coerce)
 
-import Control.Monad.ChangeMonad (ChangeMonad)
+import Control.Monad.ChangeMonad (ChangeMonad, ResultMonad(ResultingMonad))
 import System.Timeout (timeout)
 
 fb :: forall is c s m m' n r ws u v.

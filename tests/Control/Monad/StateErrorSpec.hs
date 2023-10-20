@@ -12,25 +12,24 @@ spec = do
 
   describe "MonadError" do
     it "catch state is the last state before fail" $ limit do
-      let x :: StateErrorT 'ErrorStateInstance Int (Either (ErrorState String Int)) Char
+      let x :: StateErrorT 'ErrorStateInstance (Identity Int) (Either (ErrorState String (Identity Int))) Char
           x = catchError
             (do
               put 2
               throwError "3"
             )
             \_ -> do
-              s <- get
+              Identity s <- get
               throwError $ show s
-      runSET @() x 1 `shouldBe` Left "2"
+      runSET @() x (Identity 1) `shouldBe` Left (ErrorState "2" (Identity 2))
 
 instance ChangeMonad () (Either (ErrorState String Int)) (Either String) where
   type ChangeFunction () (Either (ErrorState String Int)) (Either String) =
     ErrorState String Int -> String
   changeMonad' = first
 
-instance WrapError String Int where
-  type Error String Int = String
-  type StateForError String Int = ()
+instance WrapError String Int String where
+  type StateForError String Int String = ()
   wrapError' = const
   stateForError = const ()
 

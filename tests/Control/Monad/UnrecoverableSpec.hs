@@ -1,7 +1,6 @@
 module Control.Monad.UnrecoverableSpec where
 
 import Control.Monad.StateError
-import Biparse.Error.WrapError
 import Control.Monad.Unrecoverable
 import Data.Ord (Ordering(LT,EQ,GT), compare)
 import System.IO.Error (userError, ioeGetErrorString)

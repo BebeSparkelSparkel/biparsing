@@ -16,9 +16,9 @@ module Biparse.Text.Context.LineColumn
   ) where
 
 import Biparse.Text.LineBreak (LineBreakType(Unix,Windows))
-import Biparse.Error.WrapError (WrapError(Error,StateForError,wrapError',stateForError))
+import Biparse.Error.WrapError (WrapError(StateForError,wrapError',stateForError), wrapError)
 import Biparse.Biparser (SubState, GetSubState(getSubState), UpdateStateWithElement(updateElementContext), UpdateStateWithSubState(updateSubStateContext), ReplaceSubState(replaceSubState))
-import Control.Monad.StateError (StateErrorT, ErrorState, ErrorContext, ErrorInstance(ErrorStateInstance))
+import Control.Monad.StateError (StateErrorT, ErrorState(ErrorState), ErrorContext, ErrorInstance(ErrorStateInstance))
 import Control.Monad.EitherString (EitherString(EValue,EString))
 import GHC.Exts (IsList(Item))
 import GHC.Exts qualified as GE
@@ -113,11 +113,9 @@ instance IsList ss => IsList (Position ss) where
 data ErrorPosition = ErrorPosition Int Int String deriving (Show, Eq)
 
 instance E.Error ErrorPosition where strMsg = undefined
-instance E.Error (ErrorState String (Position text)) where strMsg = undefined
 
-instance WrapError String (Position text) where
-  type Error String (Position text) = ErrorPosition
-  type StateForError String (Position text) = Position text
+instance WrapError String (Position text) ErrorPosition where
+  type StateForError String (Position text) ErrorPosition = Position text
   wrapError' msg (Position l c _) = ErrorPosition l c msg
   stateForError = id
 
@@ -131,6 +129,12 @@ instance ChangeMonad () (EEP e text) (Either ErrorPosition) where
   type ChangeFunction () (EEP e text) (Either ErrorPosition) =
     ErrorState e (Position text) -> ErrorPosition
   changeMonad' = first
+
+instance
+  (
+  ) => ResultMonad (Either (ErrorState String (Position text))) () where
+  type ResultingMonad (Either (ErrorState String (Position text))) () = Either ErrorPosition
+  resultMonad (ErrorState e s) = wrapError e s
 
 -- | "This instance is not sound and is a hack for zoom. The monad conversion in zoom should be more complete or throw away the text entirely but 'catch' in 'MonadError e (StateErrorT s m)' makes this difficult.
 data ElementToList

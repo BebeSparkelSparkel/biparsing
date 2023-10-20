@@ -1,6 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE DataKinds #-}
+{-# OPTIONS_GHC -Wno-deprecations #-}
 module Control.Monad.StateError
   ( StateErrorT(StateErrorT)
   , runStateErrorT
@@ -9,15 +10,15 @@ module Control.Monad.StateError
   , ErrorInstance(..)
   , ErrorContext
   , runSET
-  , ResultMonad(..)
   ) where
 
-import Biparse.Error.WrapError (WrapError(Error, StateForError, wrapError', stateForError), wrapError)
+import Biparse.Error.WrapError (WrapError(StateForError, wrapError', stateForError))
 import Control.Monad.ChangeMonad (ChangeMonad(ChangeFunction,changeMonad'), ResultMonad(ResultingMonad,resultMonad), Lift)
 import Control.Monad.Unrecoverable (MonadUnrecoverable, throwUnrecoverable, UnrecoverableError)
 import Control.Monad.TransformerBaseMonad (TransformerBaseMonad, LiftBaseMonad, liftBaseMonad)
 
-import Control.Monad.Unrecoverable (UnrecoverableT)
+import GHC.Err (undefined)
+import Control.Monad.Trans.Error (Error, noMsg)
 
 -- * Allow errors to be combined with state information.
 
@@ -46,11 +47,12 @@ data ErrorState e s = ErrorState {error :: e, state :: s} deriving (Show, Eq)
 instance Bifunctor ErrorState where
   first f (ErrorState e s) = ErrorState (f e) s
   second f (ErrorState e s) = ErrorState e (f s)
-instance WrapError (ErrorState e s) s where
-  type Error (ErrorState e s) s = ErrorState e s
-  type StateForError (ErrorState e s) s = s
-  wrapError' = const
+instance WrapError (ErrorState e s) s (ErrorState e s) where
+  type StateForError (ErrorState e s) s (ErrorState e s) = s
+  wrapError' = ErrorState . error
   stateForError = id
+instance Error (ErrorState e p) where
+  noMsg = undefined
 
 deriving instance MonadPlus m => Alternative (StateErrorT 'NewtypeInstance s m)
 instance (Monoid e, MonadError (ErrorState e s) m, MonadPlus m) => Alternative (StateErrorT 'ErrorStateInstance s m) where
@@ -79,12 +81,9 @@ runSET :: forall is c s m a.
   -> ResultingMonad m is (a, s)
 runSET = (changeMonad' @is (resultMonad @m @is) .) . runStateErrorT
 
-instance
-  ( ChangeFunction is (Either (ErrorState e s)) (Either (Error e s)) ~ (ErrorState e s -> Error e s)
-  , WrapError e s
-  ) => ResultMonad (Either (ErrorState e s)) is where
-  type ResultingMonad (Either (ErrorState e s)) is = Either (Error e s)
-  resultMonad (ErrorState e s) = wrapError e s
+instance ResultMonad (Either (ErrorState e (Identity s))) () where
+  type ResultingMonad (Either (ErrorState e (Identity s))) () = Either (ErrorState e (Identity s))
+  resultMonad = ()
 
 instance Monad m => ChangeMonad Lift m (StateErrorT 'NewtypeInstance s m) where
   type ChangeFunction Lift m (StateErrorT 'NewtypeInstance s m) = ()
@@ -94,29 +93,18 @@ type instance TransformerBaseMonad (StateErrorT _ _ m) = m
 
 instance Monad m => LiftBaseMonad (StateErrorT c s m) where liftBaseMonad = lift
 
-type SubErrorType :: Type -> Type
-type family SubErrorType e where
-  SubErrorType (ErrorState e _) = e
+--type DevType e s = StateErrorT 'ErrorStateInstance s (UnrecoverableT (ErrorState e s) (Either (ErrorState e s)))
+--instance MonadUnrecoverable (DevType e s) where
+--  type UnrecoverableError (DevType e s) = e
+--  throwUnrecoverable e = StateErrorT \s -> UnrecoverableT $ Left $ ErrorState e s
+
+type SubError :: Type -> Type
+type family SubError e where
+  SubError (ErrorState e _) = e
 instance
-  ( MonadUnrecoverable m
-  , ErrorState e s ~ UnrecoverableError m
-  , Error e s ~ ErrorState e s
-  , WrapError e s
+  ( UnrecoverableError m ~ ErrorState (SubError (UnrecoverableError m)) s
+  , MonadUnrecoverable m
   ) => MonadUnrecoverable (StateErrorT i s m) where
-  type UnrecoverableError (StateErrorT i s m) = SubErrorType (UnrecoverableError m)
-  throwUnrecoverable e = StateErrorT \s -> throwUnrecoverable $ wrapError e s
-
---instance (MonadUnrecoverable (ErrorState e s) m, WrapError e s, Error e s ~ ErrorState e s) => MonadUnrecoverable e (StateErrorT i s m) where
---  throwUnrecoverable e = StateErrorT \s -> throwUnrecoverable $ wrapError e s
---instance MonadUnrecoverable e m => MonadUnrecoverable e (StateErrorT i s m) where
---  throwUnrecoverable = StateErrorT . throwUnrecoverable
-
-type Test a = StateErrorT 'ErrorStateInstance Int (UnrecoverableT (ErrorState String Int) (Either (ErrorState String Int))) a
-test :: Test String
-test = do
-          i <- get
-          when (i > 0) (throwUnrecoverable ("greater" :: String) :: Test ()) <|> fail "should not error"
-          when (i == 0) $ fail "zero"
-          put $ i + 1
-          pure $ show i
+  type UnrecoverableError (StateErrorT i s m) = SubError (UnrecoverableError m)
+  throwUnrecoverable e = StateErrorT \s -> throwUnrecoverable $ ErrorState e s
 
