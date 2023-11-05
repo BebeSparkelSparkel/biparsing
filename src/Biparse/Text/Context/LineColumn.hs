@@ -6,6 +6,7 @@ module Biparse.Text.Context.LineColumn
   , UnixLC
   , LinesOnly
   , ColumnsOnly
+  , LineColumnUnknownBreak
   , Position(..)
   , startLineColumn
   , ErrorPosition(..)
@@ -35,6 +36,8 @@ data LinesOnly
 
 data ColumnsOnly
 
+data LineColumnUnknownBreak
+
 -- * Postion state
 
 data Position text = Position
@@ -46,10 +49,12 @@ data Position text = Position
 type instance SubState (LineColumn _) (Position text) = text
 type instance SubState LinesOnly (Position text) = text
 type instance SubState ColumnsOnly (Position text) = text
+type instance SubState LineColumnUnknownBreak (Position text) = text
 
 instance GetSubState (LineColumn lb) (Position text) where getSubState = subState
 instance GetSubState LinesOnly (Position text) where getSubState = subState
 instance GetSubState ColumnsOnly (Position text) where getSubState = subState
+instance GetSubState LineColumnUnknownBreak (Position text) where getSubState = subState
 
 type CharCs text char =
   ( Eq char

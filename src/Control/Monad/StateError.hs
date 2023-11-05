@@ -87,9 +87,12 @@ instance ResultMonad (Either (ErrorState e (Identity s))) () where
   type ResultingMonad (Either (ErrorState e (Identity s))) () = Either (ErrorState e (Identity s))
   resultMonad = ()
 
-instance Monad m => ChangeMonad Lift m (StateErrorT 'NewtypeInstance s m) where
-  type ChangeFunction Lift m (StateErrorT 'NewtypeInstance s m) = ()
-  changeMonad' () = lift
+instance (ChangeMonad () m m', ChangeFunction () m m' ~ (), Monad m') => ChangeMonad Lift m (StateErrorT 'NewtypeInstance s m') where
+  type ChangeFunction Lift m (StateErrorT 'NewtypeInstance s m') = ()
+  changeMonad' () = lift . changeMonad' @() @m @m' ()
+--instance Monad m => ChangeMonad Lift m (StateErrorT 'NewtypeInstance s m) where
+--  type ChangeFunction Lift m (StateErrorT 'NewtypeInstance s m) = ()
+--  changeMonad' () = lift
 
 type instance TransformerBaseMonad (StateErrorT _ _ m) = m
 

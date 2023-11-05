@@ -33,7 +33,7 @@ type M c s m = StateErrorT (ErrorContext c) s m
 type N c s n r ws = RWST r (SubState c s) ws n
 
 -- | Discards unused s' state to avoid commingling m and n monads.
-zoom  :: forall is c' m' c s s' m n r ws u v ss'.
+zoom :: forall is c' m' c s s' m n r ws u v ss'.
   ( Monad m
   , Monad n
   , ReplaceSubState s ss' s'

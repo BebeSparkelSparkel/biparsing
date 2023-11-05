@@ -4,6 +4,7 @@
 module Biparse.Text.LineBreak
   ( LineBreakType(..)
   , lines
+  , lines'
   , lineBreakType
   , LineBreaker
   , LineSplitter
@@ -42,6 +43,17 @@ lines :: forall (lb :: LineBreakType) c m n a text.
   )
   => Iso c m n a [text]
 lines = lineSplitter @(LineBreaker lb)
+
+lines' :: forall c m n a text.
+  ( LineSplitter (LineBreaker 'Unix) c m n a
+  , LineSplitter (LineBreaker 'Windows) c m n a
+  , text ~ SubState c a
+  )
+  => LineBreakType
+  -> Iso c m n a [text]
+lines' = \case
+  Unix -> lineSplitter @(LineBreaker 'Unix)
+  Windows -> lineSplitter @(LineBreaker 'Windows)
 
 class LineSplitter (lb :: Either Char Symbol) c m n a where lineSplitter :: Iso c m n a [SubState c a]
 instance
