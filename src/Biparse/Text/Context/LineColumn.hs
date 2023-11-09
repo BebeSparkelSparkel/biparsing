@@ -4,6 +4,7 @@
 module Biparse.Text.Context.LineColumn
   ( LineColumn
   , UnixLC
+  , WindowsLC
   , LinesOnly
   , ColumnsOnly
   , LineColumnUnknownBreak
@@ -31,6 +32,7 @@ import Control.Monad.Trans.Error qualified as E
 
 data LineColumn (lineBreak :: LineBreakType)
 type UnixLC = LineColumn 'Unix
+type WindowsLC = LineColumn 'Windows
 
 data LinesOnly
 
@@ -73,6 +75,12 @@ instance (CharCs text char, IsSequence text) => UpdateStateWithElement (LineColu
     Just (c',ss') | c == fromChar '\r' && c' == fromChar '\n' -> s {line = line + 1, column = 1, subState = ss'}
     _ -> s {column = column + 1, subState = ss}
 
+instance (CharCs text char, IsSequence text) => UpdateStateWithElement LineColumnUnknownBreak (Position text) where
+  updateElementContext s@(Position l c _) ss ss' = if l == l' && c == c' then w else u
+    where
+    u@(Position l' c' _) = updateElementContext @(LineColumn 'Unix)    s ss ss'
+    w = updateElementContext @(LineColumn 'Windows) s ss ss'
+
 instance UpdateStateWithElement LinesOnly (Position [text]) where
   updateElementContext (Position {line}) _ ss = Position {line = line + 1, column = 1, subState = ss}
 
@@ -80,6 +88,9 @@ instance UpdateStateWithElement ColumnsOnly (Position text) where
   updateElementContext p@(Position {column}) _ ss = p {column = column + 1, subState = ss}
 
 instance (CharCs text char, MonoFoldable text) => UpdateStateWithSubState (LineColumn lb) (Position text) where
+  updateSubStateContext = updateSubStateContext @LineColumnUnknownBreak
+
+instance (CharCs text char, MonoFoldable text) => UpdateStateWithSubState LineColumnUnknownBreak (Position text) where
   updateSubStateContext s@(Position {line, column}) ss ss' = if ns == 0
     then s {column = column + cs, subState = ss'}
     else s {line = line + ns, column = cs, subState = ss'}
@@ -152,6 +163,7 @@ instance Monoid text => ChangeMonad ListToElement (EEP e [text]) (EEP e text) wh
 type instance ErrorContext (LineColumn _) = 'ErrorStateInstance
 type instance ErrorContext LinesOnly = 'ErrorStateInstance
 type instance ErrorContext ColumnsOnly = 'ErrorStateInstance
+type instance ErrorContext LineColumnUnknownBreak = 'ErrorStateInstance
 
 type EESP text = EEP String text
 type SE text = StateErrorT 'ErrorStateInstance (Position text) (EESP text)
