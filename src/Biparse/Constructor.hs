@@ -172,7 +172,7 @@ lensBiparse t (Biparser fw bw) = Constructor
     s <- preview t >>= maybe (fail "lensBiparse could not preview") pure
     (v, _) <- ReaderT $ const $ runStateErrorT fw s
     pure v
-  $ \u -> do
+  \u -> do
     (v,w) <- lift $ BSRW.runWriterT' $ bw u
     assign t w
     pure v

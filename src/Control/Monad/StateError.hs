@@ -26,7 +26,7 @@ import Control.Monad.Trans.Error (Error, noMsg)
 
 newtype StateErrorT (i :: ErrorInstance) s m a = StateErrorT' (StateT s m a)
   deriving (Functor, Applicative, Monad, MonadTrans)
-type M c a m = StateErrorT (ErrorContext c) a m
+type M c s m = StateErrorT (ErrorContext c) s m
 
 {-# COMPLETE StateErrorT #-}
 pattern StateErrorT :: (s -> m (a, s)) -> StateErrorT i s m a

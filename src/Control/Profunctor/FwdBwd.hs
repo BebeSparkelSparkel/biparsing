@@ -70,7 +70,7 @@ class Comap is (p :: Type -> Type -> Type) where
 
 type instance BwdMonad () (_ :*: Bwd n) = n
 instance Monad n => Comap () (Fwd m :*: Bwd n) where
-  comap f (Fwd fw :*: Bwd bw) = Fwd fw :*: Bwd (bw . f)
+  comap  f (Fwd fw :*: Bwd bw) = Fwd fw :*: Bwd (bw . f)
   comapM f (Fwd fw :*: Bwd bw) = Fwd fw :*: Bwd (bw <=< f)
 
 type FwdBwd m n = Fwd m :*: Bwd n

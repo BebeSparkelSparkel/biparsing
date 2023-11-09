@@ -16,7 +16,7 @@ module Biparse.Biparser.StateReaderWriter
   ) where
 
 import Control.Monad.ChangeMonad (ChangeMonad(ChangeFunction,changeMonad'), ResultMonad(ResultingMonad))
-import Control.Monad.StateError (StateErrorT(StateErrorT), runStateErrorT, runSET, ErrorContext)
+import Control.Monad.StateError (StateErrorT(StateErrorT), runStateErrorT, runSET, M)
 import Biparse.Biparser (SubState, forward, backward, ReplaceSubState(replaceSubState))
 import Biparse.Biparser qualified as B
 import Control.Monad.RWS (RWST(RWST), runRWST)
@@ -29,7 +29,6 @@ type ConstU c s m n r ws u v = Biparser c s m n r ws u v
 
 type IsoClass c m n r ws a b = B.IsoClass c (M c a m) (N c a n r ws) a b
 
-type M c s m = StateErrorT (ErrorContext c) s m
 type N c s n r ws = RWST r (SubState c s) ws n
 
 -- | Discards unused s' state to avoid commingling m and n monads.
@@ -57,29 +56,30 @@ zoom (B.Biparser fw bw) (B.Biparser fw' bw') = B.Biparser
 
 -- * Helper run functions
 
-runForward :: forall is c s m n r ws u v.
-  ( ChangeMonad is m (ResultingMonad m is)
+runForward :: forall is c s m rm n r ws u v.
+  ( ChangeMonad is m rm
   , ResultMonad m is
+  , rm ~ ResultingMonad m is
   )
   => Biparser c s m n r ws u v
   -> s
-  -> ResultingMonad m is (v, s)
+  -> rm (v, s)
 runForward bp = runSET @is (forward bp)
 
-evalForward :: forall is c s m m' n r ws u v.
-  ( Functor m'
-  , ChangeMonad is m m'
+evalForward :: forall is c s m rm n r ws u v.
+  ( Functor rm
+  , ChangeMonad is m rm
   , ResultMonad m is
-  , m' ~ ResultingMonad m is
+  , rm ~ ResultingMonad m is
   )
   => Biparser c s m n r ws u v
   -> s
-  -> m' v
+  -> rm v
 evalForward = (fmap fst .) . runForward @is
 
 runBackward :: forall c s m n r ws u v. Functor n => Biparser c s m n r ws u v -> r -> ws -> u -> n (v, SubState c s)
 runBackward bp r ws u = runRWST (backward bp u) r ws <&> \(x,_,y) -> (x,y)
 
 runWriterT' :: Functor m => RWST () w () m a -> m (a, w)
-runWriterT' x = runRWST x () () <&> \(y,_,z) -> (y,z)
+runWriterT' x = runRWST x () () <&> \(y,(),z) -> (y,z)
 
