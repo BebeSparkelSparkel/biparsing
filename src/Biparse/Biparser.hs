@@ -17,9 +17,11 @@ module Biparse.Biparser
   , fix
   , FixFail(..)
   , comap
+  , comapMay
   , comapM
   , comapPred
   , upon
+  , uponMay
   , uponM
   , uponPred
   , mapWrite
@@ -97,6 +99,15 @@ comapM :: forall c s m n u u' v.
   -> Biparser c s m n u  v
 comapM = FB.comapM @()
 
+comapMay :: forall  c s m n u u' v.
+  ( Monad n
+  , Alternative n
+  )
+  => (u -> Maybe u')
+  -> Biparser c s m n u' v
+  -> Biparser c s m n u  v
+comapMay f (Biparser fw bw) = Biparser fw $ bw <=< maybe empty pure . f
+
 comapPred :: forall c s m n u v.
   ( Monad n
   , Alternative n
@@ -121,6 +132,16 @@ uponM :: forall c s m n u u' v.
   -> (u -> n u')
   -> Biparser c s m n u v
 uponM = flip comapM
+
+infix 8 `uponMay`
+uponMay :: forall c s m n u u' v.
+  ( Monad n
+  , Alternative n
+  )
+  => Biparser c s m n u' v
+  -> (u -> Maybe u')
+  -> Biparser c s m n u v
+uponMay = flip comapMay
 
 infix 8 `uponPred`
 uponPred :: forall c s m n u v.
@@ -232,8 +253,7 @@ type SubState :: Type -> Type -> Type
 type family SubState context state
 
 -- | Getter for the substate.
-class GetSubState context state where
-  getSubState :: state -> SubState context state
+class GetSubState context state where getSubState :: state -> SubState context state
 
 -- | Update the state's context and substate.
 -- Used when more than one element at a time should be consumed and written.
@@ -261,7 +281,6 @@ class UpdateStateWithElement context state where
   updateElementContext :: state -> SubElement context state -> SubState context state -> state
 
 type ElementContext context state = (GetSubState context state, UpdateStateWithElement context state)
-
 
 class ReplaceSubState s ss s' | s ss -> s' where replaceSubState :: s -> ss -> s'
 
