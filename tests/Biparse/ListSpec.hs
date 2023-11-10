@@ -113,16 +113,16 @@ spec = do
       it "prints all" $ b [1,1,1] >>= (`shouldBe` ([1,1,1], [1,1,1]))
 
   fb @() "all"
-    (all $ takeUni 'a' <|> takeUni 'b' :: Iso UnixLC (FM Text) IO () () (Position Text) [Char])
+    (all $ takeUni 'a' <|> takeUni 'b' :: Iso UnixLC (FM Text) IO () () (Position () Text) [Char])
     ()
     ()
     (\f -> do
       it "empty" do
         f "" `shouldBe` Right (mempty, "")
 
-      it "one" $ f "a" `shouldBe` Right ("a", Position 1 2 mempty)
+      it "one" $ f "a" `shouldBe` Right ("a", Position () 1 2 mempty)
 
-      it "two" $ f "ba" `shouldBe` Right ("ba", Position 1 3 mempty)
+      it "two" $ f "ba" `shouldBe` Right ("ba", Position () 1 3 mempty)
 
       describe "fail" do
         it "no matches" $ f "c"   `shouldSatisfy` errorPosition 1 1
@@ -311,17 +311,17 @@ spec = do
       it "some u" $ b [0,1,2] `shouldBe` EValue ([0,1,2],[0,1,2,3])
 
   fb @() "untilInclusive"
-    (untilInclusive (== 'c') one :: Iso UnixLC (FM (Seq Char)) IO () () (Position (Seq Char)) String)
+    (untilInclusive (== 'c') one :: Iso UnixLC (FM (Seq Char)) IO () () (Position () (Seq Char)) String)
     ()
     ()
     (\f -> do
       it "empty" $ f "" `shouldSatisfy` errorPosition 1 1
       it "no match" $ f "ab" `shouldSatisfy` errorPosition 1 3
-      it "only match" $ f "c" `shouldBe` Right (['c'], Position 1 2 "")
-      it "first match" $ f "cab" `shouldBe` Right (['c'], Position 1 2 "ab")
-      it "middle match" $ f "abcd" `shouldBe` Right ("abc", Position 1 4 "d")
-      it "last match" $ f "abc" `shouldBe` Right ("abc", Position 1 4 "")
-      it "middle match" $ f "abcd" `shouldBe` Right ("abc", Position 1 4 "d")
+      it "only match" $ f "c" `shouldBe` Right (['c'], Position () 1 2 "")
+      it "first match" $ f "cab" `shouldBe` Right (['c'], Position () 1 2 "ab")
+      it "middle match" $ f "abcd" `shouldBe` Right ("abc", Position () 1 4 "d")
+      it "last match" $ f "abc" `shouldBe` Right ("abc", Position () 1 4 "")
+      it "middle match" $ f "abcd" `shouldBe` Right ("abc", Position () 1 4 "d")
     )
     \b -> do
       it "empty" $ b "" `shouldThrow` isUserError
@@ -330,17 +330,17 @@ spec = do
 
   fb @() "intersperse"
     (intersperse (one >>= \x -> if x == 'x' then pure x else empty) (one `upon` const ',' >>= \x -> if x == ',' then pure x else empty)
-      :: Iso ColumnsOnly (FM String) EitherString () () (Position String) [Char])
+      :: Iso ColumnsOnly (FM String) EitherString () () (Position () String) [Char])
     ()
     ()
     (\f -> do
-      it "empty" $ f "" `shouldBe` Right ([], Position 1 1 "")
-      it "parse none" $ f "y" `shouldBe` Right ([], Position 1 1 "y")
-      it "single" $ f "x" `shouldBe` Right ("x", Position 1 2 "")
-      it "single with fail on seperator" $ f "xy" `shouldBe` Right ("x", Position 1 2 "y")
-      it "single with seperator" $ f "x," `shouldBe` Right ("x", Position 1 2 ",")
-      it "double" $ f "x,x" `shouldBe` Right ("xx", Position 1 4 "")
-      it "double with fail on seperator" $ f "x,xy" `shouldBe` Right ("xx", Position 1 4 "y")
+      it "empty" $ f "" `shouldBe` Right ([], Position () 1 1 "")
+      it "parse none" $ f "y" `shouldBe` Right ([], Position () 1 1 "y")
+      it "single" $ f "x" `shouldBe` Right ("x", Position () 1 2 "")
+      it "single with fail on seperator" $ f "xy" `shouldBe` Right ("x", Position () 1 2 "y")
+      it "single with seperator" $ f "x," `shouldBe` Right ("x", Position () 1 2 ",")
+      it "double" $ f "x,x" `shouldBe` Right ("xx", Position () 1 4 "")
+      it "double with fail on seperator" $ f "x,xy" `shouldBe` Right ("xx", Position () 1 4 "y")
     )
     \b -> do
       it "empty" $ b "" `shouldBe` EValue ("", "")

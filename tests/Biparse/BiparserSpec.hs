@@ -35,7 +35,7 @@ spec = do
           it "used twice" $ b ('a','b') >>= (`shouldBe` (('a','b'),"ab"))
 
     fb @() "LineColumn"
-      (one :: Iso UnixLC (FM Text) IO () () (Position Text) Char)
+      (one :: Iso UnixLC (FM Text) IO () () (Position () Text) Char)
       ()
       ()
       (\f -> do
@@ -43,20 +43,20 @@ spec = do
           f "" `shouldSatisfy` errorPosition 1 1
 
         it "one" do
-          f "abc" `shouldBe` Right ('a', Position 1 2 "bc")
+          f "abc" `shouldBe` Right ('a', Position () 1 2 "bc")
 
       )
       \b -> do
         it "write char" $ b 'd' >>= (`shouldBe` ('d', "d"))
 
     fb @() "LineColumn [Text]"
-      (one :: Iso LinesOnly (FM [Text]) IO () () (Position [Text]) Text)
+      (one :: Iso LinesOnly (FM [Text]) IO () () (Position () [Text]) Text)
       ()
       ()
       (\f -> do
         it "empty" $ f [] `shouldSatisfy` errorPosition 1 1
 
-        it "one" $ f ["abc","def"] `shouldBe` Right ("abc", Position 2 1 ["def"])
+        it "one" $ f ["abc","def"] `shouldBe` Right ("abc", Position () 2 1 ["def"])
       )
       \b -> do
         it "print string" $ b "abc" >>= (`shouldBe` ("abc", ["abc"]))
@@ -119,13 +119,13 @@ spec = do
           it "prints second" $ b 'a' >>= (`shouldBe` ('a',"a"))
 
       fb @() "LineColumn"
-        (peek (takeUni 'x') <|> takeUni 'a' :: Iso UnixLC (FM String) IO () () (Position String) Char)
+        (peek (takeUni 'x') <|> takeUni 'a' :: Iso UnixLC (FM String) IO () () (Position () String) Char)
         ()
         ()
         (\f -> do
-          it "take first" $ f "xa" `shouldBe` Right ('x', Position 1 1 "xa")
+          it "take first" $ f "xa" `shouldBe` Right ('x', Position () 1 1 "xa")
 
-          it "take second" $ f "ab" `shouldBe` Right ('a', Position 1 2 "b")
+          it "take second" $ f "ab" `shouldBe` Right ('a', Position () 1 2 "b")
 
           it "no match" $ f "b" `shouldSatisfy` errorPosition 1 1
         )
@@ -174,7 +174,7 @@ spec = do
         it "false" $ b [()] `shouldBe` Identity (False,mempty)
 
     fb @() "LineColumn"
-      (isNull :: ConstU UnixLC (Position String) Identity Identity () () [()] Bool)
+      (isNull :: ConstU UnixLC (Position () String) Identity Identity () () [()] Bool)
       ()
       ()
       (\f -> do
@@ -189,7 +189,7 @@ spec = do
 
   describe "breakWhen'" do
     fb @() "LineColumn"
-      (breakWhen' $ stripPrefix "ab" :: Iso UnixLC (FM String) IO () () (Position String) String)
+      (breakWhen' $ stripPrefix "ab" :: Iso UnixLC (FM String) IO () () (Position () String) String)
       ()
       ()
       (\f -> do
@@ -197,13 +197,13 @@ spec = do
           f "" `shouldSatisfy` errorPosition 1 1
 
         it "break first" $ limit $
-          f "abcd" `shouldBe` Right (mempty, Position 1 3 "cd")
+          f "abcd" `shouldBe` Right (mempty, Position () 1 3 "cd")
 
         it "break last" $ limit $
-          f "cdab" `shouldBe` Right ("cd", Position 1 5 mempty)
+          f "cdab" `shouldBe` Right ("cd", Position () 1 5 mempty)
 
         it "break middle" $ limit $
-          f "cdabef" `shouldBe` Right ("cd", Position 1 5 "ef")
+          f "cdabef" `shouldBe` Right ("cd", Position () 1 5 "ef")
 
         it "no break" $ limit $
           f "cdefg" `shouldSatisfy` errorPosition 1 1
@@ -248,7 +248,7 @@ spec = do
 
   describe "count" do
     fb @() "ElementContext" 
-      (count $ takeElementsWhile (== 'a') :: Biparser UnixLC (Position Text) (FM Text) IO () () [Char] (Natural,[Char]))
+      (count $ takeElementsWhile (== 'a') :: Biparser UnixLC (Position () Text) (FM Text) IO () () [Char] (Natural,[Char]))
       ()
       ()
       (\f -> do
@@ -256,14 +256,14 @@ spec = do
           as :: (IsSequence a, Element a ~ Char, Index a ~ Int) => a
           as = replicate x 'a'
           bs = replicate y 'b'
-          in f (startLineColumn $ as <> bs) `shouldBe` Right ((convertIntegralUnsafe x, as), Position 1 (x + 1) bs)
+          in f (startLineColumn $ as <> bs) `shouldBe` Right ((convertIntegralUnsafe x, as), Position () 1 (x + 1) bs)
       )
       \b -> do
         prop "correct count" \xs -> let
           in b xs >>= (`shouldBe` ((convertIntegralUnsafe $ length xs, xs), fromString xs))
 
     fb @() "SubStateContext" 
-      (count $ takeWhile (== 'a') :: Biparser UnixLC (Position Text) (FM Text) IO () () Text (Natural,Text))
+      (count $ takeWhile (== 'a') :: Biparser UnixLC (Position () Text) (FM Text) IO () () Text (Natural,Text))
       ()
       ()
       (\f -> do
@@ -271,7 +271,7 @@ spec = do
           as :: (IsSequence a, Element a ~ Char, Index a ~ Int) => a
           as = replicate x 'a'
           bs = replicate y 'b'
-          in f (startLineColumn $ as <> bs) `shouldBe` Right ((convertIntegralUnsafe x, as), Position 1 (x + 1) bs)
+          in f (startLineColumn $ as <> bs) `shouldBe` Right ((convertIntegralUnsafe x, as), Position () 1 (x + 1) bs)
       )
       \b -> do
         prop "correct count" \xs -> let

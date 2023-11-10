@@ -10,7 +10,7 @@ import Data.Default (Default(def))
 spec :: Spec
 spec = do
   fb @() "AllParserTypes"
-    (unorderedDef :: Iso LinesOnly (FM Ts) EitherString () () (Position Ts) AllParserTypes)
+    (unorderedDef :: Iso LinesOnly (FM Ts) EitherString () () (Position () Ts) AllParserTypes)
     ()
     ()
     (\f -> do
@@ -20,20 +20,20 @@ spec = do
         --singleSuccessParser result `shouldNotBe` singleSuccessParser def
         accumulatingParser result `shouldNotBe` accumulatingParser def
         optionalParser result `shouldNotBe` optionalParser def
-        f [One 1, Two "Not Default", Three True] `shouldBe` Right (result, Position 4 1 mempty)
+        f [One 1, Two "Not Default", Three True] `shouldBe` Right (result, Position () 4 1 mempty)
 
       prop "all given"
         \(i, s, b) -> forAll (shuffle [One i, Two s, Three b])
         \ts ->
         f (startLineColumn ts) `shouldBe` Right
           ( AllParserTypes i (Accumulating [s]) (Optional $ Just b)
-          , Position 4 1 mempty
+          , Position () 4 1 mempty
           )
 
       it "only required given" $
         f [One 5] `shouldBe` Right
           ( AllParserTypes 5 (Accumulating []) (Optional Nothing)
-          , Position 2 1 mempty
+          , Position () 2 1 mempty
           )
 
       prop "missing required" \(ss, b, ss') -> let

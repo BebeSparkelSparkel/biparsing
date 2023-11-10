@@ -178,7 +178,6 @@ class IsoClass c m n a b where iso :: Iso c m n a b
 type Unit c s m n = Biparser c s m n () ()
 
 -- | Throws away @u@ and @v@
---unit :: forall c s m n u. Unit c s m n -> Const c s m n u
 unit :: forall c s m n u. Monad n => Unit c s m n -> Const c s m n u
 unit = comap $ const ()
 
@@ -218,9 +217,7 @@ fix :: forall c s m m' n n' u v.
   -> Biparser c s m' n' u v
 fix (Biparser fw bw) = Biparser
   (pure $ mempty `fixFail` fw)
-  --(StateT \s -> pure $ (mempty, s) `fixFail` runStateT fw s)
   (\u -> pure $ mempty `fixFail` bw u)
-  --(\u -> WriterT . pure $ mempty `fixFail` runWriterT (bw u))
 
 -- * Forward and Backward Divergence
 

@@ -144,9 +144,9 @@ fb describeLabel bp r ws fws bws = describe describeLabel do
   describe "forward" $ fws $ runForward @is bp
   describe "backward" $ bws \u -> runBackward bp r ws u
 
-errorPosition :: Int -> Int -> Either ErrorPosition b -> Bool
+errorPosition :: Int -> Int -> Either (ErrorPosition ()) b -> Bool
 errorPosition l c = \case
-  Left (ErrorPosition l' c' _) -> l == l' && c == c'
+  Left (ErrorPosition () l' c' _) -> l == l' && c == c'
   _ -> False
 
 errorIndex :: (Eq i, i ~ Index ss) => i -> Either (ErrorIndex ss) b -> Bool
@@ -157,7 +157,7 @@ errorIndex i = \case
 limit :: IO a -> IO a
 limit = (>>= maybe (fail "Timeout") pure) . timeout 10000
 
-type FM text = Either (ErrorState String (Position text))
+type FM text = Either (ErrorState String (Position () text))
 
 data TriSum a b c = One a | Two b | Three c deriving (Show, Eq)
 instance (Arbitrary a, Arbitrary b, Arbitrary c) => Arbitrary (TriSum a b c) where

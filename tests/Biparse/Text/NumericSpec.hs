@@ -13,7 +13,7 @@ import Numeric (showHex)
 spec :: Spec
 spec = do
   fb @() "naturalBaseTen"
-    (naturalBaseTen :: Iso UnixLC (FM Text) IO () () (Position Text) Word)
+    (naturalBaseTen :: Iso UnixLC (FM Text) IO () () (Position () Text) Word)
     ()
     ()
     (\f -> do
@@ -26,7 +26,7 @@ spec = do
         b 123 >>= (`shouldBe` (123, "123"))
 
   fb @() "intBaseTen"
-    (intBaseTen :: Iso UnixLC (FM Text) IO () () (Position Text) Int)
+    (intBaseTen :: Iso UnixLC (FM Text) IO () () (Position () Text) Int)
     ()
     ()
     (\f -> do
@@ -40,37 +40,37 @@ spec = do
       integerBackward b
 
   fb @() "scientific"
-    (scientific :: Iso ColumnsOnly (FM Text) IO () () (Position Text) Double)
+    (scientific :: Iso ColumnsOnly (FM Text) IO () () (Position () Text) Double)
     ()
     ()
     (\f -> do
       realForward f
 
       it "10s power mulitiplier" do
-        f "1e1" `shouldBe` Right (10, Position 1 4 mempty)
-        f "-1.0E-1" `shouldBe` Right (-0.1, Position 1 8 mempty)
-        f "12.345E2" `shouldBe` Right (1234.5, Position 1 9 mempty)
+        f "1e1" `shouldBe` Right (10, Position () 1 4 mempty)
+        f "-1.0E-1" `shouldBe` Right (-0.1, Position () 1 8 mempty)
+        f "12.345E2" `shouldBe` Right (1234.5, Position () 1 9 mempty)
     )
     \b -> do
       realBackward b
 
   fb @() "realBaseTen"
-    (realBaseTen :: Iso UnixLC (FM String) IO () () (Position String) Double)
+    (realBaseTen :: Iso UnixLC (FM String) IO () () (Position () String) Double)
     ()
     ()
     realForward
     realBackward
 
   fb @() "hex"
-    (hex @'LowerCase 2 :: Iso UnixLC (FM String) IO () () (Position String) HexWord8)
+    (hex @'LowerCase 2 :: Iso UnixLC (FM String) IO () () (Position () String) HexWord8)
     ()
     ()
     (\f -> do
-      it "zero" $ f "00" `shouldBe` Right (0, Position 1 3 mempty)
+      it "zero" $ f "00" `shouldBe` Right (0, Position () 1 3 mempty)
 
       describe "bit order" do
-        it "right" $ f "0f" `shouldBe` Right (0xf,  Position 1 3 mempty)
-        it "left"  $ f "F0" `shouldBe` Right (0xF0, Position 1 3 mempty)
+        it "right" $ f "0f" `shouldBe` Right (0xf,  Position () 1 3 mempty)
+        it "left"  $ f "F0" `shouldBe` Right (0xF0, Position () 1 3 mempty)
 
       let hexChars = elements $ fst <$> (digitsHexList <> capitalHexList <> lowerHexList :: [(Char,Word8)])
       prop "success" $ forAll (sequence [hexChars, hexChars]) \cs ->
@@ -81,20 +81,20 @@ spec = do
         it "right" $ b 0xf  >>= (`shouldBe` (0xf,  "0f"))
         it "left"  $ b 0xF0 >>= (`shouldBe` (0xF0, "f0"))
 
-naturalsForward :: (Show a1, Show a2, Show text, Eq a1, Eq a2, Eq text, Num a2, Monoid text, IsString t, IsString text) => (t -> Either a1 (a2, Position text)) -> SpecWith ()
+naturalsForward :: (Show a1, Show a2, Show text, Eq a1, Eq a2, Eq text, Num a2, Monoid text, IsString t, IsString text) => (t -> Either a1 (a2, Position () text)) -> SpecWith ()
 naturalsForward f = it "naturals" do
-  f "0"    `shouldBe` Right (0,   Position 1 2 mempty)
-  f "1"    `shouldBe` Right (1,   Position 1 2 mempty)
-  f "123"  `shouldBe` Right (123, Position 1 4 mempty)
-  f "123x" `shouldBe` Right (123, Position 1 4 "x")
+  f "0"    `shouldBe` Right (0,   Position () 1 2 mempty)
+  f "1"    `shouldBe` Right (1,   Position () 1 2 mempty)
+  f "123"  `shouldBe` Right (123, Position () 1 4 mempty)
+  f "123x" `shouldBe` Right (123, Position () 1 4 "x")
 
-negativeIntegerForward :: (Show a1, Show a2, Show text, Eq a1, Eq a2, Eq text, Num a2, Monoid text, IsString t, IsString text) => (t -> Either a1 (a2, Position text)) -> SpecWith ()
+negativeIntegerForward :: (Show a1, Show a2, Show text, Eq a1, Eq a2, Eq text, Num a2, Monoid text, IsString t, IsString text) => (t -> Either a1 (a2, Position () text)) -> SpecWith ()
 negativeIntegerForward f = it "negative integer" do
-  f "-1"    `shouldBe` Right (-1,   Position 1 3 mempty)
-  f "-123"  `shouldBe` Right (-123, Position 1 5 mempty)
-  f "-123x" `shouldBe` Right (-123, Position 1 5 "x")
+  f "-1"    `shouldBe` Right (-1,   Position () 1 3 mempty)
+  f "-123"  `shouldBe` Right (-123, Position () 1 5 mempty)
+  f "-123x" `shouldBe` Right (-123, Position () 1 5 "x")
 
-failIntegerForward :: (Show b, IsString t) => (t -> Either ErrorPosition b) -> SpecWith ()
+failIntegerForward :: (Show b, IsString t) => (t -> Either (ErrorPosition ()) b) -> SpecWith ()
 failIntegerForward f = it "fail integer" do
   f ""      `shouldSatisfy` errorPosition 1 1
   f " 123"  `shouldSatisfy` errorPosition 1 1
@@ -108,17 +108,17 @@ integerBackward b = it "integer" do
   b (-1)   >>= (`shouldBe` (-1,   "-1"))
   b (-123) >>= (`shouldBe` (-123, "-123"))
 
-realForward :: (Show a, Show text, Eq a, Eq text, Monoid text, IsString t, IsString text, Fractional a) => (t -> Either ErrorPosition (a, Position text)) -> Spec
+realForward :: (Show a, Show text, Eq a, Eq text, Monoid text, IsString t, IsString text, Fractional a) => (t -> Either (ErrorPosition ()) (a, Position () text)) -> Spec
 realForward f = do
   naturalsForward f
 
   it "decimal" do
-    f "1.0"     `shouldBe` Right (1.0,     Position 1 4 mempty)
-    f "123.123" `shouldBe` Right (123.123, Position 1 8 mempty)
+    f "1.0"     `shouldBe` Right (1.0,     Position () 1 4 mempty)
+    f "123.123" `shouldBe` Right (123.123, Position () 1 8 mempty)
 
   it "negative" do
-    f "-1.0"     `shouldBe` Right (-1.0,     Position 1 5 mempty)
-    f "-123.123" `shouldBe` Right (-123.123, Position 1 9 mempty)
+    f "-1.0"     `shouldBe` Right (-1.0,     Position () 1 5 mempty)
+    f "-123.123" `shouldBe` Right (-123.123, Position () 1 9 mempty)
 
   describe "fail" do
     failIntegerForward f

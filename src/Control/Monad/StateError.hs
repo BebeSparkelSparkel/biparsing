@@ -1,6 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE PolyKinds #-}
 {-# OPTIONS_GHC -Wno-deprecations -Wno-orphans #-}
 module Control.Monad.StateError
   ( StateErrorT(StateErrorT)
@@ -12,6 +13,7 @@ module Control.Monad.StateError
   , runSET
   , wrapErrorWithState
   , WrapErrorWithState(..)
+  , MonadProgenitor
   ) where
 
 import Control.Monad.ChangeMonad (ChangeMonad(ChangeFunction,changeMonad'), ResultMonad(ResultingMonad,resultMonad), Lift)
@@ -104,8 +106,7 @@ instance Monad m => LiftBaseMonad (StateErrorT c s m) where liftBaseMonad = lift
 --  throwUnrecoverable e = StateErrorT \s -> UnrecoverableT $ Left $ ErrorState e s
 
 type SubError :: Type -> Type
-type family SubError e where
-  SubError (ErrorState e _) = e
+type family SubError e where SubError (ErrorState e _) = e
 instance
   ( UnrecoverableError m ~ ErrorState (SubError (UnrecoverableError m)) s
   , MonadUnrecoverable m
@@ -143,4 +144,11 @@ instance WrapErrorWithState () s () where
 instance MonadError Void Identity where
   throwError = absurd
   catchError = const
+
+-- * Monad Progenitor for embedding error types
+
+type MonadProgenitor :: k -> Type -> Type -> (Type -> Type)
+type family MonadProgenitor progenitor error state
+
+type instance MonadProgenitor Either e s = Either (ErrorState e s)
 
