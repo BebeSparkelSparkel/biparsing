@@ -1,3 +1,4 @@
+{-# LANGUAGE PolyKinds #-}
 module Biparse.Biparser.StateReaderWriterSpec where
 
 import Biparse.Biparser.StateReaderWriter
@@ -10,8 +11,7 @@ spec :: Spec
 spec = do
   describe "zoom" do
     fb @() "[Text] -> Text, one line"
-      (zoom @ElementToList @LinesOnly @(FM Text)
-        --one
+      (zoom @ElementToList @LinesOnly @Either
         (one :: Iso LinesOnly (FM [Text]) IO () () (Position () [Text]) Text)
         (naturalBaseTen' @Word)
       :: Iso LinesOnly (FM [Text]) IO () () (Position () [Text]) Word)
@@ -32,10 +32,10 @@ spec = do
           b 456 >>= (`shouldBe` (456, ["456"]))
 
     fb @() "Text -> [Text], all lines"
-      (zoom @ListToElement @LinesOnly @(FM [Text])
+      (zoom @ListToElement @LinesOnly @Either
         (lines @'Unix)
         ( all
-        $ zoom @ElementToList @UnixLC @(FM Text)
+        $ zoom @ElementToList @UnixLC @Either
           one
           (naturalBaseTen' @Int)
         )
