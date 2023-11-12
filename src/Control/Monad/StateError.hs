@@ -147,8 +147,8 @@ instance MonadError Void Identity where
 
 -- * Monad Progenitor for embedding error types
 
-type MonadProgenitor :: k -> Type -> Type -> (Type -> Type)
-type family MonadProgenitor progenitor error state
+type MonadProgenitor :: k -> Type -> (Type -> Type)
+type family MonadProgenitor progenitor state
 
-type instance MonadProgenitor Either e s = Either (ErrorState e s)
+type instance MonadProgenitor Either s = Either (ErrorState String s)
 

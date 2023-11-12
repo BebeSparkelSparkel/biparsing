@@ -33,7 +33,7 @@ type IsoClass c m n r ws a b = B.IsoClass c (M c a m) (N c a n r ws) a b
 
 type N c s n r ws = RWST r (SubState c s) ws n
 
-zoom :: forall is c' mProgenitor e m' c s s' m n r ws u v ss'.
+zoom :: forall is c' mProgenitor m' c s s' m n r ws u v ss'.
   ( Monad m
   , Monad n
   , ReplaceSubState s ss' s'
@@ -41,13 +41,13 @@ zoom :: forall is c' mProgenitor e m' c s s' m n r ws u v ss'.
   , ChangeMonad is m' m
   , ChangeFunction is m' m ~ ()
   -- assignments
-  , m  ~ MonadProgenitor mProgenitor e s
-  , m' ~ MonadProgenitor mProgenitor e s'
+  , m  ~ MonadProgenitor mProgenitor s
+  , m' ~ MonadProgenitor mProgenitor s'
   )
   => Iso c m n r ws s ss'
   -> Biparser c' s' m' n r ws u v
   -> Biparser c  s  m n r ws u v
-zoom = zoom' @is @_ @(MonadProgenitor mProgenitor e s') @_ @_ @_ @(MonadProgenitor mProgenitor e s)
+zoom = zoom' @is @_ @(MonadProgenitor mProgenitor s') @_ @_ @_ @(MonadProgenitor mProgenitor s)
 
 -- | Discards unused s' state to avoid commingling m and n monads.
 zoom' :: forall is c' m' c s s' m n r ws u v ss'.
