@@ -49,6 +49,11 @@ library:
     - hvect
     - profunctors
     - safe
+
+    # remove dependencies after Data.EqElement is removed
+    - text
+    - vector
+    - bytestring
   other-modules:
     - Prelude
     #- Paths_biparsing
@@ -81,6 +86,7 @@ tests:
       - quickcheck-instances
       - text
       - vector
+      - ghc-prim
     default-extensions:
       - OverloadedStrings
       - OverloadedLists
@@ -103,3 +109,4 @@ tests:
       - -Wno-unsafe
 
       - -Wno-unused-packages
+

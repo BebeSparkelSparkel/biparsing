@@ -2,6 +2,8 @@
 {-# LANGUAGE PatternSynonyms #-}
 module Control.Monad.EitherString
   ( EitherString(EString, EValue, ..)
+  , _EString
+  , _EValue
   , getString
   , getValue
   , isString
@@ -18,8 +20,21 @@ import Data.Function ((.), ($))
 import Control.Applicative (Applicative, Alternative((<|>),empty))
 import Control.Monad (Monad, MonadFail(fail), MonadPlus)
 import Data.Monoid ((<>))
+import Control.Lens (Prism, Prism', prism, prism')
+import Data.Maybe (Maybe(Just,Nothing))
 
 newtype EitherString a = EitherString {runEitherString :: Either String a} deriving (Eq, Ord, Functor, Applicative, Monad)
+
+-- _Left :: Prism (Either a c) (Either b c) a b
+_EString :: Prism' (EitherString a) String
+_EString = prism' EString \case
+  EString x -> Just x
+  _ -> Nothing
+
+_EValue :: Prism (EitherString a) (EitherString b) a b
+_EValue = prism EValue \case
+  EValue x -> Right x
+  EString x -> Left $ EString x
 
 instance Show a => Show (EitherString a) where
   show = \case
@@ -31,6 +46,8 @@ pattern EString x = EitherString (Left x)
 
 pattern EValue :: a -> EitherString a
 pattern EValue x = EitherString (Right x)
+
+{-# COMPLETE EString, EValue #-}
 
 instance Alternative EitherString where
   empty = EitherString $ Left empty

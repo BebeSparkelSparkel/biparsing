@@ -41,9 +41,8 @@ char c = do
   c'' <- one `upon` const c'
   unless (c' == c'') $ fail $ "Did not find expected character " <> show c <> " and instead found " <> show c''
 
-string :: forall c s m n u text char.
-  ( CharElement c s char
-  , IsSequence text
+string :: forall c s m n u text.
+  ( EqElement text
   , Show text
   , MonadState s m
   , MonadFail m

@@ -1,7 +1,6 @@
 module Control.Monad.StateErrorSpec where
 
 import Control.Monad.StateError
-import Control.Monad.ChangeMonad
 
 spec :: Spec
 spec = do
@@ -23,9 +22,8 @@ spec = do
       runSET @() x (Identity 1) `shouldBe` Left (ErrorState "2" (Identity 2))
 
 instance ChangeMonad () (Either (ErrorState String Int)) (Either String) where
-  type ChangeFunction () (Either (ErrorState String Int)) (Either String) =
-    ErrorState String Int -> String
   changeMonad' = first
+type instance ChangeFunction () (Either (ErrorState String Int)) (Either String) = ErrorState String Int -> String
 
 instance WrapErrorWithState String Int String where
   type StateForError String Int String = ()

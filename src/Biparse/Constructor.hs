@@ -21,7 +21,7 @@ module Biparse.Constructor
   , exposes
   ) where
 
-import Control.Monad.ChangeMonad (ChangeMonad(ChangeFunction,changeMonad'))
+import Control.Monad.ChangeMonad (ChangeMonad, ChangeFunction, changeMonad')
 import Biparse.Biparser (Biparser(Biparser), SubState, SubElement, one, Iso, GetSubState, UpdateStateWithElement)
 import Biparse.Context.IdentityState (IdentityState)
 import Biparse.Biparser.StateReaderWriter qualified as BSRW

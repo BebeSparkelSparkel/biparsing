@@ -14,7 +14,7 @@ import Biparse.Biparser (SubState, GetSubState(getSubState), UpdateStateWithElem
 import Control.Monad.StateError (ErrorInstance(ErrorStateInstance))
 import GHC.Exts (IsList(Item))
 import GHC.Exts qualified as GE
-import Control.Monad.ChangeMonad (ChangeMonad(ChangeFunction,changeMonad'), ResultMonad(ResultingMonad,resultMonad))
+import Control.Monad.ChangeMonad (ChangeMonad, ChangeFunction, changeMonad', ResultMonad(ResultingMonad,resultMonad))
 
 --import Control.Monad.Trans.Error qualified as E
 
@@ -75,7 +75,6 @@ type EIP e ss = Either (ErrorState e (IndexPosition ss))
 type EISP ss = EIP String ss
 
 instance ChangeMonad () (EIP e ss) (Either (ErrorIndex ss)) where
-  type ChangeFunction () (EIP e ss) (Either (ErrorIndex ss)) =
-    ErrorState e (IndexPosition ss) -> ErrorIndex ss
   changeMonad' = first
+type instance ChangeFunction () (EIP e ss) (Either (ErrorIndex ss)) = ErrorState e (IndexPosition ss) -> ErrorIndex ss
 

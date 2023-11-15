@@ -1,7 +1,16 @@
 module Biparse.BiparserSpec where
 
 import Biparse.List (takeElementsWhile)
-import Biparse.Text.Context.LineColumn (startLineColumn)
+
+import Biparse.Biparser qualified as BB
+import Biparse.Biparser.StateReaderWriter (N)
+import Biparse.List (all)
+import Biparse.Text.LineBreak (lines, LineBreakType(Unix))
+import Control.Lens (_3, (%~))
+import Control.Monad.EitherString (_EValue)
+import Control.Monad.RWS (mapRWST)
+import Data.Sequences qualified as MT
+import Text.Printf (IsChar(fromChar, toChar))
 
 spec :: Spec
 spec = do
@@ -276,4 +285,30 @@ spec = do
       \b -> do
         prop "correct count" \xs -> let
           in b xs >>= (`shouldBe` ((convertIntegralUnsafe $ length xs, xs), xs))
+
+  describe "zoom" do
+
+    fb @() "Biparser success"
+      (BB.zoom @UnixLC @UnixLC @'(StateErrorT,Either) @(N UnixLC (Position () [String]) EitherString () ())
+        (lines @'Unix)
+        (all $ MT.reverse <$> one)
+      :: Iso UnixLC (FM String) EitherString () () (Position () String) [String])
+      ()
+      ()
+      (\f -> do
+        it "success" $ f "abc\ndef\nghi" `shouldBe` Right (["cba","fed","ihg"], Position () 3 4 mempty)
+      )
+      \b -> do
+        it "success" $ b ["cba","fed","ihg"] `shouldBe` EValue (["abc","def","ghi"], "cba\nfed\nihg")
+
+    it "Biparser fail" pending
+
+
+instance IsChar String where
+  fromChar = (: [])
+  toChar = undefined
+
+instance ChangeMonad UnixLC (RWST () [String] () EitherString) (RWST () [Char] () EitherString) where
+  changeMonad' f = mapRWST $ _EValue . _3 %~ f
+type instance ChangeFunction UnixLC (RWST () [String] () EitherString) (RWST () [Char] () EitherString) = [String] -> String
 

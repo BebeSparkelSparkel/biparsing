@@ -1,6 +1,6 @@
 module Biparse.Text.Context.LineColumnSpec where
 
-import Biparse.Text.Context.LineColumn
+--import Biparse.Text.Context.LineColumn
 
 spec :: Spec
 spec = do

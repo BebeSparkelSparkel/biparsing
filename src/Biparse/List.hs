@@ -32,9 +32,11 @@ module Biparse.List
   , tailAlt
   ) where
 
-import Biparse.Biparser (Biparser(Biparser), forward, backward, Iso, SubElement, SubState, emptyForward, one, try, mono, ElementContext, FixFail, fix, peek, Unit, UpdateStateWithSubState, isNull, breakWhen', GetSubState, upon, uponM, UpdateStateWithElement)
-import Biparse.General (take, takeNot, Take, memptyWrite, BreakWhen, rest, stripPrefix)
+import Biparse.Biparser (Biparser(Biparser), forward, backward, Iso, SubElement, SubState, emptyForward, one, try, mono, ElementContext, FixFail, fix, peek, Unit, UpdateStateWithSubState, isNull, breakWhen', GetSubState, upon, uponM, UpdateStateWithElement, SubStateContext)
+import Biparse.General (take, takeNot, memptyWrite, BreakWhen, rest, stripPrefix)
 import Data.List.NonEmpty (NonEmpty, nonEmpty)
+import Control.Profunctor.FwdBwd (MapMs(mapMs))
+import Data.Maybe (fromJust)
 
 replicateBiparserT :: forall c s m n u v.
   ( Monoid (SubState c s)
@@ -171,40 +173,76 @@ all :: forall c s m n u v ss.
   , Alternative n
   , ss ~ SubState c s
   )
-  => Biparser c s m n u v
+  => Biparser c s m n u   v
   -> Biparser c s m n [u] [v]
 all x = ifM isNull (pure mempty) do
   y <- x `uponM` headAlt
   cons y <$> all x `uponM` tailAlt
 
 -- | Splits the substate on given element
-splitElem :: forall c s m n ss se.
-  ( Take c s m n ss se
-  , Many c s m n
+splitElem :: forall c s m n ss se m' n'.
+  -- m
+  ( MonadState s m
+  -- n
+  , MonadWriter ss n
+  -- substate
+  , IsSequence ss
+  , Eq se
+  , Show se
+  -- context
+  , ElementContext c s
+  , m' ~ StateT s Maybe
+  , n' ~ WriterT ss Maybe
+  , se ~ SubElement c s
+  , ss ~ SubState c s
   )
   => se
   -> Iso c m n s [ss]
-splitElem x = correctEmpty splitter
+splitElem x = liftStateMaybe $ correctEmpty splitter
   where
-  splitter :: Iso c m n s [ss]
+  splitter :: Iso c m' n' s [ss]
   splitter = do
     y <- fromList <$> manyIso (takeNot x) `uponM` fmap toList . headAlt
     take x *> (cons y <$> splitter `uponM` tailAlt) <|> pure (singleton y)
-  correctEmpty :: Iso c m n s [ss] -> Iso c m n s [ss]
+  correctEmpty :: Iso c m' n' s [ss] -> Iso c m' n' s [ss]
   correctEmpty = mono \case
     [y] | null y -> mempty
     [] -> [mempty]
     y -> y
 
-splitOn :: forall c s m n ss.
-  ( BreakWhen c s m n ss
-  , UpdateStateWithSubState c s
-  , Eq (Element ss)
+splitOn :: forall c s m n ss m' n'.
+  ( MonadState s m
+  , MonadWriter ss n
   , Show ss
+  , EqElement ss
+  , ElementContext c s
+  , SubStateContext c s
+  , ss ~ SubState c s
+  , m' ~ StateT s Maybe
+  , n' ~ WriterT ss Maybe
   )
   => ss
   -> Iso c m n s [ss]
-splitOn = splitWith . stripPrefix
+splitOn = liftStateMaybe . splitWith @c @s @m' @n' . stripPrefix
+
+liftStateMaybe :: forall c s m n u v ss.
+  ( MonadState s m
+  , MonadWriter ss n
+  )
+  => Biparser c s (StateT s Maybe) (WriterT ss Maybe) u v
+  -> Biparser c s m n u v
+liftStateMaybe = mapMs
+ (\x -> do
+   s <- get
+   let (y,s') = fromJust $ runStateT x s
+   put s'
+   pure y
+ )
+ (\x -> do
+   let (y,w) = fromJust $ runWriterT x
+   tell w
+   pure y
+ )
 
 splitWith :: forall c s m n ss.
   ( BreakWhen c s m n ss

@@ -1,9 +1,7 @@
 module Biparse.Text.NumericSpec where
 
-import Biparse.Text.Context.LineColumn
 import Biparse.Text.Numeric
 import Control.Monad (sequence)
-import Data.Word (Word8)
 import GHC.Bits (Bits)
 import GHC.Enum (Enum)
 import GHC.Num (Num)

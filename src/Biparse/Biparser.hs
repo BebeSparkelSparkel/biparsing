@@ -1,6 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE PolyKinds #-}
 module Biparse.Biparser
   ( Biparser(Biparser, ..)
   , forward
@@ -48,17 +49,22 @@ module Biparse.Biparser
   , count
   , ask'
   , asks'
+  , zoom
   ) where
 
 import Biparse.FixFail (FixFail(fixFail))
 import Biparse.Utils (convertIntegralUnsafe)
+import Control.Monad.ChangeMonad (ChangeMonad, ChangeFunction, changeMonad')
 import Control.Monad.Extra (findM)
+import Control.Monad.MonadProgenitor (MonadProgenitor)
 import Control.Monad.Reader.Class (MonadReader(ask), asks)
+import Control.Monad.State (State, runState, evalState)
+import Control.Monad.Unrecoverable (MonadUnrecoverable, UnrecoverableError, throwUnrecoverable)
+import Control.Monad.Writer (Writer, execWriter)
 import Control.Monad.Writer.Class (listen)
 import Control.Profunctor.FwdBwd (BwdMonad, Comap, FwdBwd, pattern FwdBwd, MapMs(mapMs), DualMap)
 import Control.Profunctor.FwdBwd qualified as FB
 import Data.Profunctor (Profunctor(dimap))
-import Control.Monad.Unrecoverable (MonadUnrecoverable, UnrecoverableError, throwUnrecoverable)
 
 -- | Product type for simultainously constructing forward and backward running programs.
 newtype Biparser context s m n u v = Biparser' {unBiparser :: FwdBwd m n u v}
@@ -452,6 +458,38 @@ asks' x f = Biparser (pure x) (const $ asks f)
 
 --ask'' :: (Monad n, Monoid (SubState c s)) => M c s m r -> Biparser c s m n r u r
 --ask'' = flip Biparser (const ask)
+
+zoom :: forall is c' mProgenitor n' m' c s s' m n u v ss ss'.
+  -- m
+  ( MonadState s m
+  -- m'
+  , m' ~ MonadProgenitor mProgenitor s'
+  , MonadState s' m'
+  -- change monad
+  , ChangeMonad    is m' m
+  , ChangeFunction is m' m ~ (ss -> ss', ss' -> ss)
+  , ChangeMonad    is n' n
+  , ChangeFunction is n' n ~ (ss' -> ss)
+  -- substate
+  , ReplaceSubState s ss' s'
+  , ReplaceSubState s ss s
+  )
+  => Iso c (State s) (Writer ss) s ss'
+  -> Biparser c' s' (MonadProgenitor mProgenitor s') n' u v
+  -> Biparser c  s  m  n  u v
+zoom (Biparser fw bw) (Biparser fw' bw') = Biparser
+  do
+    s <- get
+    let (ss',s') = runState fw s
+        f = evalState fw . replaceSubState s
+    v <- changeMonad' @is (f,g) do
+      put $ replaceSubState s ss'
+      fw'
+    put s'
+    pure v
+  \u -> changeMonad' @is g $ bw' u
+  where
+  g = execWriter . bw
 
 instance (Monoid (SubState c s), Monad m, Applicative n) => Applicative (Biparser c s m n u) where
   pure v = Biparser (pure v) (const $ pure v)

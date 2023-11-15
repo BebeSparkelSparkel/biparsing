@@ -1,24 +1,27 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-deprecations -Wno-orphans #-}
 module Control.Monad.StateError
   ( StateErrorT(StateErrorT)
   , runStateErrorT
   , M
   , ErrorState(..)
+  , error
+  , errorState
   , ErrorInstance(..)
   , ErrorContext
   , runSET
   , wrapErrorWithState
   , WrapErrorWithState(..)
-  , MonadProgenitor
   ) where
 
-import Control.Monad.ChangeMonad (ChangeMonad(ChangeFunction,changeMonad'), ResultMonad(ResultingMonad,resultMonad), Lift)
+import Control.Monad.ChangeMonad (ChangeMonad, ChangeFunction, changeMonad', ResultMonad(ResultingMonad,resultMonad), Lift)
 import Control.Monad.Unrecoverable (MonadUnrecoverable, throwUnrecoverable, UnrecoverableError)
 import Control.Monad.TransformerBaseMonad (TransformerBaseMonad, LiftBaseMonad, liftBaseMonad)
+import Control.Monad.MonadProgenitor (MonadProgenitor)
+import Control.Lens (makeLenses)
 
 import Control.Exception (IOException)
 import GHC.Err (undefined)
@@ -47,13 +50,14 @@ type family ErrorContext c
 
 deriving instance Monad m => MonadState s (StateErrorT i s m)
 
-data ErrorState e s = ErrorState {error :: e, state :: s} deriving (Show, Eq)
+data ErrorState e s = ErrorState {_error :: e, _errorState :: s} deriving (Show, Eq)
+$(makeLenses ''ErrorState)
 instance Bifunctor ErrorState where
   first f (ErrorState e s) = ErrorState (f e) s
   second f (ErrorState e s) = ErrorState e (f s)
 instance WrapErrorWithState (ErrorState e s) s (ErrorState e s) where
   type StateForError (ErrorState e s) s (ErrorState e s) = s
-  wrapErrorWithState' = ErrorState . error
+  wrapErrorWithState' = ErrorState . _error
   stateForError = id
 instance Error (ErrorState e p) where
   noMsg = undefined
@@ -90,20 +94,12 @@ instance ResultMonad (Either (ErrorState e (Identity s))) () where
   resultMonad = ()
 
 instance (ChangeMonad () m m', ChangeFunction () m m' ~ (), Monad m') => ChangeMonad Lift m (StateErrorT 'NewtypeInstance s m') where
-  type ChangeFunction Lift m (StateErrorT 'NewtypeInstance s m') = ()
   changeMonad' () = lift . changeMonad' @() @m @m' ()
---instance Monad m => ChangeMonad Lift m (StateErrorT 'NewtypeInstance s m) where
---  type ChangeFunction Lift m (StateErrorT 'NewtypeInstance s m) = ()
---  changeMonad' () = lift
+type instance ChangeFunction Lift _ (StateErrorT 'NewtypeInstance _ _) = ()
 
 type instance TransformerBaseMonad (StateErrorT _ _ m) = m
 
 instance Monad m => LiftBaseMonad (StateErrorT c s m) where liftBaseMonad = lift
-
---type DevType e s = StateErrorT 'ErrorStateInstance s (UnrecoverableT (ErrorState e s) (Either (ErrorState e s)))
---instance MonadUnrecoverable (DevType e s) where
---  type UnrecoverableError (DevType e s) = e
---  throwUnrecoverable e = StateErrorT \s -> UnrecoverableT $ Left $ ErrorState e s
 
 type SubError :: Type -> Type
 type family SubError e where SubError (ErrorState e _) = e
@@ -113,7 +109,6 @@ instance
   ) => MonadUnrecoverable (StateErrorT i s m) where
   type UnrecoverableError (StateErrorT i s m) = SubError (UnrecoverableError m)
   throwUnrecoverable e = StateErrorT \s -> throwUnrecoverable $ ErrorState e s
-
 
 -- * Wrapping an error with state information.
 
@@ -145,10 +140,6 @@ instance MonadError Void Identity where
   throwError = absurd
   catchError = const
 
--- * Monad Progenitor for embedding error types
-
-type MonadProgenitor :: k -> Type -> (Type -> Type)
-type family MonadProgenitor progenitor state
-
 type instance MonadProgenitor Either s = Either (ErrorState String s)
+type instance MonadProgenitor '(StateErrorT,Either) s = StateErrorT 'ErrorStateInstance s (MonadProgenitor Either s)
 

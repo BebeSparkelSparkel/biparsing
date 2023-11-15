@@ -2,6 +2,7 @@ resolver: lts-20.24
 
 extra-deps:
   - github: BebeSparkelSparkel/mono-traversable
-    commit: eb7af708637e1688bb29cc82fc29ab88db17b424
+    commit: c302c973de6090656177cc27cc62e3fb83118af3
     subdirs:
       - mono-traversable
+  #- ../mono-traversable/mono-traversable

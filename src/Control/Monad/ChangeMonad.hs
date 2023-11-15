@@ -2,6 +2,7 @@
 module Control.Monad.ChangeMonad
   ( ChangeMonad(..)
   , changeMonad
+  , ChangeFunction
   , ResultMonad(..)
   , Lift
   ) where
@@ -11,8 +12,10 @@ import System.IO (IO)
 -- * ChangeMonad
 
 class ChangeMonad instanceSelector m n where
-  type ChangeFunction instanceSelector m n
   changeMonad' :: ChangeFunction instanceSelector m n -> m a -> n a
+
+type ChangeFunction :: Type -> (Type -> Type) -> (Type -> Type) -> Type
+type family ChangeFunction instanceSelector m n
 
 changeMonad :: forall m n.
   ( ChangeMonad () m n
@@ -21,8 +24,9 @@ changeMonad :: forall m n.
 changeMonad = changeMonad' @() ()
 
 instance ChangeMonad () m m where
-  type ChangeFunction _ _ _ = ()
   changeMonad' = const id
+
+type instance ChangeFunction () m m = ()
 
 -- * ResultMonad
 

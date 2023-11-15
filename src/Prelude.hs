@@ -40,6 +40,7 @@ module Prelude
   , module Control.Monad.RWS
   , module GHC.TypeLits
   , module Text.Printf
+  , module Data.EqElement
   ) where
 
 import Text.Printf (IsChar, fromChar, toChar)
@@ -82,4 +83,5 @@ import GHC.Num (Num, (+), (-))
 import Numeric.Natural (Natural)
 import Text.Read (Read)
 import Text.Show (Show(show))
+import Data.EqElement (EqElement)
 

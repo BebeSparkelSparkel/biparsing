@@ -57,6 +57,8 @@ module Prelude
   , module Data.Coerce
   , module Data.ByteString.Internal
   , module Biparse.Context.Index
+  , module Control.Monad.RWS
+  , module Control.Monad.Trans.Class
 
   , fb
   , errorPosition
@@ -73,7 +75,7 @@ import Biparse.Biparser.StateReaderWriter (Biparser, Iso, Unit, Const, ConstU, r
 import Biparse.Context.IdentityState (IdentityState)
 import Biparse.General
 import Biparse.Text (CharElement)
-import Biparse.Text.Context.LineColumn (LineColumn, UnixLC, LinesOnly, ColumnsOnly, Position(Position,line,column), ErrorPosition(ErrorPosition))
+import Biparse.Text.Context.LineColumn (LineColumn, UnixLC, LinesOnly, ColumnsOnly, Position(Position), subState, ErrorPosition(ErrorPosition), startLineColumn)
 import Biparse.Context.Index (IndexContext, IndexPosition(IndexPosition), ErrorIndex(ErrorIndex), EISP)
 import Biparse.Utils (headAlt, convertIntegralUnsafe)
 import Control.Applicative (pure, (<|>), (<*), (*>), (<*>), empty, liftA2, Alternative)
@@ -81,13 +83,13 @@ import Control.Monad ((>>=), return, (>>), fail, MonadPlus, MonadFail)
 import Control.Monad.EitherString (EitherString(EValue), isString)
 import Control.Monad.Except (MonadError(throwError,catchError))
 import Control.Monad.State (MonadState, get, put) --(StateT(runStateT), get, put)
-import Control.Monad.StateError (StateErrorT, ErrorInstance(NewtypeInstance,ErrorStateInstance), ErrorState)
+import Control.Monad.StateError (StateErrorT, ErrorInstance(NewtypeInstance,ErrorStateInstance), ErrorState(ErrorState))
 import Control.Monad.Writer (WriterT(runWriterT), MonadWriter)
 import Data.Bifunctor (first)
 import Data.Bool (Bool(True,False), otherwise, (&&))
 import Data.ByteString (ByteString)
 import Data.Char (Char, isDigit)
-import Data.Either (Either(Left,Right), fromRight, isLeft, isRight)
+import Data.Either (Either(Left,Right), fromRight, isLeft, isRight, either)
 import Data.Eq (Eq, (==), (/=))
 import Data.Function ((.), ($), const, id, flip, (&))
 import Data.Functor (Functor(fmap), (<$>), ($>), (<&>))
@@ -100,7 +102,7 @@ import Data.MonoTraversable (Element, headMay)
 import Data.MonoTraversable.Unprefixed (toList, length)
 import Data.Monoid (Monoid, mempty)
 import Data.Ord (Ord, (>), (>=))
-import Data.Semigroup ((<>))
+import Data.Semigroup (Semigroup, (<>))
 import Data.Sequence (Seq)
 import Data.Sequences (drop, index, cons, snoc, replicate, IsSequence, Index)
 import Data.String (String, IsString(fromString))
@@ -108,7 +110,7 @@ import Data.Text (Text)
 import Data.Tuple (fst, snd)
 import Data.Vector (Vector)
 import Data.Void (Void)
-import Data.Word (Word)
+import Data.Word (Word, Word8)
 import GHC.Err (undefined)
 import GHC.Float (Double)
 import GHC.IO.Exception (IOException)
@@ -123,8 +125,11 @@ import Numeric.Natural (Natural)
 import GHC.Num ((+), (-))
 import GHC.Generics (Generic)
 import Data.Coerce (coerce)
+import Control.Monad.RWS (RWST)
+import Control.Monad.ChangeMonad (ChangeMonad, ChangeFunction, changeMonad', ResultMonad(ResultingMonad))
+import Control.Monad.Trans.Class (MonadTrans, lift)
 
-import Control.Monad.ChangeMonad (ChangeMonad, ResultMonad(ResultingMonad))
+import Text.Printf (IsChar, fromChar, toChar)
 import System.Timeout (timeout)
 
 fb :: forall is c s m m' n r ws u v.
@@ -155,7 +160,7 @@ errorIndex i = \case
   _ -> False
 
 limit :: IO a -> IO a
-limit = (>>= maybe (fail "Timeout") pure) . timeout 10000
+limit = (>>= maybe (fail "Timeout") pure) . timeout 100000
 
 type FM text = Either (ErrorState String (Position () text))
 
@@ -170,4 +175,8 @@ instance (Arbitrary a, Arbitrary b, Arbitrary c) => Arbitrary (TriSum a b c) whe
 infixr 9 >>>
 (>>>) :: (a -> b) -> (b -> c) -> a -> c
 (>>>) = flip (.)
+
+instance IsChar Word8 where
+  fromChar = c2w
+  toChar = w2c
 

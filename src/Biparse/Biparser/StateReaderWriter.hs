@@ -17,8 +17,9 @@ module Biparse.Biparser.StateReaderWriter
   , runWriterT'
   ) where
 
-import Control.Monad.ChangeMonad (ChangeMonad(ChangeFunction,changeMonad'), ResultMonad(ResultingMonad))
-import Control.Monad.StateError (StateErrorT(StateErrorT), runStateErrorT, runSET, M, MonadProgenitor)
+import Control.Monad.ChangeMonad (ChangeMonad, ChangeFunction, changeMonad', ResultMonad(ResultingMonad))
+import Control.Monad.StateError (StateErrorT(StateErrorT), runStateErrorT, runSET, M)
+import Control.Monad.MonadProgenitor (MonadProgenitor)
 import Biparse.Biparser (SubState, forward, backward, ReplaceSubState(replaceSubState))
 import Biparse.Biparser qualified as B
 import Control.Monad.RWS (RWST(RWST), runRWST)
@@ -33,6 +34,7 @@ type IsoClass c m n r ws a b = B.IsoClass c (M c a m) (N c a n r ws) a b
 
 type N c s n r ws = RWST r (SubState c s) ws n
 
+-- | Strict on the Iso which makes 'Biparser' slow to run if not all 'ss\'' is requred and for error to be thrown.
 zoom :: forall is c' mProgenitor m' c s s' m n r ws u v ss'.
   ( Monad m
   , Monad n

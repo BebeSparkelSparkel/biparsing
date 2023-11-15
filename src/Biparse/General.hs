@@ -32,7 +32,7 @@ module Biparse.General
 import Control.Profunctor.FwdBwd (endoSecond)
 import Biparse.Biparser (Biparser, Iso, Unit, unit, one, try, SubState, SubElement, ElementContext, SubStateContext, split, Const, mapWrite, Unit, ignoreForward, upon, uponM, comap, comapM, count)
 import Data.Bool qualified
-import Data.Sequences qualified
+import Data.EqElement qualified
 import Control.Profunctor.FwdBwd (firstM)
 
 identity :: forall c s m n ss.
@@ -132,9 +132,8 @@ type Take' c s m n ss se =
   , Monad n
   , MonadWriter ss n
   -- substate
-  , IsSequence ss
   , Show ss
-  , Eq se
+  , EqElement ss
   -- context
   , SubStateContext c s
   -- assignments
@@ -332,8 +331,7 @@ optional x = Just <$> try x `uponM` maybe empty pure <|> pure Nothing
 
 stripPrefix :: forall c s m n ss u.
   ( ss ~ SubState c s
-  , IsSequence ss
-  , Eq (SubElement c s)
+  , EqElement ss
   , SubStateContext c s
   , Show ss
   , MonadState s m
@@ -349,7 +347,7 @@ stripPrefix pre = unit $ void s `upon` const pre
     $ maybe
       (fail $ "Could not strip prefix: " <> show pre)
       (pure . (pre,))
-    . Data.Sequences.stripPrefix pre
+    . Data.EqElement.stripPrefix pre
 
 -- * Counting
 

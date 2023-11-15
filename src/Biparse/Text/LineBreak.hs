@@ -7,11 +7,12 @@ module Biparse.Text.LineBreak
   , lines'
   , lineBreakType
   , LineBreaker
+  , LineBreakerString(lineBreakerString)
   , LineSplitter
   ) where
 
-import Biparse.Biparser (Iso, SubState, UpdateStateWithSubState)
-import Biparse.General (takeDi, takeDi', Take, Take', BreakWhen)
+import Biparse.Biparser (Iso, SubState, SubElement, SubStateContext, ElementContext)
+import Biparse.General (takeDi, takeDi', Take, Take')
 import Biparse.List (splitElem, splitOn)
 import Biparse.Utils (char)
 import Data.Char (Char)
@@ -25,6 +26,10 @@ type LineBreaker :: LineBreakType -> Either Char Symbol
 type family LineBreaker a where
   LineBreaker 'Unix = 'Left '\n'
   LineBreaker 'Windows = 'Right "\r\n"
+
+class LineBreakerString (lb :: LineBreakType) where lineBreakerString :: IsString a => a
+instance LineBreakerString 'Unix where lineBreakerString = "\n"
+instance LineBreakerString 'Windows where lineBreakerString = "\r\n"
 
 lineBreakType :: forall c m n a text se.
   ( Take c a m n text se
@@ -57,19 +62,29 @@ lines' = \case
 
 class LineSplitter (lb :: Either Char Symbol) c m n a where lineSplitter :: Iso c m n a [SubState c a]
 instance
-  ( KnownChar char
+  ( MonadState a m
+  , MonadWriter ss n
   , IsChar se
-  , Alternative n
-  , Take c a m n text se
+  , KnownChar char
+  , IsSequence ss
+  , Eq se
+  , Show se
+  , ElementContext c a
+  , ss ~ SubState c a
+  , se ~ SubElement c a
   ) => LineSplitter ('Left char) c m n a where
   lineSplitter = splitElem @c @a @m @n (char @char)
 instance
-  ( KnownSymbol sym
+  ( MonadState a m
+  , MonadWriter ss n
+  , KnownSymbol sym
+  , EqElement ss
   , IsString ss
-  , BreakWhen c a m n ss
-  , UpdateStateWithSubState c a
-  , Eq (Element ss)
   , Show ss
+  , SubStateContext c a
+  , ElementContext c a
+  , ss ~ SubState c a
+  , se ~ SubElement c a
   ) => LineSplitter ('Right sym) c m n a where
   lineSplitter = splitOn (symbol @sym)
 

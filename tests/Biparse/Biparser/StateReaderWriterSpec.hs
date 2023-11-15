@@ -1,7 +1,7 @@
 {-# LANGUAGE PolyKinds #-}
 module Biparse.Biparser.StateReaderWriterSpec where
 
-import Biparse.Biparser.StateReaderWriter
+import Biparse.Biparser.StateReaderWriter as BSRW
 import Biparse.List (all)
 import Biparse.Text.LineBreak (lines, LineBreakType(Unix))
 import Biparse.Text.Context.LineColumn (ListToElement, ElementToList)
@@ -11,7 +11,7 @@ spec :: Spec
 spec = do
   describe "zoom" do
     fb @() "[Text] -> Text, one line"
-      (zoom @ElementToList @LinesOnly @Either
+      (BSRW.zoom @ElementToList @LinesOnly @Either
         (one :: Iso LinesOnly (FM [Text]) IO () () (Position () [Text]) Text)
         (naturalBaseTen' @Word)
       :: Iso LinesOnly (FM [Text]) IO () () (Position () [Text]) Word)
@@ -32,10 +32,10 @@ spec = do
           b 456 >>= (`shouldBe` (456, ["456"]))
 
     fb @() "Text -> [Text], all lines"
-      (zoom @ListToElement @LinesOnly @Either
+      (BSRW.zoom @ListToElement @LinesOnly @Either
         (lines @'Unix)
         ( all
-        $ zoom @ElementToList @UnixLC @Either
+        $ BSRW.zoom @ElementToList @UnixLC @Either
           one
           (naturalBaseTen' @Int)
         )

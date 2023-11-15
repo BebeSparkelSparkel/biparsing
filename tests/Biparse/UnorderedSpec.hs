@@ -2,7 +2,6 @@
 module Biparse.UnorderedSpec where
 
 import Biparse.Unordered
-import Biparse.Text.Context.LineColumn (startLineColumn)
 import Data.Tuple.Extra (uncurry3)
 import Data.List (zip3)
 import Data.Default (Default(def))
