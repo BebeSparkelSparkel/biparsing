@@ -131,7 +131,7 @@ instance IsString text => IsString (Position () text) where
   fromString = startLineColumn . fromString
 
 instance IsList ss => IsList (Position () ss) where
-  type Item (Position () ss) = Item ss
+  type Item (Position _ ss) = Item ss
   fromList = startLineColumn . GE.fromList
   toList = GE.toList . _subState
 
