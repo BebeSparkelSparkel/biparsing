@@ -2,3 +2,5 @@
 biparsing.cabal
 *~
 node_modules
+*.prof
+*.prof.html
