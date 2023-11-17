@@ -32,6 +32,9 @@ spec = do
         naturalsForward f
         negativeIntegerForward f
 
+      it "error shows failed to parse string" $
+        f "   abc" `shouldBe` Left (ErrorPosition () 1 1 "Could not parse \"   abc\" to Int base 10.")
+
       failIntegerForward f
     )
     \b -> do

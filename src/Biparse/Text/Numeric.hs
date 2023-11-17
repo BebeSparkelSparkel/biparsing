@@ -17,8 +17,8 @@ module Biparse.Text.Numeric
   , lowerHexList
   ) where
 
-import Biparse.Biparser (Iso, IsoClass(iso), split, upon, SubState, SubStateContext, try, ignoreBackward, split, Biparser, ElementContext, comap, uponM, one, SubElement, GetSubState, UpdateStateWithElement)
-import Biparse.General (take, optional, takeTri)
+import Biparse.Biparser (Iso, IsoClass(iso), split, upon, SubState, SubStateContext, try, ignoreBackward, split, Biparser, ElementContext, comap, uponM, one, SubElement, GetSubState, UpdateStateWithElement, peek)
+import Biparse.General (take, optional, takeTri, rest)
 import Biparse.Text (CharElement)
 import Data.Bits (Bits, zeroBits, shift, shiftR, (.&.))
 import Data.Char (isDigit)
@@ -32,6 +32,8 @@ import GHC.Real (Fractional, (^^))
 import GHC.Real (Integral)
 import Numeric (showHex)
 import Safe (readMay)
+import Type.Reflection (Typeable, typeRep)
+import Data.Sequences qualified
 
 
 instance NaturalConstraints c s m n Word   char => IsoClass c m n s Word   where iso = naturalBaseTen
@@ -51,12 +53,19 @@ type NaturalConstraints c s m n number char =
   , Read number
   , Num number
   , Show number
+  , Typeable number
+  , Show (SubState c s)
   )
 
 naturalBaseTen :: forall c s m n number char. NaturalConstraints c s m n number char => Iso c m n s number
 naturalBaseTen = do
   ds <- fmap toChar . toList <$> digitsBaseTen `upon` abs
-  maybe (fail $ "Could not parse " <> show ds <> " to natural base 10.") pure $ readMay ds
+  maybe
+    do
+      cs <- peek $ Data.Sequences.take 20 <$> rest `upon` const mempty
+      fail $ "Could not parse " <> show cs <> " to " <> show (typeRep @number) <> " base 10."
+    pure
+    $ readMay ds
 
 naturalBaseTen' :: forall number c s m n char. NaturalConstraints c s m n number char => Iso c m n s number
 naturalBaseTen' = naturalBaseTen
