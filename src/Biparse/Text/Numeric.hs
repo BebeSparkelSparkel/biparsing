@@ -5,7 +5,7 @@ module Biparse.Text.Numeric
   ( NaturalConstraints
   , naturalBaseTen
   , naturalBaseTen'
-  , IntConstrints
+  , IntConstraints
   , intBaseTen
   , scientific
   , RealConstrints
@@ -70,13 +70,13 @@ naturalBaseTen = do
 naturalBaseTen' :: forall number c s m n char. NaturalConstraints c s m n number char => Iso c m n s number
 naturalBaseTen' = naturalBaseTen
 
-instance NaturalConstraints c s m n Int   char => IsoClass c m n s Int   where iso = naturalBaseTen
-instance NaturalConstraints c s m n Int8  char => IsoClass c m n s Int8  where iso = naturalBaseTen
-instance NaturalConstraints c s m n Int16 char => IsoClass c m n s Int16 where iso = naturalBaseTen
-instance NaturalConstraints c s m n Int32 char => IsoClass c m n s Int32 where iso = naturalBaseTen
-instance NaturalConstraints c s m n Int64 char => IsoClass c m n s Int64 where iso = naturalBaseTen
+instance IntConstraints c s m n Int   char => IsoClass c m n s Int   where iso = intBaseTen
+instance IntConstraints c s m n Int8  char => IsoClass c m n s Int8  where iso = intBaseTen
+instance IntConstraints c s m n Int16 char => IsoClass c m n s Int16 where iso = intBaseTen
+instance IntConstraints c s m n Int32 char => IsoClass c m n s Int32 where iso = intBaseTen
+instance IntConstraints c s m n Int64 char => IsoClass c m n s Int64 where iso = intBaseTen
 
-type IntConstrints c s m n number char =
+type IntConstraints c s m n number char =
   ( NaturalConstraints c s m n number char
   , MonadPlus m
   , Alternative n
@@ -85,7 +85,7 @@ type IntConstrints c s m n number char =
   , ElementContext c s
   )
 
-intBaseTen :: forall c s m n number char. IntConstrints c s m n number char => Iso c m n s number
+intBaseTen :: forall c s m n number char. IntConstraints c s m n number char => Iso c m n s number
 intBaseTen = do
   s <- sign
   n <- naturalBaseTen
