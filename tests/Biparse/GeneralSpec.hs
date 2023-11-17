@@ -130,17 +130,13 @@ spec = do
     ()
     ()
     (\f -> do
-      it "empty" do
-        f "" `shouldBe` Right (mempty,"")
+      it "empty" $ f "" `shouldBe` Right (mempty,"")
 
-      it "take none" do
-        f "xab" `shouldBe` Right (mempty, "xab")
+      it "take none" $ f "xab" `shouldBe` Right (mempty, "xab")
 
-      it "take 2" do
-        f "abx" `shouldBe` Right ("ab", Position () 1 3 "x")
+      it "take 2" $ f "abx" `shouldBe` Right ("ab", Position () 1 3 "x")
 
-      it "take all" do
-        f "abc" `shouldBe` Right ("abc", Position () 1 4 mempty)
+      it "take all" $ f "abc" `shouldBe` Right ("abc", Position () 1 4 mempty)
     )
     \b -> do
       it "empty" $ b mempty >>= (`shouldBe` (mempty,mempty))
@@ -148,6 +144,20 @@ spec = do
       it "no x" $ b "abc" >>= (`shouldBe` ("abc", "abc"))
 
       it "has x" $ b "axc" >>= (`shouldBe` ("axc", "axc"))
+
+  fb @() "skipUntil"
+    (skipUntil $ (> 2) <$> one :: Const LinesOnly (Position () [Int]) (FM [Int]) EitherString () () Int)
+    ()
+    ()
+    (\f -> do
+      it "empty" $ f [] `shouldSatisfy` errorPosition 1 1
+
+      it "no true" $ f [0, 1, 2] `shouldSatisfy` errorPosition 4 1
+
+      it "no true" $ f [0, 1, 2, 3, 4] `shouldBe` Right ((), Position () 4 1 [3, 4])
+    )
+    \b -> do
+      it "success" $ b 5 `shouldBe` EValue ((), [5])
 
   fb @() "pad"
     (pad 4 'x' naturalBaseTen :: Iso UnixLC (FM Text) IO () () (Position () Text) Int)

@@ -50,6 +50,7 @@ module Biparse.Biparser
   , ask'
   , asks'
   , zoom
+  , resetState
   ) where
 
 import Biparse.FixFail (FixFail(fixFail))
@@ -398,7 +399,7 @@ write :: forall c s m n ss.
   => Biparser c s m n ss ()
 write = Biparser (pure ()) tell
 
--- | Like 'breakWhen' but fails if 'x' does not succeed
+-- | 'x' does not succeed
 breakWhen' :: forall c s m n ss.
   ( MonadState s m
   , Alternative m
@@ -490,6 +491,20 @@ zoom (Biparser fw bw) (Biparser fw' bw') = Biparser
   \u -> changeMonad' @is g $ bw' u
   where
   g = execWriter . bw
+
+-- | Set the state as before if the predicate passes.
+resetState :: forall c s m n u v.
+  MonadState s m
+  => (v -> Bool)
+  -> Biparser c s m n u v
+  -> Biparser c s m n u v
+resetState p (Biparser fw bw) = Biparser
+  do
+    s <- get
+    x <- fw
+    when (p x) $ put s
+    pure x
+  bw
 
 instance (Monoid (SubState c s), Monad m, Applicative n) => Applicative (Biparser c s m n u) where
   pure v = Biparser (pure v) (const $ pure v)

@@ -12,6 +12,7 @@ module Biparse.General
   , takeDi'
   , takeTri'
   , dropWhile
+  , skipUntil
   , pad
   , padCount
   , BreakWhen
@@ -30,7 +31,7 @@ module Biparse.General
   ) where
 
 import Control.Profunctor.FwdBwd (endoSecond)
-import Biparse.Biparser (Biparser, Iso, Unit, unit, one, try, SubState, SubElement, ElementContext, SubStateContext, split, Const, mapWrite, Unit, ignoreForward, upon, uponM, comap, comapM, count)
+import Biparse.Biparser (Biparser, Iso, Unit, unit, one, try, SubState, SubElement, ElementContext, SubStateContext, split, Const, mapWrite, Unit, ignoreForward, upon, uponM, comap, comapM, count, resetState)
 import Data.Bool qualified
 import Data.EqElement qualified
 import Control.Profunctor.FwdBwd (firstM)
@@ -187,6 +188,16 @@ dropWhile :: forall c s m n u se.
   => (se -> Bool)
   -> Const c s m n u
 dropWhile = void . comap (const mempty) . takeWhile
+
+-- | Run until returns True
+skipUntil :: forall c s m n u.
+  ( MonadState s m
+  , Monad n
+  , Monoid (SubState c s)
+  )
+  => Biparser c s m n u Bool
+  -> Const c s m n u
+skipUntil x = bool (void $ skipUntil x) (pure ()) =<< resetState id x
 
 -- * Pad
 
