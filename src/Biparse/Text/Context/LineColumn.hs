@@ -30,6 +30,7 @@ import GHC.Exts (IsList(Item))
 import GHC.Exts qualified as GE
 import Control.Monad.ChangeMonad (ChangeMonad, ChangeFunction, changeMonad', ResultMonad(ResultingMonad,resultMonad))
 import Control.Lens (makeLenses, (.~), (%~), _2, _Left, _Right)
+import Control.Monad.UndefinedBackwards (UndefinedBackwards)
 
 import GHC.Err (undefined)
 import Control.Monad.Trans.Error qualified as E
@@ -186,4 +187,8 @@ instance ChangeMonad () EitherString (SE dataId text) where
     EValue x -> pure x
     EString msg -> fail msg
 type instance ChangeFunction () EitherString (SE _ _) = ()
+
+type instance ChangeFunction ListToElement (_ (UndefinedBackwards text)) (_ (UndefinedBackwards text)) = [text] -> text
+
+type instance ChangeFunction (LineColumn _) (RWST r [text] w m) (RWST r text w m) = [text] -> text
 
