@@ -10,7 +10,6 @@ module Biparse.Biparser.StateReaderWriter
   , M
   , N
   , zoom
-  , zoom'
   , runForward
   , evalForward
   , runBackward
@@ -47,23 +46,9 @@ zoom :: forall is c' mProgenitor m' c s s' m n r ws u v ss'.
   , m' ~ MonadProgenitor mProgenitor s'
   )
   => Iso c m n r ws s ss'
-  -> Biparser c' s' m' n r ws u v
-  -> Biparser c  s  m n r ws u v
-zoom = zoom' @is @_ @(MonadProgenitor mProgenitor s') @_ @_ @_ @(MonadProgenitor mProgenitor s)
-
--- | Discards unused s' state to avoid commingling m and n monads.
-zoom' :: forall is c' m' c s s' m n r ws u v ss'.
-  ( Monad m
-  , Monad n
-  , ReplaceSubState s ss' s'
-  , ss' ~ SubState c' s'
-  , ChangeMonad is m' m
-  , ChangeFunction is m' m ~ ()
-  )
-  => Iso c m n r ws s ss'
-  -> Biparser c' s' m' n r ws u v
-  -> Biparser c  s  m n r ws u v
-zoom' (B.Biparser fw bw) (B.Biparser fw' bw') = B.Biparser
+  -> Biparser c' s' (MonadProgenitor mProgenitor s') n r ws u v
+  -> Biparser c  s  (MonadProgenitor mProgenitor s)  n r ws u v
+zoom (B.Biparser fw bw) (B.Biparser fw' bw') = B.Biparser
   (StateErrorT \s -> do
     (ss,s') <- runStateErrorT fw s
     (x,_) <- changeMonad' @is () $ runStateErrorT fw' $ replaceSubState s ss
@@ -73,6 +58,13 @@ zoom' (B.Biparser fw bw) (B.Biparser fw' bw') = B.Biparser
     (x,s',w)  <- runRWST (bw' u) r s
     (_,s'',w') <- runRWST (bw  w) r s'
     pure (x,s'',w')
+
+--stream :: forall .
+--  (
+--  )
+--  => Iso c m n r ws s ss' -- create stream
+--  -> Iso c' m' n' r ws s' ss'' -- pick element/elements from stream
+--  -> Biparser c'' s'' m n r ws u v -- consume element
 
 -- * Helper run functions
 
