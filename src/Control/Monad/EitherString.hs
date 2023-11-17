@@ -7,10 +7,11 @@ module Control.Monad.EitherString
   , getString
   , getValue
   , isString
+  , eitherString
   ) where
 
 import Data.Bool (Bool)
-import Data.Either (Either(Left,Right), fromLeft, fromRight, isLeft)
+import Data.Either (Either(Left,Right), fromLeft, fromRight, isLeft, either)
 import Data.String (String)
 import Text.Show (Show, show)
 import Data.Ord (Ord)
@@ -22,6 +23,7 @@ import Control.Monad (Monad, MonadFail(fail), MonadPlus)
 import Data.Monoid ((<>))
 import Control.Lens (Prism, Prism', prism, prism')
 import Data.Maybe (Maybe(Just,Nothing))
+import Data.Coerce (coerce)
 
 newtype EitherString a = EitherString {runEitherString :: Either String a} deriving (Eq, Ord, Functor, Applicative, Monad)
 
@@ -67,4 +69,7 @@ getValue x = fromRight x . runEitherString
 
 isString :: EitherString a -> Bool
 isString = isLeft . runEitherString
+
+eitherString :: (String -> b) -> (a -> b) -> EitherString a -> b
+eitherString f g = coerce $ either f g
 
