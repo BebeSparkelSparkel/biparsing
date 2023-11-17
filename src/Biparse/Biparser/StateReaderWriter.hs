@@ -13,6 +13,7 @@ module Biparse.Biparser.StateReaderWriter
   , runForward
   , evalForward
   , runBackward
+  , evalBackward
   , runWriterT'
   ) where
 
@@ -21,6 +22,7 @@ import Control.Monad.StateError (StateErrorT(StateErrorT), runStateErrorT, runSE
 import Control.Monad.MonadProgenitor (MonadProgenitor)
 import Biparse.Biparser (SubState, forward, backward, ReplaceSubState(replaceSubState))
 import Biparse.Biparser qualified as B
+--import Biparse.Context.IdentityState (IdentityState)
 import Control.Monad.RWS (RWST(RWST), runRWST)
 
 type Biparser c s m n r ws u v = B.Biparser c s (M c s m) (N c s n r ws) u v 
@@ -59,12 +61,19 @@ zoom (B.Biparser fw bw) (B.Biparser fw' bw') = B.Biparser
     (_,s'',w') <- runRWST (bw  w) r s'
     pure (x,s'',w')
 
---stream :: forall .
---  (
+--stripSuperState :: forall mProgenitor c s m m' n r ws u v ss.
+--  ( Monad (MonadProgenitor mProgenitor s)
+--  , ss ~ SubState c s
 --  )
---  => Iso c m n r ws s ss' -- create stream
---  -> Iso c' m' n' r ws s' ss'' -- pick element/elements from stream
---  -> Biparser c'' s'' m n r ws u v -- consume element
+--  => Biparser IdentityState ss (M IdentityState ss (MonadProgenitor mProgenitor ss)) n r ws u v
+--  -> Biparser c  s  (M c s(MonadProgenitor mProgenitor s))  n r ws u v
+--stripSuperState (B.Biparser (StateErrorT fw) bw) = B.Biparser
+--  do
+--    s <- get
+--    (x,ss) <- fw $ getSubState @c s
+--    put $ replaceSubState s ss
+--    pure x
+--  bw
 
 -- * Helper run functions
 
@@ -91,6 +100,9 @@ evalForward = (fmap fst .) . runForward @is
 
 runBackward :: forall c s m n r ws u v. Functor n => Biparser c s m n r ws u v -> r -> ws -> u -> n (v, SubState c s)
 runBackward bp r ws u = runRWST (backward bp u) r ws <&> \(x,_,y) -> (x,y)
+
+evalBackward :: forall c s m n r ws u v. Functor n => Biparser c s m n r ws u v -> r -> ws -> u -> n (SubState c s)
+evalBackward bp r ws u = snd <$> runBackward bp r ws u
 
 runWriterT' :: Functor m => RWST () w () m a -> m (a, w)
 runWriterT' x = runRWST x () () <&> \(y,(),z) -> (y,z)
