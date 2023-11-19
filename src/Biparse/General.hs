@@ -13,6 +13,7 @@ module Biparse.General
   , takeTri'
   , dropWhile
   , skipUntil
+  , Pad
   , pad
   , padCount
   , BreakWhen
