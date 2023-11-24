@@ -12,7 +12,7 @@ import Biparse.Biparser (Biparser, upon, one, SubElement, SubState, ElementConte
 import Biparse.General (stripPrefix)
 import Data.Char (Char)
 
-type CharElement c s char =
+type CharElement s char =
   ( IsChar char
   , Show char
   , Eq char
@@ -23,7 +23,7 @@ type CharElement c s char =
 char :: forall c s m n u text char.
   ( IsSequence text
   , ElementContext c s
-  , CharElement c s char
+  , CharElement s char
   -- m
   , MonadState s m
   , MonadFail m

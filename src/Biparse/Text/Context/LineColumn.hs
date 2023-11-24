@@ -35,7 +35,7 @@ import GHC.Exts qualified as GE
 import Control.Monad.ChangeMonad (ChangeMonad, ChangeFunction, changeMonad', ResultMonad(ResultingMonad,resultMonad))
 import Control.Lens (makeLenses, (.~), (%~), _2, _Left, _Right, (^.))
 import Control.Monad.UndefinedBackwards (UndefinedBackwards)
-import Data.EqElement (splitElem)
+import Data.EqElement (splitElem, splitSeq)
 
 import GHC.Err (undefined)
 import Control.Monad.Trans.Error qualified as E
@@ -215,15 +215,15 @@ instance
 instance
   ( MonadState (Position d text) m
   , EqElement text
-  , IsChar (Element text)
   , Applicative n
-  , KnownChar char
+  , IsString text
+  , KnownSymbol sym
   , text ~ SubState (Position d text)
   ) => LineSplitter ('Right sym) 'False c m n (Position d text) where
   lineSplitter = Biparser
     do
       p <- get
       put $ p & subState .~ mempty
-      pure $ splitElem (char @char) $ p ^. subState
+      pure $ splitSeq (symbol @sym) $ p ^. subState
     pure
 

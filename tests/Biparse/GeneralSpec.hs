@@ -253,6 +253,17 @@ spec = do
 
       it "contains break" $ b "cdab" >>= (`shouldBe` ("cdab", "cdabab"))
 
+  fb @() "rest"
+    (rest :: Iso () (FM (Identity (Vector Int))) EitherString () () (Identity (Vector Int)) (Vector Int))
+    ()
+    ()
+    (\f -> do
+      it "success" $ f [1,2,3] `shouldBe` Right ([1,2,3], mempty)
+    )
+    \b -> do
+      it "success" $ b [1,2,3] `shouldBe` EValue ([1,2,3], [1,2,3])
+
+
   let mapBool :: Bool -> Int
       mapBool = \case True -> 1; False -> 2
   fb @() "optionMaybe"

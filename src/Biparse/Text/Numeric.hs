@@ -43,7 +43,7 @@ instance NaturalConstraints c s m n Word32 char => IsoClass c m n s Word32 where
 instance NaturalConstraints c s m n Word64 char => IsoClass c m n s Word64 where iso = naturalBaseTen
 
 type NaturalConstraints c s m n number char =
-  ( CharElement c s char
+  ( CharElement s char
   , IsSequence (SubState s)
   , MonadState s m
   , MonadFail m
@@ -129,7 +129,7 @@ realBaseTen = do
   maybe (fail "Could not parse real base 10.") (pure . s) $ readMay $ fmap toChar $ toList $ ws <> ds
 
 digitsBaseTen :: forall c m n s u ss char.
-  ( CharElement c s char
+  ( CharElement s char
   , Show u
   , IsSequence ss
   , MonadState s m
@@ -152,7 +152,7 @@ deduceSign x
   | otherwise = Zero
 
 sign :: forall c s m n number ss char.
-  ( CharElement c s char
+  ( CharElement s char
   , MonadState s m
   , MonadFail m
   , MonadPlus m
@@ -179,7 +179,7 @@ hex :: forall (charCase :: CharCase) c m n a number text char.
   -- text
   , IsSequence text
   -- char
-  , CharElement c a char
+  , CharElement a char
   -- number
   , Bits number
   , Integral number

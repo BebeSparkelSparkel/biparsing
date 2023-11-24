@@ -16,6 +16,7 @@ import Biparse.General (takeDi, takeDi', Take, Take')
 import Biparse.List (splitElem, splitOn)
 import Biparse.Utils (char)
 import Data.Char (Char)
+import Biparse.Text (CharElement)
 
 data LineBreakType
   = Unix
@@ -34,7 +35,7 @@ instance LineBreakerString 'Windows where lineBreakerString = "\r\n"
 lineBreakType :: forall c m n a text se.
   ( Take c a m n text se
   , Take' c a m n text se
-  , IsChar se
+  , CharElement a se
   , Alternative n
   , IsString text
   ) => Iso c m n a LineBreakType
@@ -58,11 +59,9 @@ class LineSplitter (lb :: Either Char Symbol) (up :: Bool) c m n a where lineSpl
 instance
   ( MonadState a m
   , MonadWriter ss n
-  , IsChar se
   , KnownChar char
   , IsSequence ss
-  , Eq se
-  , Show se
+  , CharElement a se
   , ElementContext c a
   , ss ~ SubState a
   , se ~ SubElement a
@@ -73,6 +72,7 @@ instance
   , MonadWriter ss n
   , KnownSymbol sym
   , EqElement ss
+  , CharElement a se
   , IsString ss
   , Show ss
   , SubStateContext c a
