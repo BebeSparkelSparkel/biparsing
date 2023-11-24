@@ -10,7 +10,7 @@ import Control.Monad.MonadProgenitor (MonadProgenitor)
 import Control.Monad.State (State, runState, evalState)
 import Control.Monad.Writer (Writer, execWriter)
 
-zoom :: forall is c' mProgenitor n' m' c s s' m n u v ss ss'.
+zoom :: forall is c' c'' mProgenitor n' m' c s s' m n u v ss ss'.
   -- m
   ( MonadState s m
   -- m'
@@ -25,7 +25,7 @@ zoom :: forall is c' mProgenitor n' m' c s s' m n u v ss ss'.
   , ReplaceSubState s ss' s'
   , ReplaceSubState s ss s
   )
-  => Iso c (State s) (Writer ss) s ss'
+  => Iso c'' (State s) (Writer ss) s ss'
   -> Biparser c' s' (MonadProgenitor mProgenitor s') n' u v
   -> Biparser c  s  m  n  u v
 zoom (Biparser fw bw) (Biparser fw' bw') = Biparser
