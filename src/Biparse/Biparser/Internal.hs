@@ -28,7 +28,6 @@ module Biparse.Biparser.Internal
   , emptyForward
   , ignoreForward
   , ignoreBackward
-  , SubState
   , GetSubState(..)
   , UpdateStateWithSubState(..)
   , SubStateContext
@@ -245,18 +244,18 @@ ignoreBackward = flip setBackward pure
 
 -- * SubState
 -- SubState allows for context outside of the parser and printer.
-
--- | Line and column number for parsing error messages is an example of context that is important to maintain but annoying to directly deal with when writeing the parser.
--- DEV NOTE: 'context' may not be a necessary type argument
-type SubState :: Type -> Type
-type family SubState state
-
-type instance SubState (Identity s) = s
+-- Line and column number for parsing error messages is an example of context that is important to maintain but annoying to directly deal with when writeing the parser.
 
 -- | Getter for the substate.
-class GetSubState state where getSubState :: state -> SubState state
+class GetSubState state where
+  type SubState state
+  getSubState :: state -> SubState state
 
-instance GetSubState (Identity s) where getSubState = runIdentity
+
+
+instance GetSubState (Identity s) where
+  type SubState (Identity s) = s
+  getSubState = runIdentity
 
 -- | Update the state's context and substate.
 -- Used when more than one element at a time should be consumed and written.

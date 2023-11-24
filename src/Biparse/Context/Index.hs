@@ -30,8 +30,9 @@ data IndexPosition ss = IndexPosition
 deriving instance (Show (Index ss), Show ss) => Show (IndexPosition ss)
 deriving instance (Eq (Index ss), Eq ss) => Eq (IndexPosition ss)
 
-type instance SubState (IndexPosition ss) = ss
-instance GetSubState (IndexPosition ss) where getSubState = subState
+instance GetSubState (IndexPosition ss) where
+  type SubState (IndexPosition ss) = ss
+  getSubState = subState
 
 instance IsSequence ss => UpdateStateWithSubState IndexContext (IndexPosition ss) where
   updateSubStateContext (IndexPosition i _) consumed remaining = IndexPosition (i + lengthIndex consumed) remaining

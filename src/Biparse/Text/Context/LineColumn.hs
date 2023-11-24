@@ -60,9 +60,10 @@ data Position dataId text = Position
   } deriving (Show, Eq, Functor)
 $(makeLenses ''Position)
 
-type instance SubState (Position _ text) = text
 
-instance GetSubState (Position dataId text) where getSubState = _subState
+instance GetSubState (Position dataId text) where
+  type SubState (Position _ text) = text
+  getSubState = _subState
 
 type CharCs text char =
   ( Eq char
