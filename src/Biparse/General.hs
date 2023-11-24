@@ -13,6 +13,7 @@ module Biparse.General
   , takeTri'
   , dropWhile
   , skipUntil
+  , untilJust
   , Pad
   , pad
   , padCount
@@ -199,6 +200,17 @@ skipUntil :: forall c s m n u.
   => Biparser c s m n u Bool
   -> Const c s m n u
 skipUntil x = bool (void $ skipUntil x) (pure ()) =<< resetState id x
+
+-- | Run until Just
+untilJust :: forall c s m n u a ss.
+  ( Monad m
+  , Monad n
+  , Monoid ss
+  , ss ~ SubState c s
+  )
+  => Biparser c s m n u (Maybe a)
+  -> Biparser c s m n u a
+untilJust x = maybe (untilJust x) pure =<< x
 
 -- * Pad
 
