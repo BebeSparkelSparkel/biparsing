@@ -4,29 +4,48 @@ module Data.EqElement
   ( EqElement(..)
   ) where
 
-import Data.Sequences (IsSequence)
-import Data.Sequences qualified
-import Data.MonoTraversable (Element)
-import Data.Eq (Eq)
-import Data.Maybe (Maybe)
+import Data.Bool (otherwise)
+import Data.Eq (Eq, (==))
+import Data.Function ((.))
+import Data.Functor (fmap)
+import Data.Maybe (Maybe(Just,Nothing))
+import Data.MonoTraversable (Element, otoList)
+import Data.Sequences (IsSequence, singleton, splitWhen, fromList)
 
-import Data.List qualified
-import Data.ByteString qualified
-import Data.Text qualified
-import Data.Sequence qualified
+import Data.ByteString qualified as S
+import Data.List qualified as List
+import Data.List.Split qualified as List
+import Data.Sequence qualified as Seq
+import Data.Text qualified as T
+
+--import GHC.Err (undefined)
 
 class (IsSequence seq, Eq (Element seq)) => EqElement seq where
   stripPrefix :: seq -> seq -> Maybe seq
+  stripPrefix x y = fmap fromList (otoList x `List.stripPrefix` otoList y)
+  splitElem :: Element seq -> seq -> [seq]
+  splitElem = splitWhen . (==)
+  splitSeq :: seq -> seq -> [seq]
+  splitSeq sep = List.map fromList . List.splitOn (otoList sep) . otoList
 
 instance Eq a => EqElement [a] where
-  stripPrefix = Data.List.stripPrefix
+  stripPrefix = List.stripPrefix
+  splitSeq = List.splitOn
 
-instance EqElement Data.ByteString.ByteString where
-  stripPrefix = Data.ByteString.stripPrefix
+instance EqElement S.ByteString where
+  stripPrefix x y
+    | x `S.isPrefixOf` y = Just (S.drop (S.length x) y)
+    | otherwise = Nothing
+  splitElem sep s
+    | S.null s = [S.empty]
+    | otherwise = S.split sep s
+  --splitSeq = undefined -- probably needs a better implementation
 
-instance EqElement Data.Text.Text where
-  stripPrefix = Data.Text.stripPrefix
+instance EqElement T.Text where
+  stripPrefix = T.stripPrefix
+  splitSeq sep
+    | T.null sep = (:) T.empty . List.map singleton . T.unpack
+    | otherwise = T.splitOn sep
 
-instance Eq a => EqElement (Data.Sequence.Seq a) where
-  stripPrefix = Data.Sequences.stripPrefix
+instance Eq a => EqElement (Seq.Seq a)
 

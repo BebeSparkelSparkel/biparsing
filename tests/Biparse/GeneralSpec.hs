@@ -154,7 +154,21 @@ spec = do
 
       it "no true" $ f [0, 1, 2] `shouldSatisfy` errorPosition 4 1
 
-      it "no true" $ f [0, 1, 2, 3, 4] `shouldBe` Right ((), Position () 4 1 [3, 4])
+      it "success" $ f [0, 1, 2, 3, 4] `shouldBe` Right ((), Position () 4 1 [3, 4])
+    )
+    \b -> do
+      it "success" $ b 5 `shouldBe` EValue ((), [5])
+
+  fb @() "untilJust"
+    (untilJust $ bool Nothing (Just ()) . (> 2) <$> one :: Biparser LinesOnly (Position () [Int]) (FM [Int]) EitherString () () Int ())
+    ()
+    ()
+    (\f -> do
+      it "empty" $ f [] `shouldSatisfy` errorPosition 1 1
+
+      it "no Just" $ f [0, 1, 2] `shouldSatisfy` errorPosition 4 1
+
+      it "success" $ f [0, 1, 2, 3, 4] `shouldBe` Right ((), Position () 5 1 [4])
     )
     \b -> do
       it "success" $ b 5 `shouldBe` EValue ((), [5])

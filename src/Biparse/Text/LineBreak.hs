@@ -4,11 +4,11 @@
 module Biparse.Text.LineBreak
   ( LineBreakType(..)
   , lines
-  , lines'
   , lineBreakType
   , LineBreaker
   , LineBreakerString(lineBreakerString)
-  , LineSplitter
+  , UpdateSuperState
+  , LineSplitter(..)
   ) where
 
 import Biparse.Biparser (Iso, SubState, SubElement, SubStateContext, ElementContext)
@@ -42,25 +42,19 @@ lineBreakType
   =   takeDi  (fromChar '\n') Unix
   <|> takeDi' "\r\n"          Windows
 
-lines :: forall (lb :: LineBreakType) c m n a text.
-  ( LineSplitter (LineBreaker lb) c m n a
+lines :: forall (lb :: LineBreakType) c m n a text up.
+  ( LineSplitter (LineBreaker lb) up c m n a
   , text ~ SubState c a
+  , up ~ UpdateSuperState c
   )
   => Iso c m n a [text]
-lines = lineSplitter @(LineBreaker lb)
+lines = lineSplitter @(LineBreaker lb) @(UpdateSuperState c)
 
-lines' :: forall c m n a text.
-  ( LineSplitter (LineBreaker 'Unix) c m n a
-  , LineSplitter (LineBreaker 'Windows) c m n a
-  , text ~ SubState c a
-  )
-  => LineBreakType
-  -> Iso c m n a [text]
-lines' = \case
-  Unix -> lineSplitter @(LineBreaker 'Unix)
-  Windows -> lineSplitter @(LineBreaker 'Windows)
+-- | Used to indicate if 'updateElementContext' and 'updateSubStateContext' should be used. An optimization since 'lines' knows how to update the context without traverseing the consumed substate.
+type UpdateSuperState :: Type -> Bool
+type family UpdateSuperState a
 
-class LineSplitter (lb :: Either Char Symbol) c m n a where lineSplitter :: Iso c m n a [SubState c a]
+class LineSplitter (lb :: Either Char Symbol) (up :: Bool) c m n a where lineSplitter :: Iso c m n a [SubState c a]
 instance
   ( MonadState a m
   , MonadWriter ss n
@@ -72,7 +66,7 @@ instance
   , ElementContext c a
   , ss ~ SubState c a
   , se ~ SubElement c a
-  ) => LineSplitter ('Left char) c m n a where
+  ) => LineSplitter ('Left char) 'True c m n a where
   lineSplitter = splitElem @c @a @m @n (char @char)
 instance
   ( MonadState a m
@@ -85,6 +79,6 @@ instance
   , ElementContext c a
   , ss ~ SubState c a
   , se ~ SubElement c a
-  ) => LineSplitter ('Right sym) c m n a where
+  ) => LineSplitter ('Right sym) 'True c m n a where
   lineSplitter = splitOn (symbol @sym)
 

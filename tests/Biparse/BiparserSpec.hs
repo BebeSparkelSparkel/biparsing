@@ -289,7 +289,7 @@ spec = do
   describe "zoom" do
 
     fb @() "Biparser success"
-      (BB.zoom @UnixLC @UnixLC @'(StateErrorT,Either) @(N UnixLC (Position () [String]) EitherString () ())
+      (BB.zoom @UnixLC @UnixLC @UnixLC @'(StateErrorT,Either) @(N UnixLC (Position () [String]) EitherString () ())
         (lines @'Unix)
         (all $ MT.reverse <$> one)
       :: Iso UnixLC (FM String) EitherString () () (Position () String) [String])

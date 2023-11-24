@@ -1,6 +1,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Biparse.Text.Context.LineColumn
   ( LineColumn
@@ -9,6 +10,7 @@ module Biparse.Text.Context.LineColumn
   , LinesOnly
   , ColumnsOnly
   , LineColumnUnknownBreak
+  , NoUpdate
   , Position(..)
   , dataId
   , line
@@ -22,30 +24,31 @@ module Biparse.Text.Context.LineColumn
   , ListToElement
   ) where
 
-import Biparse.Text.LineBreak (LineBreakType(Unix,Windows))
+import Biparse.Utils (char)
+import Biparse.Text.LineBreak (LineBreakType(Unix,Windows), LineSplitter, lineSplitter, UpdateSuperState)
 import Biparse.Biparser (SubState, GetSubState(getSubState), UpdateStateWithElement(updateElementContext), UpdateStateWithSubState(updateSubStateContext), ReplaceSubState(replaceSubState))
+import Biparse.Biparser.Internal (Biparser(Biparser))
 import Control.Monad.StateError (StateErrorT(StateErrorT), ErrorState(ErrorState), ErrorContext, ErrorInstance(ErrorStateInstance), WrapErrorWithState(StateForError,wrapErrorWithState',stateForError), wrapErrorWithState, errorState)
 import Control.Monad.EitherString (EitherString(EValue,EString))
 import GHC.Exts (IsList(Item))
 import GHC.Exts qualified as GE
 import Control.Monad.ChangeMonad (ChangeMonad, ChangeFunction, changeMonad', ResultMonad(ResultingMonad,resultMonad))
-import Control.Lens (makeLenses, (.~), (%~), _2, _Left, _Right)
+import Control.Lens (makeLenses, (.~), (%~), _2, _Left, _Right, (^.))
 import Control.Monad.UndefinedBackwards (UndefinedBackwards)
+import Data.EqElement (splitElem)
 
 import GHC.Err (undefined)
 import Control.Monad.Trans.Error qualified as E
 
 -- * Contexts
-
-data LineColumn (lineBreak :: LineBreakType)
 type UnixLC = LineColumn 'Unix
 type WindowsLC = LineColumn 'Windows
 
+data LineColumn (lineBreak :: LineBreakType)
 data LinesOnly
-
 data ColumnsOnly
-
 data LineColumnUnknownBreak
+data NoUpdate
 
 -- * Postion state
 
@@ -61,11 +64,13 @@ type instance SubState (LineColumn _)         (Position _ text) = text
 type instance SubState LinesOnly              (Position _ text) = text
 type instance SubState ColumnsOnly            (Position _ text) = text
 type instance SubState LineColumnUnknownBreak (Position _ text) = text
+type instance SubState NoUpdate               (Position _ text) = text
 
 instance GetSubState (LineColumn lb)        (Position dataId text) where getSubState = _subState
 instance GetSubState LinesOnly              (Position dataId text) where getSubState = _subState
 instance GetSubState ColumnsOnly            (Position dataId text) where getSubState = _subState
 instance GetSubState LineColumnUnknownBreak (Position dataId text) where getSubState = _subState
+instance GetSubState NoUpdate               (Position dataId text) where getSubState = _subState
 
 type CharCs text char =
   ( Eq char
@@ -191,4 +196,42 @@ type instance ChangeFunction () EitherString (SE _ _) = ()
 type instance ChangeFunction ListToElement (_ (UndefinedBackwards text)) (_ (UndefinedBackwards text)) = [text] -> text
 
 type instance ChangeFunction (LineColumn _) (RWST r [text] w m) (RWST r text w m) = [text] -> text
+
+-- * Line Break
+
+type instance UpdateSuperState (LineColumn _)         = 'True
+type instance UpdateSuperState LinesOnly              = 'True
+type instance UpdateSuperState ColumnsOnly            = 'True
+type instance UpdateSuperState LineColumnUnknownBreak = 'True
+type instance UpdateSuperState NoUpdate               = 'False
+
+instance
+  ( MonadState (Position d text) m
+  , EqElement text
+  , IsChar (Element text)
+  , Applicative n
+  , KnownChar char
+  , text ~ SubState c (Position d text)
+  ) => LineSplitter ('Left char) 'False c m n (Position d text) where
+  lineSplitter = Biparser
+    do
+      p <- get
+      put $ p & subState .~ mempty
+      pure $ splitElem (char @char) $ p ^. subState
+    pure
+
+instance
+  ( MonadState (Position d text) m
+  , EqElement text
+  , IsChar (Element text)
+  , Applicative n
+  , KnownChar char
+  , text ~ SubState c (Position d text)
+  ) => LineSplitter ('Right sym) 'False c m n (Position d text) where
+  lineSplitter = Biparser
+    do
+      p <- get
+      put $ p & subState .~ mempty
+      pure $ splitElem (char @char) $ p ^. subState
+    pure
 

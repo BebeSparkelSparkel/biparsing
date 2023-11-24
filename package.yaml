@@ -54,6 +54,7 @@ library:
     - text
     - vector
     - bytestring
+    - split
   other-modules:
     - Prelude
     #- Paths_biparsing

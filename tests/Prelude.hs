@@ -75,7 +75,7 @@ import Biparse.Biparser.StateReaderWriter (Biparser, Iso, Unit, Const, ConstU, r
 import Biparse.Context.IdentityState (IdentityState)
 import Biparse.General
 import Biparse.Text (CharElement)
-import Biparse.Text.Context.LineColumn (LineColumn, UnixLC, LinesOnly, ColumnsOnly, Position(Position), subState, ErrorPosition(ErrorPosition), startLineColumn)
+import Biparse.Text.Context.LineColumn (LineColumn, UnixLC, LinesOnly, ColumnsOnly, Position(Position), subState, ErrorPosition(ErrorPosition), startLineColumn, NoUpdate)
 import Biparse.Context.Index (IndexContext, IndexPosition(IndexPosition), ErrorIndex(ErrorIndex), EISP)
 import Biparse.Utils (headAlt, convertIntegralUnsafe)
 import Control.Applicative (pure, (<|>), (<*), (*>), (<*>), empty, liftA2, Alternative)
@@ -86,7 +86,7 @@ import Control.Monad.State (MonadState, get, put) --(StateT(runStateT), get, put
 import Control.Monad.StateError (StateErrorT, ErrorInstance(NewtypeInstance,ErrorStateInstance), ErrorState(ErrorState))
 import Control.Monad.Writer (WriterT(runWriterT), MonadWriter)
 import Data.Bifunctor (first)
-import Data.Bool (Bool(True,False), otherwise, (&&))
+import Data.Bool (Bool(True,False), otherwise, (&&), bool)
 import Data.ByteString (ByteString)
 import Data.Char (Char, isDigit)
 import Data.Either (Either(Left,Right), fromRight, isLeft, isRight, either)

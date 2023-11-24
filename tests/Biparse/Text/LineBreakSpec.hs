@@ -17,7 +17,7 @@ spec = do
           , IsString text
           , Show text
           , Monoid text
-          , LineSplitter (LineBreaker lb) (LineColumn lb) (StateErrorT 'ErrorStateInstance (Position () text) (FM text)) (RWST () text () EitherString) (Position () text)
+          , LineSplitter (LineBreaker lb) (UpdateSuperState (LineColumn lb)) (LineColumn lb) (StateErrorT 'ErrorStateInstance (Position () text) (FM text)) (RWST () text () EitherString) (Position () text)
           )
           => String
           -> Spec

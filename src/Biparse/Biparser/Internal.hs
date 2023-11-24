@@ -246,7 +246,8 @@ ignoreBackward = flip setBackward pure
 -- * SubState
 -- SubState allows for context outside of the parser and printer.
 
--- Line and column number for parsing error messages is an example of context that is important to maintain but annoying to directly deal with when writeing the parser.
+-- | Line and column number for parsing error messages is an example of context that is important to maintain but annoying to directly deal with when writeing the parser.
+-- DEV NOTE: 'context' may not be a necessary type argument
 type SubState :: Type -> Type -> Type
 type family SubState context state
 
