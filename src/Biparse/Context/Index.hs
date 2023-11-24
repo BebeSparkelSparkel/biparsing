@@ -19,7 +19,7 @@ import Control.Monad.ChangeMonad (ChangeMonad, ChangeFunction, changeMonad', Res
 --import Control.Monad.Trans.Error qualified as E
 
 -- * Identity Context
--- Use as the context if @state ~ SubState IdentityState state@ basically if there is no context outside the 
+-- Use as the context if @state ~ SubState state@ basically if there is no context outside the 
 
 data IndexContext
 
@@ -30,8 +30,8 @@ data IndexPosition ss = IndexPosition
 deriving instance (Show (Index ss), Show ss) => Show (IndexPosition ss)
 deriving instance (Eq (Index ss), Eq ss) => Eq (IndexPosition ss)
 
-type instance SubState IndexContext (IndexPosition ss) = ss
-instance GetSubState IndexContext (IndexPosition ss) where getSubState = subState
+type instance SubState (IndexPosition ss) = ss
+instance GetSubState (IndexPosition ss) where getSubState = subState
 
 instance IsSequence ss => UpdateStateWithSubState IndexContext (IndexPosition ss) where
   updateSubStateContext (IndexPosition i _) consumed remaining = IndexPosition (i + lengthIndex consumed) remaining

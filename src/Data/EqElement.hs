@@ -18,7 +18,7 @@ import Data.List.Split qualified as List
 import Data.Sequence qualified as Seq
 import Data.Text qualified as T
 
---import GHC.Err (undefined)
+import GHC.Err (undefined)
 
 class (IsSequence seq, Eq (Element seq)) => EqElement seq where
   stripPrefix :: seq -> seq -> Maybe seq
@@ -39,7 +39,7 @@ instance EqElement S.ByteString where
   splitElem sep s
     | S.null s = [S.empty]
     | otherwise = S.split sep s
-  --splitSeq = undefined -- probably needs a better implementation
+  splitSeq = undefined -- probably needs a better implementation
 
 instance EqElement T.Text where
   stripPrefix = T.stripPrefix

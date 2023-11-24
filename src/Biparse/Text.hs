@@ -17,7 +17,7 @@ type CharElement c s char =
   , Show char
   , Eq char
   , Ord char
-  , SubElement c s ~ char
+  , SubElement s ~ char
   )
 
 char :: forall c s m n u text char.
@@ -32,7 +32,7 @@ char :: forall c s m n u text char.
   , MonadWriter text n
   , MonadFail n
   -- assignments
-  , text ~ SubState c s
+  , text ~ SubState s
   )
   => Char
   -> Biparser c s m n u ()
@@ -48,7 +48,7 @@ string :: forall c s m n u text.
   , MonadFail m
   , MonadWriter text n
   , SubStateContext c s
-  , text ~ SubState c s
+  , text ~ SubState s
   )
   => text
   -> Const c s m n u

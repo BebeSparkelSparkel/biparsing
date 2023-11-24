@@ -48,6 +48,8 @@ data ErrorInstance
 type ErrorContext :: Type -> ErrorInstance
 type family ErrorContext c
 
+type instance ErrorContext () = 'NewtypeInstance
+
 deriving instance Monad m => MonadState s (StateErrorT i s m)
 
 data ErrorState e s = ErrorState {_error :: e, _errorState :: s} deriving (Show, Eq)

@@ -13,11 +13,11 @@ spec = do
         expect _1 1
         x <- exposes (^. _2)
         return $ x + 1
-      :: Biparser IdentityState [(Int,Double)] EitherString EitherString () () [(Int,Double)] Double)
+      :: Biparser () (Identity [(Int,Double)]) EitherString EitherString () () [(Int,Double)] Double)
       ()
       ()
       (\f -> do
-        it "empty" $ f empty `shouldSatisfy` isString
+        it "empty" $ f mempty `shouldSatisfy` isString
 
         it "success" $ f [(1,2),(3,4)] `shouldBe` EValue (3,[(3,4)])
 
@@ -31,7 +31,7 @@ spec = do
   describe "lensBiparse" do
     let lb :: Constructor ([Int],()) EitherString EitherString () ()
         lb = lensBiparse _1
-          (take 1 :: Biparser IdentityState [Int] EitherString EitherString () () () ())
+          (take 1 :: Biparser () (Identity [Int]) EitherString EitherString () () () ())
 
     describe "forward" do
       let f = runForwardC lb

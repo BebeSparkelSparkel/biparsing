@@ -70,7 +70,7 @@ instance
   , MonadState a m
   , Monad n
   , Alternative n
-  , Monoid (SubState c a)
+  , Monoid (SubState a)
   ) => IsoClass c m n a (Optional b) where
   iso = Optional <$> optional (iso @c @m @n @a @b) `upon` unOptional
 instance Default (Optional a) where def = Optional Nothing
@@ -207,7 +207,7 @@ instance
   , MakeWriter c m n a g
   , MonadWriter ss n
   , Monad m
-  , ss ~ SubState c a
+  , ss ~ SubState a
   ) => MakeWriter c m n a (f :*: g) where
   makeWriter
     =   (:*:)

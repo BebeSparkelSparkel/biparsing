@@ -77,7 +77,7 @@ spec = do
       f "az" `shouldSatisfy` errorPosition 1 2
 
   it "runBackward" do
-    let bp :: Iso IdentityState IO EitherString Char () ByteString ByteString
+    let bp :: Iso () IO EitherString Char () (Identity ByteString) ByteString
         bp = do
           c <- ask' undefined
           cons (c2w c) <$> rest

@@ -65,7 +65,7 @@ instance Arbitrary AllParserTypes where
   shrink (AllParserTypes i (Accumulating ss) (Optional b)) = uncurry3 AllParserTypes . coerce <$> zip3 (shrink i) (shrink ss) (shrink b)
 
 type IsoConstraints c m n a ss =
-  ( T ~ SubElement c a
+  ( T ~ SubElement a
   , One c a m n ss
   , MonadFail n
   )

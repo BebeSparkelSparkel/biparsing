@@ -15,9 +15,9 @@ import Text.Printf (IsChar(fromChar, toChar))
 spec :: Spec
 spec = do
   describe "one" do
-    describe "IdentityState" do
+    describe "Identity" do
       fb @() "id"
-        (one :: Iso IdentityState IO IO () () String Char)
+        (one :: Iso () IO IO () () (Identity String) Char)
         ()
         ()
         (\f -> do
@@ -32,7 +32,7 @@ spec = do
           it "typical use" $ b 'a' >>= (`shouldBe` ('a',"a"))
 
       fb @() "tuple"
-        ((,) <$> one `upon` fst <*> one `upon` snd :: Iso IdentityState IO IO () () String (Char,Char))
+        ((,) <$> one `upon` fst <*> one `upon` snd :: Iso () IO IO () () (Identity String) (Char,Char))
         ()
         ()
         (\f -> do
@@ -71,7 +71,7 @@ spec = do
         it "print string" $ b "abc" >>= (`shouldBe` ("abc", ["abc"]))
 
   describe "split" do
-    let takeTwo :: Iso IdentityState IO IO () () String String
+    let takeTwo :: Iso () IO IO () () (Identity String) String
         takeTwo = split do
           x <- get
           y <- maybe empty (pure . \(f,s) -> f:s:[]) $
@@ -79,7 +79,7 @@ spec = do
           put $ drop 2 x
           return y
 
-    fb @() "IdentityState"
+    fb @() "Identity"
       takeTwo
       ()
       ()
@@ -95,7 +95,7 @@ spec = do
 
   describe "peek" do
     fb @() "simple"
-      (peek one :: Iso IdentityState IO IO () () String Char)
+      (peek one :: Iso () IO IO () () (Identity String) Char)
       ()
       ()
       (\f -> do
@@ -107,8 +107,8 @@ spec = do
         it "prints char" $ b 'a' >>= (`shouldBe` ('a',"a"))
 
     describe "Alternative" do
-      fb @() "IdentityState"
-        (peek (takeUni 'x') <|> takeUni 'a' :: Iso IdentityState IO IO () () String Char)
+      fb @() "Identity"
+        (peek (takeUni 'x') <|> takeUni 'a' :: Iso () IO IO () () (Identity String) Char)
         ()
         ()
         (\f -> do
@@ -144,7 +144,7 @@ spec = do
           it "prints second" $ b 'a' >>= (`shouldBe` ('a',"a"))
 
   describe "try" do
-    let bp = (try $ one <* take 'b' :: Biparser IdentityState (Seq Char) IO IO () () Char Char)
+    let bp = (try $ one <* take 'b' :: Biparser () (Identity (Seq Char)) IO IO () () Char Char)
         f = runForward @() bp
         b = runBackward bp () ()
 
@@ -168,8 +168,8 @@ spec = do
           x `shouldBe` ('z',"zb")
       
   describe "isNull" do
-    fb @() "IdentityState"
-      (isNull :: ConstU IdentityState String Identity Identity () () [()] Bool)
+    fb @() "Identity"
+      (isNull :: ConstU () (Identity String) Identity Identity () () [()] Bool)
       ()
       ()
       (\f -> do
@@ -226,8 +226,8 @@ spec = do
 
         it "contains break" $ b "cdab" >>= (`shouldBe` ("cdab", "cdabab"))
 
-    fb @() "IdentityState"
-      (breakWhen' $ stripPrefix "ab" :: Iso IdentityState IO IO () () String String)
+    fb @() "Identity"
+      (breakWhen' $ stripPrefix "ab" :: Iso () IO IO () () (Identity String) String)
       ()
       ()
       (\f -> do

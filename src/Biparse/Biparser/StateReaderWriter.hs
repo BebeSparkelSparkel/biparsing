@@ -33,14 +33,14 @@ type ConstU c s m n r ws u v = Biparser c s m n r ws u v
 
 type IsoClass c m n r ws a b = B.IsoClass c (M c a m) (N c a n r ws) a b
 
-type N c s n r ws = RWST r (SubState c s) ws n
+type N c s n r ws = RWST r (SubState s) ws n
 
 -- | Strict on the Iso which makes 'Biparser' slow to run if not all 'ss\'' is requred and for error to be thrown.
 zoom :: forall is c' mProgenitor m' c s s' m n r ws u v ss'.
   ( Monad m
   , Monad n
   , ReplaceSubState s ss' s'
-  , ss' ~ SubState c' s'
+  , ss' ~ SubState s'
   , ChangeMonad is m' m
   , ChangeFunction is m' m ~ ()
   -- assignments
@@ -63,7 +63,7 @@ zoom (B.Biparser fw bw) (B.Biparser fw' bw') = B.Biparser
 
 --stripSuperState :: forall mProgenitor c s m m' n r ws u v ss.
 --  ( Monad (MonadProgenitor mProgenitor s)
---  , ss ~ SubState c s
+--  , ss ~ SubState s
 --  )
 --  => Biparser IdentityState ss (M IdentityState ss (MonadProgenitor mProgenitor ss)) n r ws u v
 --  -> Biparser c  s  (M c s(MonadProgenitor mProgenitor s))  n r ws u v
@@ -98,10 +98,10 @@ evalForward :: forall is c s m rm n r ws u v.
   -> rm v
 evalForward = (fmap fst .) . runForward @is
 
-runBackward :: forall c s m n r ws u v. Functor n => Biparser c s m n r ws u v -> r -> ws -> u -> n (v, SubState c s)
+runBackward :: forall c s m n r ws u v. Functor n => Biparser c s m n r ws u v -> r -> ws -> u -> n (v, SubState s)
 runBackward bp r ws u = runRWST (backward bp u) r ws <&> \(x,_,y) -> (x,y)
 
-evalBackward :: forall c s m n r ws u v. Functor n => Biparser c s m n r ws u v -> r -> ws -> u -> n (SubState c s)
+evalBackward :: forall c s m n r ws u v. Functor n => Biparser c s m n r ws u v -> r -> ws -> u -> n (SubState s)
 evalBackward bp r ws u = snd <$> runBackward bp r ws u
 
 runWriterT' :: Functor m => RWST () w () m a -> m (a, w)

@@ -10,7 +10,7 @@ tupleFst :: forall c m n s a b.
   , Eq a
   , Monad n
   , Alternative n
-  , Monoid (SubState c s)
+  , Monoid (SubState s)
   )
   => a
   -> Iso c m n s (a,b)

@@ -44,7 +44,7 @@ lineBreakType
 
 lines :: forall (lb :: LineBreakType) c m n a text up.
   ( LineSplitter (LineBreaker lb) up c m n a
-  , text ~ SubState c a
+  , text ~ SubState a
   , up ~ UpdateSuperState c
   )
   => Iso c m n a [text]
@@ -54,7 +54,7 @@ lines = lineSplitter @(LineBreaker lb) @(UpdateSuperState c)
 type UpdateSuperState :: Type -> Bool
 type family UpdateSuperState a
 
-class LineSplitter (lb :: Either Char Symbol) (up :: Bool) c m n a where lineSplitter :: Iso c m n a [SubState c a]
+class LineSplitter (lb :: Either Char Symbol) (up :: Bool) c m n a where lineSplitter :: Iso c m n a [SubState a]
 instance
   ( MonadState a m
   , MonadWriter ss n
@@ -64,8 +64,8 @@ instance
   , Eq se
   , Show se
   , ElementContext c a
-  , ss ~ SubState c a
-  , se ~ SubElement c a
+  , ss ~ SubState a
+  , se ~ SubElement a
   ) => LineSplitter ('Left char) 'True c m n a where
   lineSplitter = splitElem @c @a @m @n (char @char)
 instance
@@ -77,8 +77,8 @@ instance
   , Show ss
   , SubStateContext c a
   , ElementContext c a
-  , ss ~ SubState c a
-  , se ~ SubElement c a
+  , ss ~ SubState a
+  , se ~ SubElement a
   ) => LineSplitter ('Right sym) 'True c m n a where
   lineSplitter = splitOn (symbol @sym)
 

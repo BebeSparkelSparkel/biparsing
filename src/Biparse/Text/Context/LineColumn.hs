@@ -60,17 +60,9 @@ data Position dataId text = Position
   } deriving (Show, Eq, Functor)
 $(makeLenses ''Position)
 
-type instance SubState (LineColumn _)         (Position _ text) = text
-type instance SubState LinesOnly              (Position _ text) = text
-type instance SubState ColumnsOnly            (Position _ text) = text
-type instance SubState LineColumnUnknownBreak (Position _ text) = text
-type instance SubState NoUpdate               (Position _ text) = text
+type instance SubState (Position _ text) = text
 
-instance GetSubState (LineColumn lb)        (Position dataId text) where getSubState = _subState
-instance GetSubState LinesOnly              (Position dataId text) where getSubState = _subState
-instance GetSubState ColumnsOnly            (Position dataId text) where getSubState = _subState
-instance GetSubState LineColumnUnknownBreak (Position dataId text) where getSubState = _subState
-instance GetSubState NoUpdate               (Position dataId text) where getSubState = _subState
+instance GetSubState (Position dataId text) where getSubState = _subState
 
 type CharCs text char =
   ( Eq char
@@ -211,7 +203,7 @@ instance
   , IsChar (Element text)
   , Applicative n
   , KnownChar char
-  , text ~ SubState c (Position d text)
+  , text ~ SubState (Position d text)
   ) => LineSplitter ('Left char) 'False c m n (Position d text) where
   lineSplitter = Biparser
     do
@@ -226,7 +218,7 @@ instance
   , IsChar (Element text)
   , Applicative n
   , KnownChar char
-  , text ~ SubState c (Position d text)
+  , text ~ SubState (Position d text)
   ) => LineSplitter ('Right sym) 'False c m n (Position d text) where
   lineSplitter = Biparser
     do

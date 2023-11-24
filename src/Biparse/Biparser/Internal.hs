@@ -78,7 +78,7 @@ setBackward (Biparser fw _) = Biparser fw
 type instance BwdMonad () (Biparser _ _ _ n) = n
 deriving instance Monad n => Comap () (Biparser c s m n)
 deriving instance (Functor m, Functor n) => DualMap (Biparser c s m n u)
-deriving instance (MonadError e m, MonadError e n, Monoid (SubState c s)) => MonadError e (Biparser c s m n u)
+deriving instance (MonadError e m, MonadError e n, Monoid (SubState s)) => MonadError e (Biparser c s m n u)
 instance (MonadUnrecoverable m, MonadUnrecoverable n, UnrecoverableError m ~ UnrecoverableError n) => MonadUnrecoverable (Biparser c s m n u) where
   type UnrecoverableError (Biparser c s m n u) = UnrecoverableError (FwdBwd m n u)
   throwUnrecoverable = Biparser' . throwUnrecoverable
@@ -248,11 +248,15 @@ ignoreBackward = flip setBackward pure
 
 -- | Line and column number for parsing error messages is an example of context that is important to maintain but annoying to directly deal with when writeing the parser.
 -- DEV NOTE: 'context' may not be a necessary type argument
-type SubState :: Type -> Type -> Type
-type family SubState context state
+type SubState :: Type -> Type
+type family SubState state
+
+type instance SubState (Identity s) = s
 
 -- | Getter for the substate.
-class GetSubState context state where getSubState :: state -> SubState context state
+class GetSubState state where getSubState :: state -> SubState state
+
+instance GetSubState (Identity s) where getSubState = runIdentity
 
 -- | Update the state's context and substate.
 -- Used when more than one element at a time should be consumed and written.
@@ -263,23 +267,27 @@ class GetSubState context state where getSubState :: state -> SubState context s
 -- The second @ss@ is the new substate
 -- Returns the updated state
 class UpdateStateWithSubState context state where
-  updateSubStateContext :: ss ~ SubState context state => state -> ss -> ss -> state
+  updateSubStateContext :: ss ~ SubState state => state -> ss -> ss -> state
 
-type SubStateContext context state = (GetSubState context state, UpdateStateWithSubState context state)
+instance UpdateStateWithSubState c (Identity s) where updateSubStateContext _ _ = Identity
 
-type SubElement :: Type -> Type -> Type
-type SubElement c s = Element (SubState c s)
+type SubStateContext context state = (GetSubState state, UpdateStateWithSubState context state)
+
+type SubElement :: Type -> Type
+type SubElement s = Element (SubState s)
 
 -- | Update the state's context and substate.
 -- Used when only one element is consumed and written.
 -- - @state@ is the old state
--- - @SubElement context state@ is the consumed element
--- - @SubState context state@ is the new substate
+-- - @SubElement state@ is the consumed element
+-- - @SubState state@ is the new substate
 -- - Returns the updated state
 class UpdateStateWithElement context state where
-  updateElementContext :: state -> SubElement context state -> SubState context state -> state
+  updateElementContext :: state -> SubElement state -> SubState state -> state
 
-type ElementContext context state = (GetSubState context state, UpdateStateWithElement context state)
+instance UpdateStateWithElement c (Identity s) where updateElementContext _ _ = Identity
+
+type ElementContext context state = (GetSubState state, UpdateStateWithElement context state)
 
 class ReplaceSubState s ss s' | s ss -> s' where replaceSubState :: s -> ss -> s'
 
@@ -302,22 +310,22 @@ type One c s m n ss =
   -- n
   , MonadWriter ss n
   -- assignments
-  , ss ~ SubState c s
+  , ss ~ SubState s
   )
 -- | Takes and writes one element. Updates the context and substate.
-one :: forall c s m n ss. One c s m n ss => Iso c m n s (SubElement c s)
+one :: forall c s m n ss. One c s m n ss => Iso c m n s (SubElement s)
 one = Biparser fw bw
   where
   fw = do
     s <- get
-    (x, ss) <- headTailAlt (getSubState @c s) <|> fail "Could not take one element. The container is empty."
+    (x, ss) <- headTailAlt (getSubState s) <|> fail "Could not take one element. The container is empty."
     put (updateElementContext @c s x ss) $> x
-  bw :: SubElement c s -> n (SubElement c s)
+  bw :: SubElement s -> n (SubElement s)
   bw c = tell (singleton c) $> c
 
 -- | Takes and writes substate. Updates the context and substate.
 split :: forall c s m n ss.
-  ( SubState c s ~ ss
+  ( SubState s ~ ss
   , SubStateContext c s
   , MonadState s m
   , MonadWriter ss n
@@ -328,7 +336,7 @@ split splitSubState = Biparser fw bw
   where
   fw = do
     s <- get
-    (start, end) <- runStateT @ss splitSubState $ getSubState @c @s s
+    (start, end) <- runStateT @ss splitSubState $ getSubState @s s
     put $ updateSubStateContext @c s start end
     return start
   bw :: ss -> n ss
@@ -376,15 +384,15 @@ optionalBack f x (Biparser fw bw) = Biparser fw $ maybe (pure x) bw . f
 -- DEV NOTE: May be able to be written in general without Biparser constructor
 isNull :: forall c s m n u ss.
   ( MonoFoldable u
-  , GetSubState c s
+  , GetSubState s
   , MonadState s m
   , MonoFoldable ss
   , Applicative n
-  , ss ~ SubState c s
+  , ss ~ SubState s
   )
   => Biparser c s m n u Bool
 isNull = Biparser
-  (gets @s $ null . getSubState @c)
+  (gets @s $ null . getSubState)
   (pure . null)
 
 write :: forall c s m n ss.
@@ -401,7 +409,7 @@ breakWhen' :: forall c s m n ss.
   , MonadWriter ss n
   , SubStateContext c s
   , IsSequence ss
-  , ss ~ SubState c s
+  , ss ~ SubState s
   )
   => Unit c s m n
   -> Iso c m n s ss
@@ -409,7 +417,7 @@ breakWhen' (Biparser fw bw) = Biparser fw' bw'
   where
   fw' = do
     startState <- get
-    let its = initTails $ getSubState @c @s startState
+    let its = initTails $ getSubState @s startState
     tryState $ maybe empty (pure . fst) =<< flip findM its \(h,t) -> do
       put $ updateSubStateContext @c startState h t
       fw $> True <|> pure False
@@ -426,10 +434,10 @@ count :: forall c s m n u v ss.
   -- n
   , MonadWriter ss n
   -- substate
-  , GetSubState c s
+  , GetSubState s
   , MonoFoldable ss
   -- assignments
-  , ss ~ SubState c s
+  , ss ~ SubState s
   )
   => Biparser c s m n u v
   -> Biparser c s m n u (Natural, v)
@@ -438,7 +446,7 @@ count (Biparser fw bw) = Biparser
     s <- get
     x <- fw
     s' <- get
-    let c = convertIntegralUnsafe $ length (getSubState @c @s s) - length (getSubState @c @s s')
+    let c = convertIntegralUnsafe $ length (getSubState @s s) - length (getSubState @s s')
     pure (c, x)
   \u -> do
     (x,w) <- listen @ss $ bw u
@@ -452,7 +460,7 @@ ask' x = Biparser (pure x) (const ask)
 asks' :: (Applicative m, MonadReader r n) => a -> (r -> a) -> Biparser c s m n u a
 asks' x f = Biparser (pure x) (const $ asks f)
 
---ask'' :: (Monad n, Monoid (SubState c s)) => M c s m r -> Biparser c s m n r u r
+--ask'' :: (Monad n, Monoid (SubState s)) => M c s m r -> Biparser c s m n r u r
 --ask'' = flip Biparser (const ask)
 
 -- | Set the state as before if the predicate passes.
@@ -469,24 +477,24 @@ resetState p (Biparser fw bw) = Biparser
     pure x
   bw
 
-instance (Monoid (SubState c s), Monad m, Applicative n) => Applicative (Biparser c s m n u) where
+instance (Monoid (SubState s), Monad m, Applicative n) => Applicative (Biparser c s m n u) where
   pure v = Biparser (pure v) (const $ pure v)
   Biparser fw bw <*> Biparser fw' bw' = Biparser
     (fw <*> fw')
     (\u -> bw u <*> bw' u)
 
-instance (Monoid (SubState c s), MonadPlus m, Alternative n) => Alternative (Biparser c s m n u) where
+instance (Monoid (SubState s), MonadPlus m, Alternative n) => Alternative (Biparser c s m n u) where
   empty = Biparser empty (const empty)
   Biparser fw bw <|> Biparser fw' bw' =
     Biparser (fw <|> fw') (\u -> bw u <|> bw' u)
 
-instance (Monoid (SubState c s), Monad m, Monad n) => Monad (Biparser c s m n u) where
+instance (Monoid (SubState s), Monad m, Monad n) => Monad (Biparser c s m n u) where
   pu >>= kw = Biparser fw bw
     where
     fw = forward pu >>= forward . kw
     bw u = backward pu u >>= ($ u) . backward . kw
 
-instance (Monoid (SubState c s), MonadFail m, MonadFail n) => MonadFail (Biparser c s m n u) where
+instance (Monoid (SubState s), MonadFail m, MonadFail n) => MonadFail (Biparser c s m n u) where
   fail x = Biparser (fail x) (const $ fail x)
 
 instance (Functor m, Functor n) => Profunctor (Biparser c s m n) where

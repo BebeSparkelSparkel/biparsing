@@ -7,7 +7,7 @@ spec = do
   describe "take" do
     describe "IdentityState" do
       fb @() "uni"
-        (take 'a' :: Unit IdentityState Text IO IO () ())
+        (take 'a' :: Unit () (Identity Text) IO IO () ())
         ()
         ()
         (\f -> do
@@ -22,7 +22,7 @@ spec = do
           it "print one" $ b () >>= (`shouldBe` ((), "a"))
 
       fb @() "di"
-        (take 'a' *> take 'b' :: Unit IdentityState Text IO IO () ())
+        (take 'a' *> take 'b' :: Unit () (Identity Text) IO IO () ())
         ()
         ()
         (\f -> do
@@ -72,8 +72,8 @@ spec = do
    \_ -> pure ()
 
   describe "takeDi" do
-    fb @() "IdentityState"
-      (takeDi 'x' 1 :: Iso IdentityState IO IO () () Text Int)
+    fb @() "Identity"
+      (takeDi 'x' 1 :: Iso () IO IO () () (Identity Text) Int)
       ()
       ()
       (\f -> do
@@ -95,8 +95,8 @@ spec = do
       \_ -> pure ()
 
   describe "takeNot" do
-    fb @() "IdentityState"
-      (takeNot 'A' :: Iso IdentityState IO IO () () String Char)
+    fb @() "Identity"
+      (takeNot 'A' :: Iso () IO IO () () (Identity String) Char)
       ()
       ()
       (\f -> do
@@ -213,7 +213,7 @@ spec = do
           | otherwise -> mempty
       bs = replicate nb 'b'
       cs = replicate nc 'c'
-      bp :: Biparser IdentityState (Seq Char) (FM (Seq Char)) (Either String) () () (Seq Char) (Natural, Seq Char)
+      bp :: Biparser () (Identity (Seq Char)) (FM (Seq Char)) (Either String) () () (Seq Char) (Natural, Seq Char)
       bp = padCount n' 'a' $ takeWhile (== 'b')
       f = runForward @() bp
       b = runBackward bp () ()
@@ -221,7 +221,7 @@ spec = do
       na' = convertIntegralUnsafe na
       nb' = convertIntegralUnsafe nb
       in do
-        f (as <> bs <> cs) `shouldBe` Right ((na' + nb', bs), cs)
+        f (Identity $ as <> bs <> cs) `shouldBe` Right ((na' + nb', bs), Identity cs)
         b bs `shouldBe` Right ((n', bs), as' <> bs)
 
   fb @() "breakWhen"
@@ -258,7 +258,7 @@ spec = do
   fb @() "optionMaybe"
     ((,) <$> optionMaybe (takeUni 1 `upon` mapBool $> "one")
          <*> optionMaybe (takeUni 2 `upon` mapBool $> "two")
-    :: Biparser IdentityState (Vector Int) IO IO () () Bool (Maybe String, Maybe String))
+    :: Biparser () (Identity (Vector Int)) IO IO () () Bool (Maybe String, Maybe String))
     ()
     ()
     (\f -> do
@@ -280,8 +280,8 @@ spec = do
       it "prints second" $ b False >>= (`shouldBe` ((Nothing, Just "two"), [2]))
 
   describe "stripPrefix" do
-    fb @() "IdentityState"
-      (stripPrefix "abc" :: Unit IdentityState Text IO IO () ())
+    fb @() "Identity"
+      (stripPrefix "abc" :: Unit () (Identity Text) IO IO () ())
       ()
       ()
       (\f -> do
@@ -309,7 +309,7 @@ spec = do
         it "prints prefix" $ b () >>= (`shouldBe` ((), "abc"))
 
   fb @() "not"
-    (not $ (== 'x') <$> one :: Biparser IdentityState String IO IO () () Char Bool)
+    (not $ (== 'x') <$> one :: Biparser () (Identity String) IO IO () () Char Bool)
     ()
     ()
     (\f -> do

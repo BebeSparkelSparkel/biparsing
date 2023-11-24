@@ -42,7 +42,7 @@ identity :: forall c s m n ss.
   ( MonadState s m
   , MonadWriter ss n
   , SubStateContext c s
-  , ss ~ SubState c s
+  , ss ~ SubState s
   )
   => Iso c m n s ss
 identity = split do
@@ -53,18 +53,18 @@ identity = split do
 -- * Take for single elements
 
 type Take c s m n ss se =
-  ( Show (SubElement c s)
-  , Eq (SubElement c s)
-  , IsSequence (SubState c s)
+  ( Show (SubElement s)
+  , Eq (SubElement s)
+  , IsSequence (SubState s)
   , MonadState s m
   , MonadFail m
   , MonadPlus m
-  , MonadWriter (SubState c s) n
+  , MonadWriter (SubState s) n
   , MonadFail n
   , ElementContext c s
   -- assignments
-  , ss ~ SubState c s
-  , se ~ SubElement c s
+  , ss ~ SubState s
+  , se ~ SubElement s
   )
 
 -- | Assumes but disregards the writer context
@@ -97,7 +97,7 @@ takeDi :: forall c s m n u ss se.
   -> Iso c m n s u
 takeDi takeWrite matchReturn = takeTri takeWrite matchReturn matchReturn
 
--- | Allows 'SubElement c s'`, 'u', and 'v' to be fixed which works well with Alternative.
+-- | Allows 'SubElement s'`, 'u', and 'v' to be fixed which works well with Alternative.
 takeTri :: forall c s m n u v ss se.
   ( Take c s m n ss se
   , Eq u
@@ -140,8 +140,8 @@ type Take' c s m n ss se =
   -- context
   , SubStateContext c s
   -- assignments
-  , ss ~ SubState c s
-  , se ~ SubElement c s
+  , ss ~ SubState s
+  , se ~ SubElement s
   )
 
 takeDi' :: forall c s m n u ss se.
@@ -160,7 +160,7 @@ takeTri' :: forall c s m n u v ss se.
   , Alternative n
   , Take' c s m n ss se
   )
-  => SubState c s
+  => SubState s
   -> u
   -> v
   -> Biparser c s m n u v
@@ -172,16 +172,16 @@ takeTri' takeWrite toMatch toReturn = try do
 
 type TakeWhile c s m n se =
   ( SubStateContext c s
-  , IsSequence (SubState c s)
+  , IsSequence (SubState s)
   , MonadState s m
-  , MonadWriter (SubState c s) n
-  , se ~ SubElement c s
+  , MonadWriter (SubState s) n
+  , se ~ SubElement s
   )
 
 takeWhile :: forall c s m n se.
   TakeWhile c s m n se
   => (se -> Bool)
-  -> Iso c m n s (SubState c s)
+  -> Iso c m n s (SubState s)
 takeWhile = split . state . span
 
 -- | Drop forward elements while predicate is true.
@@ -195,7 +195,7 @@ dropWhile = void . comap (const mempty) . takeWhile
 skipUntil :: forall c s m n u.
   ( MonadState s m
   , Monad n
-  , Monoid (SubState c s)
+  , Monoid (SubState s)
   )
   => Biparser c s m n u Bool
   -> Const c s m n u
@@ -206,7 +206,7 @@ untilJust :: forall c s m n u a ss.
   ( Monad m
   , Monad n
   , Monoid ss
-  , ss ~ SubState c s
+  , ss ~ SubState s
   )
   => Biparser c s m n u (Maybe a)
   -> Biparser c s m n u a
@@ -228,8 +228,8 @@ type Pad c s m n u v ss i se =
   , Num i
   , ConvertIntegral Natural i
   -- Assignments
-  , ss ~ SubState c s
-  , se ~ SubElement c s
+  , ss ~ SubState s
+  , se ~ SubElement s
   , i ~ Index ss
   )
 
@@ -267,7 +267,7 @@ type BreakWhen c s m n ss =
   , MonadWriter ss n
   , Alternative n
   , ElementContext c s
-  , ss ~ SubState c s
+  , ss ~ SubState s
   )
 
 -- | Breaks off the substate head when 'x' succeeds. Writes x after given 'ss'.
@@ -306,7 +306,7 @@ rest :: forall c s m n ss.
   ( MonadState s m
   , MonadWriter ss n
   , SubStateContext c s
-  , ss ~ SubState c s
+  , ss ~ SubState s
   )
   => Iso c m n s ss
 rest = split $ get <* put mempty
@@ -330,7 +330,7 @@ failBackward = comapM $ const empty
 -- * Optional parsing
 
 optionMaybe :: forall c s m n u v.
-  ( Monoid (SubState c s)
+  ( Monoid (SubState s)
   , MonadPlus m
   , MonadState s m
   , Alternative n
@@ -345,7 +345,7 @@ optional :: forall c s m n u v.
   , MonadState s m
   , Monad n
   , Alternative n
-  , Monoid (SubState c s)
+  , Monoid (SubState s)
   )
   => Biparser c s m n u v
   -> Biparser c s m n (Maybe u) (Maybe v)
@@ -354,7 +354,7 @@ optional x = Just <$> try x `uponM` maybe empty pure <|> pure Nothing
 -- * Stripping
 
 stripPrefix :: forall c s m n ss u.
-  ( ss ~ SubState c s
+  ( ss ~ SubState s
   , EqElement ss
   , SubStateContext c s
   , Show ss
@@ -377,7 +377,7 @@ stripPrefix pre = unit $ void s `upon` const pre
 
 -- | Counts 0 or more elements
 countElement :: forall c s m n se.
-  ( FromNatural (Index (SubState c s))
+  ( FromNatural (Index (SubState s))
   , Eq se
   , TakeWhile c s m n se
   )
@@ -395,10 +395,10 @@ countElementSome :: forall c s m n ss se.
   , MonadWriter ss n
   , Alternative n
   , Eq se
-  , se ~ SubElement c s
-  , ss ~ SubState c s
+  , se ~ SubElement s
+  , ss ~ SubState s
   )
-  => SubElement c s
+  => SubElement s
   -> Biparser c s m n Natural Natural
 countElementSome x = do
   c <- countElement x

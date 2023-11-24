@@ -44,17 +44,17 @@ instance NaturalConstraints c s m n Word64 char => IsoClass c m n s Word64 where
 
 type NaturalConstraints c s m n number char =
   ( CharElement c s char
-  , IsSequence (SubState c s)
+  , IsSequence (SubState s)
   , MonadState s m
   , MonadFail m
-  , MonadWriter (SubState c s) n
+  , MonadWriter (SubState s) n
   , MonadFail n
   , SubStateContext c s
   , Read number
   , Num number
   , Show number
   , Typeable number
-  , Show (SubState c s)
+  , Show (SubState s)
   )
 
 naturalBaseTen :: forall c s m n number char. NaturalConstraints c s m n number char => Iso c m n s number
@@ -99,7 +99,7 @@ type RealConstrints c s m n number ss char =
   , Alternative n
   , Num number
   , Ord number
-  , ss ~ SubState c s
+  , ss ~ SubState s
   )
 
 instance RealConstrints c s m n Float  ss char => IsoClass c m n s Float  where iso = realBaseTen
@@ -135,7 +135,7 @@ digitsBaseTen :: forall c m n s u ss char.
   , MonadState s m
   , MonadWriter ss n
   , SubStateContext c s
-  , ss ~ SubState c s
+  , ss ~ SubState s
   ) => Biparser c s m n u ss
 digitsBaseTen = split (state $ span $ isDigit . toChar) `upon` fromList . fmap fromChar . show
 
@@ -163,7 +163,7 @@ sign :: forall c s m n number ss char.
   , Num number
   , Ord number
   , ElementContext c s
-  , ss ~ SubState c s
+  , ss ~ SubState s
   ) => Biparser c s m n number (number -> number)
 sign = comap deduceSign $ takeTri (fromChar '-') Negative negate <|> pure id
 
@@ -185,12 +185,12 @@ hex :: forall (charCase :: CharCase) c m n a number text char.
   , Integral number
   , Show number
   -- context
-  , GetSubState c a
+  , GetSubState a
   , UpdateStateWithElement c a
   , HexCharMap charCase
   -- assignments
-  , text ~ SubState c a
-  , char ~ SubElement c a
+  , text ~ SubState a
+  , char ~ SubElement a
   )
   => Natural
   -> Iso c m n a number

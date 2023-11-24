@@ -3,7 +3,6 @@
 module Prelude
   ( module Biparse.Biparser
   , module Biparse.Biparser.StateReaderWriter
-  , module Biparse.Context.IdentityState
   , module Biparse.General
   , module Biparse.Text
   , module Biparse.Text.Context.LineColumn
@@ -72,7 +71,6 @@ module Prelude
 import Data.ByteString.Internal (w2c, c2w)
 import Biparse.Biparser hiding (Biparser, Iso, Unit, Const, ConstU)
 import Biparse.Biparser.StateReaderWriter (Biparser, Iso, Unit, Const, ConstU, runForward, runBackward, evalForward)
-import Biparse.Context.IdentityState (IdentityState)
 import Biparse.General
 import Biparse.Text (CharElement)
 import Biparse.Text.Context.LineColumn (LineColumn, UnixLC, LinesOnly, ColumnsOnly, Position(Position), subState, ErrorPosition(ErrorPosition), startLineColumn, NoUpdate)
@@ -129,6 +127,8 @@ import Control.Monad.RWS (RWST)
 import Control.Monad.ChangeMonad (ChangeMonad, ChangeFunction, changeMonad', ResultMonad(ResultingMonad))
 import Control.Monad.Trans.Class (MonadTrans, lift)
 
+import GHC.Exts (IsList, fromList, Item)
+import GHC.Exts qualified
 import Text.Printf (IsChar, fromChar, toChar)
 import System.Timeout (timeout)
 
@@ -143,7 +143,7 @@ fb :: forall is c s m m' n r ws u v.
   -> r
   -> ws
   -> ((s -> m' (v, s)) -> Spec)
-  -> ((u -> n (v, SubState c s)) -> Spec)
+  -> ((u -> n (v, SubState s)) -> Spec)
   -> Spec
 fb describeLabel bp r ws fws bws = describe describeLabel do
   describe "forward" $ fws $ runForward @is bp
@@ -179,4 +179,9 @@ infixr 9 >>>
 instance IsChar Word8 where
   fromChar = c2w
   toChar = w2c
+
+instance IsList a => IsList (Identity a) where
+  type Item (Identity a) = Item a
+  fromList = Identity . fromList
+  toList = GHC.Exts.toList . runIdentity
 

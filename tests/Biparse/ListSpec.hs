@@ -8,7 +8,7 @@ import Data.Text qualified as T
 spec :: Spec
 spec = do
   fb @() "takeElementsWhile"
-    (fmap w2c <$> takeElementsWhile (isDigit . w2c) `upon` fmap c2w :: Iso IdentityState IO IO () () ByteString String)
+    (fmap w2c <$> takeElementsWhile (isDigit . w2c) `upon` fmap c2w :: Iso () IO IO () () (Identity ByteString) String)
     ()
     ()
     (\f -> do
@@ -53,7 +53,7 @@ spec = do
 
   describe "many" do
     fb @() "with takeUni"
-      (many $ takeUni 'a' :: Iso IdentityState IO IO () () Text [Char])
+      (many $ takeUni 'a' :: Iso () IO IO () () (Identity Text) [Char])
       ()
       ()
       (\f -> do
@@ -72,7 +72,7 @@ spec = do
       (   many
       $   try (takeTri "TRUE" True 1)
       <|>      takeTri "FALSE" False 0
-      :: Biparser IdentityState [String] Maybe Maybe () () [Bool] [Int])
+      :: Biparser () (Identity [String]) Maybe Maybe () () [Bool] [Int])
       ()
       ()
       (\f -> do
@@ -96,7 +96,7 @@ spec = do
             `shouldBe` Just (mempty, mempty)
 
   fb @() "some"
-    (some (takeUni 1) :: Iso IdentityState IO IO () () [Int] (NonEmpty Int))
+    (some (takeUni 1) :: Iso () IO IO () () (Identity [Int]) (NonEmpty Int))
     ()
     ()
     (\f -> do
@@ -141,13 +141,13 @@ spec = do
         b "abc" `shouldThrow` isUserError
 
   describe "splitElem" do
-    let bp :: Iso IdentityState IO IO () () Text [Text]
+    let bp :: Iso () IO IO () () (Identity Text) [Text]
         bp = splitElem ':'
         f = runForward @() bp
         b = runBackward bp () ()
         t name f' b' = describe name do
           it "forward" $ limit do
-            f f' >>= (`shouldBe` (b', mempty))
+            f (Identity f') >>= (`shouldBe` (b', mempty))
           it "backward" $ limit do
             y <- b b'
             y `shouldBe` (b', f')
@@ -160,11 +160,11 @@ spec = do
     t "empty first" ":ab" [mempty,"ab"]
 
     let ef = evalForward @() bp
-    prop "forward should never return [\"\"]" $ forAll (T.pack <$> listOf (elements "ab:")) \string -> do
+    prop "forward should never return [\"\"]" $ forAll (Identity . T.pack <$> listOf (elements "ab:")) \string -> do
       ef string >>= (`shouldNotBe` [mempty])
 
   fb @() "splitOn"
-    (splitOn "ab" :: Iso IdentityState IO IO () () Text [Text])
+    (splitOn "ab" :: Iso () IO IO () () (Identity Text) [Text])
     ()
     ()
     (\f -> do
@@ -199,7 +199,7 @@ spec = do
         x `shouldBe` (xs,"abcdababefab")
 
   fb @() "whileM"
-    (whileM (peek (memptyWrite one >>= \x -> pure $ x /= 'x')) one :: Iso IdentityState IO IO () () Text [Char])
+    (whileM (peek (memptyWrite one >>= \x -> pure $ x /= 'x')) one :: Iso () IO IO () () (Identity Text) [Char])
     ()
     ()
     (\f -> do
@@ -224,9 +224,9 @@ spec = do
 
   --describe "whileId" do
   --  describe "THIS IS WACK" do
-  --    let o = one :: Iso IdentityState Maybe Maybe Text Char
+  --    let o = one :: Iso () Maybe Maybe (Identity Text) Char
   --        m2i x = Identity . fromMaybe (False,x)
-  --        bp :: Iso IdentityState Identity Identity Text [Maybe Char]
+  --        bp :: Iso () Identity Identity (Identity Text) [Maybe Char]
   --        bp = whileId
   --          ( memptyWrite $ mapMs' m2i m2i $ comap (fromMaybe '0') $ peek do
   --            x <- o
@@ -262,9 +262,9 @@ spec = do
   --        b "abxc" `shouldBe` Identity ("ab","ab")
 
   --describe "untilId" do
-  --  let bp :: Iso IdentityState Identity Identity String [String]
+  --  let bp :: Iso () Identity Identity (Identity String) [String]
   --      bp = untilId isNull bp'
-  --      bp' :: Iso IdentityState Identity Identity String String
+  --      bp' :: Iso () Identity Identity (Identity String) String
   --      bp' = split do
   --        x <- get
   --        maybe undefined (\(y,z) -> y <$ put z) $
@@ -285,7 +285,7 @@ spec = do
   --    it "takes all" $ b ["a","b"] `shouldBe` Identity (["a","b"],"ab")
 
   fb @() "whileFwdAllBwd"
-    (whileFwdAllBwd (take 3 $> False <|> pure True) one :: Iso IdentityState EitherString EitherString () () [Int] [Int])
+    (whileFwdAllBwd (take 3 $> False <|> pure True) one :: Iso () EitherString EitherString () () (Identity [Int]) [Int])
     ()
     ()
     (\f -> do
@@ -298,7 +298,7 @@ spec = do
       it "some u" $ b [0,1,2] `shouldBe` EValue ([0,1,2],[0,1,2,3])
 
   fb @() "untilFwdSuccessBwdAll"
-    (one `untilFwdSuccessBwdAll` take 3 :: Iso IdentityState EitherString EitherString () () [Int] [Int])
+    (one `untilFwdSuccessBwdAll` take 3 :: Iso () EitherString EitherString () () (Identity [Int]) [Int])
     ()
     ()
     (\f -> do

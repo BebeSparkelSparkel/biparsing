@@ -39,7 +39,7 @@ import Control.Profunctor.FwdBwd (MapMs(mapMs))
 import Data.Maybe (fromJust)
 
 replicateBiparserT :: forall c s m n u v.
-  ( Monoid (SubState c s)
+  ( Monoid (SubState s)
   -- m
   , Monad m
   -- n
@@ -69,8 +69,8 @@ takeElementsWhile :: forall c s m n ss se.
    , Alternative n
    , ElementContext c s
    -- assignments
-   , ss ~ SubState c s
-   , se ~ SubElement c s
+   , ss ~ SubState s
+   , se ~ SubElement s
    )
   => (se -> Bool)
   -> Iso c m n s [se]
@@ -92,11 +92,11 @@ takeN :: forall c m n a ss se.
   , Alternative n
   -- substate
   , IsSequence ss
-  , GetSubState c a
+  , GetSubState a
   , UpdateStateWithElement c a
   -- assignments
-  , ss ~ SubState c a
-  , se ~ SubElement c a
+  , ss ~ SubState a
+  , se ~ SubElement a
   )
   => Natural
   -> Iso c m n a [se]
@@ -105,7 +105,7 @@ takeN n = if n > 0
   else pure mempty
 
 type Many c s m n =
-  ( Monoid (SubState c s)
+  ( Monoid (SubState s)
   , MonadPlus m
   , Monad n
   , Alternative n
@@ -126,7 +126,7 @@ many x =
 manyId :: forall c s m n u v.
   ( FixFail m
   , FixFail n
-  , Monoid (SubState c s)
+  , Monoid (SubState s)
   , MonadPlus m
   , Monad n
   , Alternative n
@@ -167,11 +167,11 @@ someIso = some
 all :: forall c s m n u v ss.
   ( Monoid ss
   , MonoFoldable ss
-  , GetSubState c s
+  , GetSubState s
   , MonadState s m
   , Monad n
   , Alternative n
-  , ss ~ SubState c s
+  , ss ~ SubState s
   )
   => Biparser c s m n u   v
   -> Biparser c s m n [u] [v]
@@ -193,8 +193,8 @@ splitElem :: forall c s m n ss se m' n'.
   , ElementContext c s
   , m' ~ StateT s Maybe
   , n' ~ WriterT ss Maybe
-  , se ~ SubElement c s
-  , ss ~ SubState c s
+  , se ~ SubElement s
+  , ss ~ SubState s
   )
   => se
   -> Iso c m n s [ss]
@@ -217,7 +217,7 @@ splitOn :: forall c s m n ss m' n'.
   , EqElement ss
   , ElementContext c s
   , SubStateContext c s
-  , ss ~ SubState c s
+  , ss ~ SubState s
   , m' ~ StateT s Maybe
   , n' ~ WriterT ss Maybe
   )
@@ -268,7 +268,7 @@ whileM :: forall c s m n u v ss.
   , MonadState s m
   , MonadWriter ss n
   , Alternative n
-  , ss ~ SubState c s
+  , ss ~ SubState s
   )
   => Biparser c s m n u Bool
   -> Biparser c s m n u v
@@ -280,7 +280,7 @@ whileM' :: forall c s m n u v.
   ( MonadPlus m
   , Monad n
   , Alternative n
-  , Monoid (SubState c s)
+  , Monoid (SubState s)
   )
   => Biparser c s m n u Bool
   -> Biparser c s m n u v
@@ -308,7 +308,7 @@ whileFwdAllBwd predicate produce = Biparser
 
 -- | Like 'whileFwdAllBwd' but runs 'produce' until 'predicate' succeeds.
 untilFwdSuccessBwdAll :: forall c s m n u v.
-  ( Monoid (SubState c s)
+  ( Monoid (SubState s)
   , MonadPlus m
   , Monad n
   , Alternative n
@@ -320,7 +320,7 @@ untilFwdSuccessBwdAll produce predicate = whileFwdAllBwd (False <$ predicate <|>
 
 -- | Should be able to use ghosts of departed prrofs to get rid of partial head tail
 --whileId :: forall c s u v.
---  ( Monoid (SubState c s)
+--  ( Monoid (SubState s)
 --  )
 --  => Biparser c s Identity Identity u Bool
 --  -> Biparser c s Identity Identity u v
@@ -333,7 +333,7 @@ untilFwdSuccessBwdAll produce predicate = whileFwdAllBwd (False <$ predicate <|>
 --  ( MonadPlus m
 --  , Monad n
 --  , Alternative n
---  , Monoid (SubState c s)
+--  , Monoid (SubState s)
 --  )
 --  => Biparser c s m n u Bool
 --  -> Biparser c s m n u v
@@ -344,7 +344,7 @@ untilFwdSuccessBwdAll produce predicate = whileFwdAllBwd (False <$ predicate <|>
 --  ( MonadPlus m
 --  , Monad n
 --  , Alternative n
---  , Monoid (SubState c s)
+--  , Monoid (SubState s)
 --  )
 --  => Biparser c s m n u Bool
 --  -> Biparser c s m n u v
@@ -353,7 +353,7 @@ untilFwdSuccessBwdAll produce predicate = whileFwdAllBwd (False <$ predicate <|>
 
 -- | Should be able to use ghosts of departed prrofs to get rid of undefined
 --untilId :: forall c s u v.
---  ( Monoid (SubState c s)
+--  ( Monoid (SubState s)
 --  )
 --  => Biparser c s Identity Identity u Bool
 --  -> Biparser c s Identity Identity u v
@@ -390,7 +390,7 @@ untilExclusive' :: forall c s m n u v.
 untilExclusive' = untilClusive \f x -> (f mempty, x)
 
 type UntilClusive c s m n =
-  ( Monoid (SubState c s)
+  ( Monoid (SubState s)
   , Monad m
   , Monad n
   , Alternative n
@@ -424,7 +424,7 @@ intersperse :: forall c s m n u fu v fv v' ss.
   , IsSequence fv
   , Element fv ~ v
   -- assignments
-  , ss ~ SubState c s
+  , ss ~ SubState s
   )
   => Biparser c s m n u v
   -> (forall u'. Biparser c s m n u' v')

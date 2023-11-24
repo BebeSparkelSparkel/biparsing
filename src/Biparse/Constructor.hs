@@ -23,7 +23,6 @@ module Biparse.Constructor
 
 import Control.Monad.ChangeMonad (ChangeMonad, ChangeFunction, changeMonad')
 import Biparse.Biparser (Biparser(Biparser), SubState, SubElement, one, Iso, GetSubState, UpdateStateWithElement)
-import Biparse.Context.IdentityState (IdentityState)
 import Biparse.Biparser.StateReaderWriter qualified as BSRW
 import Control.Lens (Traversal', preview, assign)
 import Control.Monad.TransformerBaseMonad (TransformerBaseMonad, LiftBaseMonad, liftBaseMonad)
@@ -93,7 +92,7 @@ uponM = flip comapM
 
 type FocusOne is c s m m' n n' ss se =
   ( IsSequence ss
-  , GetSubState c s
+  , GetSubState s
   , UpdateStateWithElement c s
   -- m
   , MonadState s m
@@ -102,8 +101,8 @@ type FocusOne is c s m m' n n' ss se =
   -- n
   , MonadWriter ss n
   -- assignments
-  , ss ~ SubState c s
-  , se ~ SubElement c s
+  , ss ~ SubState s
+  , se ~ SubElement s
   --
   , Focus is m m' n n'
   )
@@ -165,11 +164,11 @@ lensBiparse :: forall s s' m n u v.
   , Monad n
   )
   => Traversal' s s'
-  -> BSRW.Biparser IdentityState s' m n () () u v
+  -> BSRW.Biparser () (Identity s') m n () () u v
   -> Constructor s m n u v
 lensBiparse t (Biparser fw bw) = Constructor
   do
-    s <- preview t >>= maybe (fail "lensBiparse could not preview") pure
+    s <- preview t >>= maybe (fail "lensBiparse could not preview") (pure . Identity)
     (v, _) <- ReaderT $ const $ runStateErrorT fw s
     pure v
   \u -> do
