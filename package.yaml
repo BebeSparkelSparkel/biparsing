@@ -55,6 +55,8 @@ library:
     - vector
     - bytestring
     - split
+    - stringsearch
+
   other-modules:
     - Prelude
     #- Paths_biparsing

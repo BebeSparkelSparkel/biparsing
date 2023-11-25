@@ -6,19 +6,18 @@ module Data.EqElement
 
 import Data.Bool (otherwise)
 import Data.Eq (Eq, (==))
-import Data.Function ((.))
+import Data.Function ((.), ($))
 import Data.Functor (fmap)
 import Data.Maybe (Maybe(Just,Nothing))
 import Data.MonoTraversable (Element, otoList)
 import Data.Sequences (IsSequence, singleton, splitWhen, fromList)
 
 import Data.ByteString qualified as S
+import Data.ByteString.Search qualified as SS
 import Data.List qualified as List
 import Data.List.Split qualified as List
 import Data.Sequence qualified as Seq
 import Data.Text qualified as T
-
-import GHC.Err (undefined)
 
 class (IsSequence seq, Eq (Element seq)) => EqElement seq where
   stripPrefix :: seq -> seq -> Maybe seq
@@ -39,7 +38,10 @@ instance EqElement S.ByteString where
   splitElem sep s
     | S.null s = [S.empty]
     | otherwise = S.split sep s
-  splitSeq = undefined -- probably needs a better implementation
+  splitSeq sep s
+    | S.null sep = (:) S.empty $ List.map singleton $ S.unpack s
+    | S.null s = [S.empty]
+    | otherwise = SS.split sep s
 
 instance EqElement T.Text where
   stripPrefix = T.stripPrefix

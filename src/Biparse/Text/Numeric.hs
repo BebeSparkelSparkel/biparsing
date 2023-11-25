@@ -28,12 +28,12 @@ import Data.Tuple (swap)
 import Data.Word (Word, Word8, Word16, Word32, Word64)
 import GHC.Float (Float, Double)
 import GHC.Num ((*), negate, Integer, abs)
-import GHC.Real (Fractional, (^^))
-import GHC.Real (Integral)
+import GHC.Real (Fractional, (^^), Integral)
 import Numeric (showHex)
 import Safe (readMay)
 import Type.Reflection (Typeable, typeRep)
 import Data.Sequences qualified
+import Data.Ix (Ix, index)
 
 
 instance NaturalConstraints c s m n Word   char => IsoClass c m n s Word   where iso = naturalBaseTen
@@ -44,30 +44,38 @@ instance NaturalConstraints c s m n Word64 char => IsoClass c m n s Word64 where
 
 type NaturalConstraints c s m n number char =
   ( CharElement s char
+  , Ix char
   , IsSequence (SubState s)
   , MonadState s m
   , MonadFail m
   , MonadWriter (SubState s) n
   , MonadFail n
   , SubStateContext c s
-  , Read number
-  , Num number
-  , Show number
+  , Enum number
   , Typeable number
   , Show (SubState s)
   )
 
-naturalBaseTen :: forall c s m n number char. NaturalConstraints c s m n number char => Iso c m n s number
+naturalBaseTen :: forall c s m n number char.
+  ( NaturalConstraints c s m n number char
+  , Show number
+  ) => Iso c m n s number
 naturalBaseTen = do
-  ds <- fmap toChar . toList <$> digitsBaseTen `upon` abs
-  maybe
-    do
-      cs <- peek $ Data.Sequences.take 20 <$> rest `upon` const mempty
-      fail $ "Could not parse " <> show cs <> " to " <> show (typeRep @number) <> " base 10."
-    pure
-    $ readMay ds
+  ds <- digitsBaseTen
+  if null ds
+  then do
+    cs <- peek $ Data.Sequences.take 20 <$> rest `upon` const mempty
+    fail $ "Could not parse " <> show cs <> " to " <> show (typeRep @number) <> " base 10."
+  else pure $ toEnum $ foldl' (\x c -> x * 10 + charToDigit c) 0 ds
 
-naturalBaseTen' :: forall number c s m n char. NaturalConstraints c s m n number char => Iso c m n s number
+
+charToDigit :: (Ix char, IsChar char) => char -> Int
+charToDigit = index (fromChar '0', fromChar '9')
+
+naturalBaseTen' :: forall number c s m n char.
+  ( NaturalConstraints c s m n number char
+  , Show number
+  ) => Iso c m n s number
 naturalBaseTen' = naturalBaseTen
 
 instance IntConstraints c s m n Int   char => IsoClass c m n s Int   where iso = intBaseTen
@@ -85,10 +93,13 @@ type IntConstraints c s m n number char =
   , ElementContext c s
   )
 
-intBaseTen :: forall c s m n number char. IntConstraints c s m n number char => Iso c m n s number
+intBaseTen :: forall c s m n number char.
+  ( IntConstraints c s m n number char
+  , Show number
+  ) => Iso c m n s number
 intBaseTen = do
   s <- sign
-  n <- naturalBaseTen
+  n <- naturalBaseTen `upon` abs
   pure $ s n
 
 type RealConstrints c s m n number ss char =
@@ -109,6 +120,8 @@ instance RealConstrints c s m n Double ss char => IsoClass c m n s Double where 
 scientific :: forall c s m n number ss char.
   ( Fractional number
   , RealConstrints c s m n number ss char
+  , Show number
+  , Read number
   ) => Iso c m n s number
 scientific = do
   digits <- realBaseTen
@@ -119,15 +132,18 @@ scientific = do
 
 realBaseTen :: forall c s m n number ss char.
   ( RealConstrints c s m n number ss char
+  , Show number
+  , Read number
   ) => Iso c m n s number
 realBaseTen = do
   s <- sign
   ws <- digitsBaseTen `upon` abs
   ds <- comap (const mempty) $ ignoreBackward
-    $   try (cons <$> (fromChar '.' <$ take (fromChar '.'))  <*> digitsBaseTen)
+    $   try (cons <$> (fromChar '.' <$ take (fromChar '.')) <*> digitsBaseTen)
     <|> pure mempty
   maybe (fail "Could not parse real base 10.") (pure . s) $ readMay $ fmap toChar $ toList $ ws <> ds
 
+-- DEV NOTE: show should not be used
 digitsBaseTen :: forall c m n s u ss char.
   ( CharElement s char
   , Show u
