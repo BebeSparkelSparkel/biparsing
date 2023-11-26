@@ -31,7 +31,6 @@ import GHC.Num ((*), negate, Integer, abs)
 import GHC.Real (Fractional, (^^), Integral)
 import Numeric (showHex)
 import Safe (readMay)
-import Type.Reflection (Typeable, typeRep)
 import Data.Sequences qualified
 import Data.Ix (Ix, index)
 
@@ -52,7 +51,6 @@ type NaturalConstraints c s m n number char =
   , MonadFail n
   , SubStateContext c s
   , Enum number
-  , Typeable number
   , Show (SubState s)
   )
 
@@ -65,7 +63,7 @@ naturalBaseTen = do
   if null ds
   then do
     cs <- peek $ Data.Sequences.take 20 <$> rest `upon` const mempty
-    fail $ "Could not parse " <> show cs <> " to " <> show (typeRep @number) <> " base 10."
+    fail $ "Could not parse " <> show cs <> " to a base 10 natural."
   else pure $ toEnum $ foldl' (\x c -> x * 10 + charToDigit c) 0 ds
 
 
@@ -135,13 +133,17 @@ realBaseTen :: forall c s m n number ss char.
   , Show number
   , Read number
   ) => Iso c m n s number
-realBaseTen = do
-  s <- sign
-  ws <- digitsBaseTen `upon` abs
-  ds <- comap (const mempty) $ ignoreBackward
-    $   try (cons <$> (fromChar '.' <$ take (fromChar '.')) <*> digitsBaseTen)
-    <|> pure mempty
-  maybe (fail "Could not parse real base 10.") (pure . s) $ readMay $ fmap toChar $ toList $ ws <> ds
+realBaseTen =
+  try do
+    s <- sign
+    ws <- digitsBaseTen `upon` abs
+    ds <- comap (const mempty) $ ignoreBackward
+      $   try (cons <$> (fromChar '.' <$ take (fromChar '.')) <*> digitsBaseTen)
+      <|> pure mempty
+    maybe empty (pure . s) $ readMay $ fmap toChar $ toList $ ws <> ds
+  <|> do
+    cs <- peek $ Data.Sequences.take 20 <$> rest `upon` const mempty
+    fail $ "Could not parse " <> show cs <> " to a base 10 real."
 
 -- DEV NOTE: show should not be used
 digitsBaseTen :: forall c m n s u ss char.

@@ -33,7 +33,7 @@ spec = do
         negativeIntegerForward f
 
       it "error shows failed to parse string" $
-        f "   abc" `shouldBe` Left (ErrorPosition () 1 1 "Could not parse \"   abc\" to Int base 10.")
+        f "   abc" `shouldBe` Left (ErrorPosition () 1 1 "Could not parse \"   abc\" to a base 10 natural.")
 
       failIntegerForward f
     )
@@ -125,7 +125,7 @@ realForward f = do
     failIntegerForward f
 
     it "fail real" do
-      f "1."   `shouldSatisfy` errorPosition 1 3
+      f "1."   `shouldBe` Left (ErrorPosition () 1 1 "Could not parse \"1.\" to a base 10 real.")
 
 realBackward :: (Show a, Show b, Eq a, Eq b, IsString b, Fractional t, Fractional a) => (t -> IO (a, b)) -> Spec
 realBackward b = do
