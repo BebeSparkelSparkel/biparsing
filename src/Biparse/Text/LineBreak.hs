@@ -55,7 +55,8 @@ lines = lineSplitter @(LineBreaker lb) @(UpdateSuperState c)
 type UpdateSuperState :: Type -> Bool
 type family UpdateSuperState a
 
-class LineSplitter (lb :: Either Char Symbol) (up :: Bool) c m n a where lineSplitter :: Iso c m n a [SubState a]
+class LineSplitter (lb :: Either Char Symbol) (up :: Bool) c m n a where
+  lineSplitter :: Iso c m n a [SubState a]
 instance
   ( MonadState a m
   , MonadWriter ss n

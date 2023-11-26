@@ -36,6 +36,7 @@ import Control.Monad.ChangeMonad (ChangeMonad, ChangeFunction, changeMonad', Res
 import Control.Lens (makeLenses, (.~), (%~), _2, _Left, _Right, (^.))
 import Control.Monad.UndefinedBackwards (UndefinedBackwards)
 import Data.EqElement (splitElem, splitSeq)
+import Data.MonoTraversable.Unprefixed (intercalate)
 
 import GHC.Err (undefined)
 import Control.Monad.Trans.Error qualified as E
@@ -202,7 +203,7 @@ instance
   ( MonadState (Position d text) m
   , EqElement text
   , IsChar (Element text)
-  , Applicative n
+  , MonadWriter text n
   , KnownChar char
   , text ~ SubState (Position d text)
   ) => LineSplitter ('Left char) 'False c m n (Position d text) where
@@ -210,13 +211,19 @@ instance
     do
       p <- get
       put $ p & subState .~ mempty
-      pure $ splitElem (char @char) $ p ^. subState
-    pure
+      pure case splitElem c $ p ^. subState of
+        [x] | null x -> mempty
+        x -> x
+    \ls -> do
+      tell $ intercalate (singleton c) ls
+      pure ls
+    where
+    c = char @char
 
 instance
   ( MonadState (Position d text) m
   , EqElement text
-  , Applicative n
+  , MonadWriter text n
   , IsString text
   , KnownSymbol sym
   , text ~ SubState (Position d text)
@@ -225,6 +232,12 @@ instance
     do
       p <- get
       put $ p & subState .~ mempty
-      pure $ splitSeq (symbol @sym) $ p ^. subState
-    pure
+      pure case splitSeq sym $ p ^. subState of
+        [x] | null x -> mempty
+        x -> x
+    \ls -> do
+      tell $ intercalate sym ls
+      pure ls
+    where
+    sym = symbol @sym
 
