@@ -204,8 +204,38 @@ spec = do
 
       describe "only pad" do
         it "one" $ f "x" `shouldSatisfy` errorPosition 1 2
-
         it "multiple" $ f "xxx" `shouldSatisfy` errorPosition 1 4
+    )
+    \b -> do
+      it "add pad" do
+        b 1 >>= (`shouldBe` (1, "xxx1"))
+        b 123 >>= (`shouldBe` (123, "x123"))
+
+      it "no pad exact" do
+        b 1234 >>= (`shouldBe` (1234, "1234"))
+
+      it "no pad over" do
+        b 12345 >>= (`shouldBe` (12345, "12345"))
+
+  fb @() "padSet"
+    (padSet 4 'x' ['x','y'] naturalBaseTen :: Iso UnixLC (FM (Seq Char)) IO () () (Position () (Seq Char)) Int)
+    ()
+    ()
+    (\f -> do
+      it "no pad" do
+        f "1" `shouldBe` Right (1, Position () 1 2 mempty)
+        f "123" `shouldBe` Right (123, Position () 1 4 mempty)
+
+      it "with pad" do
+        f "x4" `shouldBe` Right (4, Position () 1 3 mempty)
+        f "xyx456" `shouldBe` Right (456, Position () 1 7 mempty)
+
+      it "empty fail" do
+        f "" `shouldSatisfy` errorPosition 1 1
+
+      describe "only pad" do
+        it "one" $ f "x" `shouldSatisfy` errorPosition 1 2
+        it "multiple" $ f "xyx" `shouldSatisfy` errorPosition 1 4
     )
     \b -> do
       it "add pad" do

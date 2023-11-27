@@ -16,6 +16,7 @@ module Biparse.General
   , untilJust
   , Pad
   , pad
+  , padSet
   , padCount
   , BreakWhen
   , breakWhen
@@ -37,6 +38,7 @@ import Biparse.Biparser (Biparser, Iso, Unit, unit, one, try, SubState, SubEleme
 import Data.Bool qualified
 import Data.EqElement qualified
 import Control.Profunctor.FwdBwd (firstM)
+import Data.Set (Set, member)
 
 identity :: forall c s m n ss.
   ( MonadState s m
@@ -240,8 +242,28 @@ pad :: forall c s m n u v ss i se.
   -> se
   -> Biparser c s m n u v
   -> Biparser c s m n u v
-pad (convertIntegral -> n) c x = do
-  dropWhile (== c)
+pad n c = padTemplate (== c) n c
+
+padSet :: forall c s m n u v ss i se.
+  ( Pad c s m n u v ss i se
+  , Ord se
+  )
+  => Natural
+  -> se
+  -> Set se
+  -> Biparser c s m n u v
+  -> Biparser c s m n u v
+padSet n c cs = padTemplate (`member` cs) n c
+
+padTemplate :: forall c s m n u v ss i se.
+  Pad c s m n u v ss i se
+  => (se -> Bool)
+  -> Natural
+  -> se
+  -> Biparser c s m n u v
+  -> Biparser c s m n u v
+padTemplate dropPred (convertIntegral -> n) c x = do
+  dropWhile dropPred
   mapWrite x \y ->
     let l = lengthIndex y
     in if l >= n
