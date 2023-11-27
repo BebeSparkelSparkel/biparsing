@@ -6,7 +6,8 @@ module Biparse.Text.LineBreak
   , lines
   , lineBreakType
   , LineBreaker
-  , LineBreakerString(lineBreakerString)
+  , LineBreakerString(..)
+  , lineBreakerString'
   , UpdateSuperState
   , LineSplitter(..)
   ) where
@@ -17,6 +18,7 @@ import Biparse.List (splitElem, splitOn)
 import Biparse.Utils (char)
 import Data.Char (Char)
 import Biparse.Text (CharElement)
+import GHC.TypeLits (ConsSymbol)
 
 data LineBreakType
   = Unix
@@ -25,12 +27,26 @@ data LineBreakType
 
 type LineBreaker :: LineBreakType -> Either Char Symbol
 type family LineBreaker a where
-  LineBreaker 'Unix = 'Left '\n'
+  LineBreaker 'Unix    = 'Left  '\n'
   LineBreaker 'Windows = 'Right "\r\n"
 
+type LineBreakerToSymbol :: Either Char Symbol -> Symbol
+type family LineBreakerToSymbol a where
+  LineBreakerToSymbol ('Left c) = ConsSymbol c ""
+  LineBreakerToSymbol ('Right sym) = sym
+
 class LineBreakerString (lb :: LineBreakType) where lineBreakerString :: IsString a => a
-instance LineBreakerString 'Unix where lineBreakerString = "\n"
-instance LineBreakerString 'Windows where lineBreakerString = "\r\n"
+instance LineBreakerString 'Unix    where lineBreakerString = symbol @(LineBreakerToSymbol (LineBreaker 'Unix))
+instance LineBreakerString 'Windows where lineBreakerString = symbol @(LineBreakerToSymbol (LineBreaker 'Windows))
+
+type FromLeft :: Either Char Symbol -> Char
+type family FromLeft a where
+  FromLeft ('Left a) = a
+
+lineBreakerString' :: IsString a => LineBreakType -> a
+lineBreakerString' = \case
+  Unix    -> lineBreakerString @'Unix
+  Windows -> lineBreakerString @'Windows
 
 lineBreakType :: forall c m n a text se.
   ( Take c a m n text se
@@ -40,8 +56,8 @@ lineBreakType :: forall c m n a text se.
   , IsString text
   ) => Iso c m n a LineBreakType
 lineBreakType
-  =   takeDi  (fromChar '\n') Unix
-  <|> takeDi' "\r\n"          Windows
+  =   takeDi  (char @(FromLeft (LineBreaker 'Unix)))    Unix
+  <|> takeDi' (lineBreakerString @'Windows) Windows
 
 lines :: forall (lb :: LineBreakType) c m n a text up.
   ( LineSplitter (LineBreaker lb) up c m n a
