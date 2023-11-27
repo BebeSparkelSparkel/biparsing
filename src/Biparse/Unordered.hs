@@ -19,7 +19,6 @@ module Biparse.Unordered
 import Biparse.Biparser (Iso, IsoClass(iso), SubState, upon, try, forward, backward, Biparser(Biparser))
 import Biparse.General (optional)
 import Biparse.List (many, Many)
-import Data.Default (Default(def))
 import Data.HVect (HVect((:&:)), Append, (<++>))
 import Data.HVect qualified as HV
 import Data.IORef (IORef, newIORef, writeIORef, modifyIORef, readIORef)

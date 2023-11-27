@@ -125,10 +125,10 @@ instance MonoFoldable text => UpdateStateWithSubState ColumnsOnly (Position data
 instance ReplaceSubState (Position dataId a) ss (Position dataId ss) where
   replaceSubState p ss = p & subState .~ ss
 
-startLineColumn :: text -> Position () text
-startLineColumn = Position () 1 1
+startLineColumn :: Default d => text -> Position d text
+startLineColumn = Position def 1 1
 
-instance IsString text => IsString (Position () text) where
+instance (Default d, IsString text) => IsString (Position d text) where
   fromString = startLineColumn . fromString
 
 instance IsList ss => IsList (Position () ss) where

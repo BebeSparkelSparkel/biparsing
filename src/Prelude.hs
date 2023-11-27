@@ -41,6 +41,7 @@ module Prelude
   , module GHC.TypeLits
   , module Text.Printf
   , module Data.EqElement
+  , module Data.Default
   ) where
 
 import Text.Printf (IsChar, fromChar, toChar)
@@ -84,4 +85,5 @@ import Numeric.Natural (Natural)
 import Text.Read (Read)
 import Text.Show (Show(show))
 import Data.EqElement (EqElement)
+import Data.Default (Default, def)
 

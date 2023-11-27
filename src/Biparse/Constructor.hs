@@ -27,7 +27,6 @@ import Biparse.Biparser.StateReaderWriter qualified as BSRW
 import Control.Lens (Traversal', preview, assign)
 import Control.Monad.TransformerBaseMonad (TransformerBaseMonad, LiftBaseMonad, liftBaseMonad)
 import Control.Monad.Reader (ReaderT(ReaderT), ask)
-import Data.Default (Default, def)
 import Control.Monad.StateError (runStateErrorT)
 import Control.Profunctor.FwdBwd (BwdMonad, Comap, FwdBwd, pattern FwdBwd, Fwd, Bwd)
 import Control.Profunctor.FwdBwd qualified as FB

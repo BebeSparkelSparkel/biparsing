@@ -23,7 +23,8 @@ spec = do
           -> Spec
         test = flip it let
           f = runForward @() @(LineColumn lb) @_ @(FM text) @_ @EitherString @() @() $ lines @lb
-          text = startLineColumn $ (repeatConcat numLines $ line $ lineBreakerString @lb :: text)
+          text :: Position () text
+          text = startLineColumn $ repeatConcat numLines $ line $ lineBreakerString @lb
           in seq text $ limit $ f text `shouldSatisfy` isRight
 
     test @'Windows @String "Windows String"
