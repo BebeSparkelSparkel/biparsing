@@ -144,21 +144,19 @@ spec = do
           it "prints second" $ b 'a' >>= (`shouldBe` ('a',"a"))
 
   describe "try" do
-    let bp = (try $ one <* take 'b' :: Biparser () (Identity (Seq Char)) IO IO () () Char Char)
+    let bp :: Biparser ColumnsOnly (Position () (Seq Char)) (FM (Seq Char)) IO () () Char Char
+        bp = try $ one <* take 'b'
         f = runForward @() bp
         b = runBackward bp () ()
 
     describe "forward" do
-      it "success" do
-        x <- f "abc"
-        x `shouldBe` ('a',"c")
+      it "success" $ f "abc" `shouldBe` Right ('a', Position () 1 3 "c")
       
       it "does not consume state in failed attempt" do
-        x <- runForward @() (bp <|> takeUni 'c') "cde"
-        x `shouldBe` ('c', "de")
+        runForward @() (bp <|> takeUni 'c') "cde" `shouldBe` Right ('c', Position () 1 2 "de")
 
       it "fails if no alternate" do
-        f mempty `shouldThrow` isUserError
+        f "" `shouldSatisfy` errorPosition 1 1
 
     describe "backward" do
         it "prints correctly" $ b 'a' >>= (`shouldBe` ('a',"ab"))
