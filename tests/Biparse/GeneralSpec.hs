@@ -145,6 +145,19 @@ spec = do
 
       it "has x" $ b "axc" >>= (`shouldBe` ("axc", "axc"))
 
+  fb @() "dropWhile"
+    (dropWhile (== 1) :: Iso LinesOnly (FM (Vector Int)) EitherString () () (Position () (Vector Int)) ())
+    ()
+    ()
+    (\f -> do
+      it "empty" $ f [] `shouldBe` Right ((), Position () 1 1 [])
+      it "drop none" $ f [2,3] `shouldBe` Right ((), Position () 1 1 [2,3])
+      it "drop all" $ f [1,1] `shouldBe` Right ((), Position () 3 1 [])
+      it "drop some" $ f [1,1,2,3] `shouldBe` Right ((), Position () 3 1 [2,3])
+    )
+    \b -> do
+      it "success" $ b () `shouldBe` EValue ((), mempty)
+
   fb @() "skipUntil"
     (skipUntil $ (> 2) <$> one :: Const LinesOnly (Position () [Int]) (FM [Int]) EitherString () () Int)
     ()

@@ -113,12 +113,14 @@ instance (CharCs text char, MonoFoldable text) => UpdateStateWithSubState LineCo
       . (== fromChar '\n')
 
 instance MonoFoldable text => UpdateStateWithSubState LinesOnly (Position dataId text) where
-  updateSubStateContext = updateSubStateContext @ColumnsOnly
+  updateSubStateContext s ss ss' = s
+    & line %~ (+ length ss)
+    & subState .~ ss'
 
 instance MonoFoldable text => UpdateStateWithSubState ColumnsOnly (Position dataId text) where
-  updateSubStateContext s ss ss' =
-    s & column %~ (+ length ss)
-      & subState .~ ss'
+  updateSubStateContext s ss ss' = s
+    & column %~ (+ length ss)
+    & subState .~ ss'
 
 instance ReplaceSubState (Position dataId a) ss (Position dataId ss) where
   replaceSubState p ss = p & subState .~ ss
