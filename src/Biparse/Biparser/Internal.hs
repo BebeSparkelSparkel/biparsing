@@ -18,10 +18,12 @@ module Biparse.Biparser.Internal
   , FixFail(..)
   , comap
   , comapMay
+  , comapEither
   , comapM
   , comapPred
   , upon
   , uponMay
+  , uponEither
   , uponM
   , uponPred
   , mapWrite
@@ -99,7 +101,7 @@ comapM :: forall c s m n u u' v.
   -> Biparser c s m n u  v
 comapM = FB.comapM @()
 
-comapMay :: forall  c s m n u u' v.
+comapMay :: forall c s m n u u' v.
   ( Monad n
   , Alternative n
   )
@@ -107,6 +109,14 @@ comapMay :: forall  c s m n u u' v.
   -> Biparser c s m n u' v
   -> Biparser c s m n u  v
 comapMay f (Biparser fw bw) = Biparser fw $ bw <=< maybe empty pure . f
+
+comapEither :: forall c s m n u u' v.
+  ( Applicative n
+  )
+  => (u -> Either v u')
+  -> Biparser c s m n u' v
+  -> Biparser c s m n u  v
+comapEither f (Biparser fw bw) = Biparser fw $ either pure bw . f
 
 comapPred :: forall c s m n u v.
   ( Monad n
@@ -142,6 +152,15 @@ uponMay :: forall c s m n u u' v.
   -> (u -> Maybe u')
   -> Biparser c s m n u v
 uponMay = flip comapMay
+
+infix 8 `uponEither`
+uponEither :: forall c s m n u u' v.
+  ( Applicative n
+  )
+  => Biparser c s m n u' v
+  -> (u -> Either v u')
+  -> Biparser c s m n u  v
+uponEither = flip comapEither
 
 infix 8 `uponPred`
 uponPred :: forall c s m n u v.
