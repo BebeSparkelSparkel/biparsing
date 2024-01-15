@@ -36,6 +36,7 @@ module Biparse.Biparser.Internal
   , SubElement
   , UpdateStateWithElement(..)
   , ElementContext
+  , UpdateStateWithNConsumed(..)
   , ReplaceSubState(..)
   , One
   , one
@@ -73,7 +74,7 @@ setForward :: forall c s m m' n u v. Biparser c s m n u v -> m' v -> Biparser c 
 setForward (Biparser _ bw) fw = Biparser fw bw
 backward :: forall c s m n u v. Biparser c s m n u v -> u -> n v
 backward (Biparser _ bw) = bw
-setBackward :: forall c s m n n' u u' v. Biparser c s m n u v -> (u' -> n' v) -> Biparser c s m n' u' v
+setBackward :: forall n c s m n' u u' v. Biparser c s m n u v -> (u' -> n' v) -> Biparser c s m n' u' v
 setBackward (Biparser fw _) = Biparser fw
 
 type instance BwdMonad () (Biparser _ _ _ n) = n
@@ -270,14 +271,12 @@ class GetSubState state where
   type SubState state
   getSubState :: state -> SubState state
 
-
-
 instance GetSubState (Identity s) where
   type SubState (Identity s) = s
   getSubState = runIdentity
 
 -- | Update the state's context and substate.
--- Used when more than one element at a time should be consumed and written.
+-- Used when more than one element at a time should be consumed.
 -- This class is for effiencey and everything could be accomplished with 'UpdateStateWithElement' only.
 -- UNKNOWN: Does 'UpdateStateWithSubState' need to be used in isolation from 'UpdateStateWithElement'
 -- @state@ is the old state
@@ -295,7 +294,7 @@ type SubElement :: Type -> Type
 type SubElement s = Element (SubState s)
 
 -- | Update the state's context and substate.
--- Used when only one element is consumed and written.
+-- Used when only one element is consumed.
 -- - @state@ is the old state
 -- - @SubElement state@ is the consumed element
 -- - @SubState state@ is the new substate
@@ -306,6 +305,14 @@ class UpdateStateWithElement context state where
 instance UpdateStateWithElement c (Identity s) where updateElementContext _ _ = Identity
 
 type ElementContext context state = (GetSubState state, UpdateStateWithElement context state)
+
+-- | Update the state's context and substate.
+-- - @state@ is the old state
+-- - @Int@ is the number of elements consumed
+-- - @SubState state@ is nte new substate
+-- - Returns the updated state
+class UpdateStateWithNConsumed context state where
+  updateStateWithNConsumed :: state -> Index (SubState state) -> state
 
 class ReplaceSubState s ss s' | s ss -> s' where replaceSubState :: s -> ss -> s'
 

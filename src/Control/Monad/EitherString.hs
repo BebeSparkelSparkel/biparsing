@@ -24,6 +24,7 @@ import Data.Monoid ((<>))
 import Control.Lens (Prism, Prism', prism, prism')
 import Data.Maybe (Maybe(Just,Nothing))
 import Data.Coerce (coerce)
+import Control.Monad.Except (MonadError)
 
 newtype EitherString a = EitherString {runEitherString :: Either String a} deriving (Eq, Ord, Functor, Applicative, Monad)
 
@@ -58,6 +59,8 @@ instance Alternative EitherString where
 
 instance MonadFail EitherString where
   fail = EitherString . Left
+
+deriving instance MonadError String EitherString
 
 instance MonadPlus EitherString
 
