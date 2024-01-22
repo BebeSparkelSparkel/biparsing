@@ -27,6 +27,7 @@ module Biparse.Biparser.Internal
   , uponM
   , uponPred
   , mapWrite
+  , onlyBackwards
   , emptyForward
   , ignoreForward
   , ignoreBackward
@@ -45,7 +46,6 @@ module Biparse.Biparser.Internal
   , try
   , optionalBack
   , isNull
-  , write
   , breakWhen'
   , count
   , ask'
@@ -183,6 +183,16 @@ mapWrite :: forall c s m n u v ss.
   -> Biparser c s m n u v
 mapWrite (Biparser fw bw) f = Biparser fw $
   pass . fmap (,f) . bw
+
+-- * Only Backwards
+
+-- | Only run a backwards operation
+onlyBackwards ::
+  ( Applicative m
+  )
+  => (u -> n ())
+  -> Const c s m n u 
+onlyBackwards = Biparser (pure ())
 
 -- * Constrained Subtypes
 -- More constrained subtypes of Biparser
@@ -419,13 +429,6 @@ isNull :: forall c s m n u ss.
 isNull = Biparser
   (gets @s $ null . getSubState)
   (pure . null)
-
-write :: forall c s m n ss.
-  ( Applicative m
-  , MonadWriter ss n
-  )
-  => Biparser c s m n ss ()
-write = Biparser (pure ()) tell
 
 -- | 'x' does not succeed
 breakWhen' :: forall c s m n ss.
