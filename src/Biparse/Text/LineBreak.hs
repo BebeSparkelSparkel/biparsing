@@ -4,6 +4,7 @@
 module Biparse.Text.LineBreak
   ( LineBreakType(..)
   , lines
+  , linesOn
   , lineBreakType
   , LineBreaker
   , LineBreakerString(..)
@@ -66,6 +67,18 @@ lines :: forall (lb :: LineBreakType) c m n a text up.
   )
   => Iso c m n a [text]
 lines = lineSplitter @(LineBreaker lb) @(UpdateSuperState c)
+
+linesOn :: forall c m n a text up.
+  ( LineSplitter (LineBreaker 'Unix) up c m n a
+  , LineSplitter (LineBreaker 'Windows) up c m n a
+  , text ~ SubState a
+  , up ~ UpdateSuperState c
+  )
+  => LineBreakType
+  -> Iso c m n a [text]
+linesOn = \case
+  Unix -> lines @'Unix
+  Windows -> lines @'Windows
 
 -- | Used to indicate if 'updateElementContext' and 'updateSubStateContext' should be used. An optimization since 'lines' knows how to update the context without traverseing the consumed substate.
 type UpdateSuperState :: Type -> Bool
