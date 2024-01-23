@@ -263,11 +263,11 @@ spec = do
           as :: (IsSequence a, Element a ~ Char, Index a ~ Int) => a
           as = replicate x 'a'
           bs = replicate y 'b'
-          in f (startLineColumn $ as <> bs) `shouldBe` Right ((convertIntegralUnsafe x, as), Position () 1 (x + 1) bs)
+          in f (startLineColumn $ as <> bs) `shouldBe` Right ((fromIntegral x, as), Position () 1 (x + 1) bs)
       )
       \b -> do
         prop "correct count" \xs -> let
-          in b xs >>= (`shouldBe` ((convertIntegralUnsafe $ length xs, xs), fromString xs))
+          in b xs >>= (`shouldBe` ((fromIntegral $ length xs, xs), fromString xs))
 
     fb @() "SubStateContext" 
       (count $ takeWhile (== 'a') :: Biparser UnixLC (Position () Text) (FM Text) IO () () Text (Natural,Text))
@@ -278,11 +278,11 @@ spec = do
           as :: (IsSequence a, Element a ~ Char, Index a ~ Int) => a
           as = replicate x 'a'
           bs = replicate y 'b'
-          in f (startLineColumn $ as <> bs) `shouldBe` Right ((convertIntegralUnsafe x, as), Position () 1 (x + 1) bs)
+          in f (startLineColumn $ as <> bs) `shouldBe` Right ((fromIntegral x, as), Position () 1 (x + 1) bs)
       )
       \b -> do
         prop "correct count" \xs -> let
-          in b xs >>= (`shouldBe` ((convertIntegralUnsafe $ length xs, xs), xs))
+          in b xs >>= (`shouldBe` ((fromIntegral $ length xs, xs), xs))
 
   describe "zoom" do
 

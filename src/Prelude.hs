@@ -42,6 +42,7 @@ module Prelude
   , module Text.Printf
   , module Data.EqElement
   , module Data.Default
+  , module GHC.Real
   ) where
 
 import Text.Printf (IsChar, fromChar, toChar)
@@ -86,4 +87,5 @@ import Text.Read (Read)
 import Text.Show (Show(show))
 import Data.EqElement (EqElement)
 import Data.Default (Default, def)
+import GHC.Real (fromIntegral)
 

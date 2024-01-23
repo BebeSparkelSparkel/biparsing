@@ -54,7 +54,6 @@ module Biparse.Biparser.Internal
   ) where
 
 import Biparse.FixFail (FixFail(fixFail))
-import Biparse.Utils (convertIntegralUnsafe)
 import Control.Monad.Extra (findM)
 import Control.Monad.Reader.Class (MonadReader(ask), asks)
 import Control.Monad.Unrecoverable (MonadUnrecoverable, UnrecoverableError, throwUnrecoverable)
@@ -474,11 +473,11 @@ count (Biparser fw bw) = Biparser
     s <- get
     x <- fw
     s' <- get
-    let c = convertIntegralUnsafe $ length (getSubState @s s) - length (getSubState @s s')
+    let c = fromIntegral $ length (getSubState @s s) - length (getSubState @s s')
     pure (c, x)
   \u -> do
     (x,w) <- listen @ss $ bw u
-    pure (convertIntegralUnsafe $ length w, x)
+    pure (fromIntegral $ length w, x)
 
 -- | Return provided value forward and return reader value backward.
 ask' :: (Applicative m, MonadReader r n) => r -> Biparser c s m n u r

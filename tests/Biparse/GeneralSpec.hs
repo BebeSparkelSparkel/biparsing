@@ -260,9 +260,9 @@ spec = do
       bp = padCount n' 'a' $ takeWhile (== 'b')
       f = runForward @() bp
       b = runBackward bp () ()
-      n' = convertIntegralUnsafe n
-      na' = convertIntegralUnsafe na
-      nb' = convertIntegralUnsafe nb
+      n' = fromIntegral n
+      na' = fromIntegral na
+      nb' = fromIntegral nb
       in do
         f (Identity $ as <> bs <> cs) `shouldBe` Right ((na' + nb', bs), Identity cs)
         b bs `shouldBe` Right ((n', bs), as' <> bs)

@@ -14,7 +14,6 @@ module Biparse.Utils
   , initAlt
   , headTailAlt
   , ConvertIntegral(..)
-  , convertIntegralUnsafe
   , ConvertString'(..)
   , ConvertString
   , convertString
@@ -42,8 +41,7 @@ import Data.String (String, IsString(fromString))
 import GHC.Exts (IsList, toList, Item)
 import GHC.Int (Int)
 import GHC.Integer (Integer)
-import GHC.Num (Num, fromInteger)
-import GHC.Real (Integral, toInteger)
+import GHC.Real (fromIntegral)
 import GHC.TypeLits (KnownSymbol, symbolVal, KnownChar, charVal)
 import Numeric.Natural (Natural)
 import Text.Printf (IsChar(fromChar))
@@ -83,11 +81,8 @@ headTailAlt :: (IsSequence b, Alternative m) => b -> m (Element b, b)
 headTailAlt x = liftA2 (,) (headAlt x) (tailAlt x)
 
 class ConvertIntegral a b where convertIntegral :: a -> b
--- | Unsafe because not number types are compatable for confersion. Use do define appropriate instances of ConvertIntegral
-convertIntegralUnsafe :: forall a b. (Integral a, Num b) => a -> b
-convertIntegralUnsafe = fromInteger . toInteger
-instance ConvertIntegral Natural Int where convertIntegral = convertIntegralUnsafe
-instance ConvertIntegral Natural Integer where convertIntegral = convertIntegralUnsafe
+instance ConvertIntegral Natural Int where convertIntegral = fromIntegral
+instance ConvertIntegral Natural Integer where convertIntegral = fromIntegral
 
 type ConvertStringInstanceSelector :: Type -> Type -> Type
 type family ConvertStringInstanceSelector a b where

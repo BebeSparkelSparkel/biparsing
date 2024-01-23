@@ -58,6 +58,7 @@ module Prelude
   , module Biparse.Context.Index
   , module Control.Monad.RWS
   , module Control.Monad.Trans.Class
+  , module GHC.Real
 
   , fb
   , errorPosition
@@ -75,7 +76,7 @@ import Biparse.General
 import Biparse.Text (CharElement)
 import Biparse.Text.Context.LineColumn (LineColumn, UnixLC, LinesOnly, ColumnsOnly, Position(Position), subState, ErrorPosition(ErrorPosition), startLineColumn, NoUpdate)
 import Biparse.Context.Index (IndexContext, IndexPosition(IndexPosition), ErrorIndex(ErrorIndex), EISP)
-import Biparse.Utils (headAlt, convertIntegralUnsafe)
+import Biparse.Utils (headAlt)
 import Control.Applicative (pure, (<|>), (<*), (*>), (<*>), empty, liftA2, Alternative)
 import Control.Monad ((>>=), return, (>>), fail, MonadPlus, MonadFail, Monad)
 import Control.Monad.EitherString (EitherString(EValue), isString)
@@ -126,6 +127,7 @@ import Data.Coerce (coerce)
 import Control.Monad.RWS (RWST)
 import Control.Monad.ChangeMonad (ChangeMonad, ChangeFunction, changeMonad', ResultMonad(ResultingMonad))
 import Control.Monad.Trans.Class (MonadTrans, lift)
+import GHC.Real (fromIntegral)
 
 import GHC.Exts (IsList, fromList, Item)
 import GHC.Exts qualified
