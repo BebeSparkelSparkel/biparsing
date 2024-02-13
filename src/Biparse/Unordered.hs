@@ -65,11 +65,12 @@ instance Monoid a => Default (Accumulating a) where def = Accumulating mempty
 newtype Optional a = Optional {unOptional :: Maybe a} deriving (Show, Eq, Ord)
 instance
   ( IsoClass c m n a b
-  , MonadPlus m
   , MonadState a m
-  , Monad n
-  , Alternative n
-  , Monoid (SubState a)
+  , MonadFail m
+  , MonadError e m
+  , Alt m
+  , MonadFail n
+  , Alt n
   ) => IsoClass c m n a (Optional b) where
   iso = Optional <$> optional (iso @c @m @n @a @b) `upon` unOptional
 instance Default (Optional a) where def = Optional Nothing
@@ -161,8 +162,10 @@ class MakeParsers c m n a bs where
 instance {-# OVERLAPS #-}
   ( IsoClass c m n a (Element b)
   , SemiSequence b
-  , MonadPlus m
   , MonadState a m
+  , MonadFail m
+  , MonadError e m
+  , Alt m
   , MakeParsers c m n a bs
   ) => MakeParsers c m n a (IORef (Accumulating b) ': bs) where
   makeParsers (r :&: rs)
@@ -170,22 +173,24 @@ instance {-# OVERLAPS #-}
           x <- forward $ try $ iso @c @m @n @a
           () <- pure $ unsafePerformIO $ modifyIORef r $ Accumulating . cons x . unAccumulating
           pure True
-      <|> pure False
+      <!> pure False
       )
     : makeParsers @c @m @n @a rs
 instance {-# OVERLAPPABLE #-}
   ( IsoClass c m n a b
   , MakeParsers c m n a bs
-  , MonadPlus m
   , MonadState a m
+  , MonadFail m
+  , MonadError e m
+  , Alt m
   ) => MakeParsers c m n a (IORef b ': bs) where
   makeParsers (r :&: rs)
     = SingleSuccessParser ( do
           x <- forward $ try $ iso @c @m @n @a
           () <- pure $ unsafePerformIO $ writeIORef r x
           pure True
-      <|> pure False
-      )
+      <!> pure False
+    )
     : makeParsers @c @m @n @a rs
 instance MakeParsers c m n a '[] where
   makeParsers = mempty

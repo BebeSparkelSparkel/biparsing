@@ -14,16 +14,22 @@ module Control.Profunctor.FwdBwd
 
 import GHC.Generics (Generic, Generic1)
 import Generic.Data (gpure, gap, gempty, galt)
+import Data.Functor.Alt qualified
 import Control.Monad.Unrecoverable (MonadUnrecoverable, UnrecoverableError, throwUnrecoverable)
+import Control.Monad (MonadPlus)
+import Control.Applicative (Alternative, empty, (<|>))
 
 data (:*:) p q u v = (:*:) {pfst :: p u v, psnd :: q u v} deriving (Functor, Generic, Generic1)
 {-# COMPLETE (:*:) #-}
 instance (Applicative (p u), Applicative (q u)) => Applicative ((:*:) p q u) where
   pure = gpure
   (<*>) = gap
+instance (Alternative (p u), Monad (p u), Alternative (q u), Monad (q u)) => MonadPlus ((:*:) p q u)
 instance (Alternative (p u), Alternative (q u)) => Alternative ((:*:) p q u) where
   empty = gempty
   (<|>) = galt
+instance (Alt (p u), Alt (q u)) => Alt ((:*:) p q u) where
+  (<!>) = Data.Functor.Alt.galt
 instance (Monad (p u), Monad (q u)) => Monad ((:*:) p q u) where
   (fw :*: bw) >>= f = (fw >>= pfst . f) :*: (bw >>= psnd . f)
 instance (MonadFail (p u), MonadFail (q u)) => MonadFail ((:*:) p q u) where
@@ -38,6 +44,8 @@ instance (MonadUnrecoverable (p u), MonadUnrecoverable (q u), UnrecoverableError
 newtype Fwd m u v = Fwd {unFwd :: m v} deriving (Functor, Applicative, Alternative, Monad, MonadFail)
 deriving instance MonadError e m => MonadError e (Fwd m u)
 deriving instance MonadUnrecoverable m => MonadUnrecoverable (Fwd m u)
+instance Alt m => Alt (Fwd m u) where
+  Fwd x <!> Fwd y = Fwd $ x <!> y
 
 newtype Bwd m u v = Bwd {unBwd :: u -> m v} deriving (Functor, Generic1)
 instance Applicative m => Applicative (Bwd m u) where
@@ -45,9 +53,12 @@ instance Applicative m => Applicative (Bwd m u) where
   (<*>) = gap
 instance Monad m => Monad (Bwd m u) where
   Bwd bw >>= f = Bwd \u -> bw u >>= ($ u) . unBwd . f
+instance (Alternative m, Monad m) => MonadPlus (Bwd m u)
 instance Alternative m => Alternative (Bwd m u) where
   empty = Bwd $ const empty
   Bwd x <|> Bwd y = Bwd \u -> x u <|> y u
+instance Alt m => Alt (Bwd m u) where
+  Bwd x <!> Bwd y = Bwd \u -> x u <!> y u
 instance MonadFail m => MonadFail (Bwd m u) where
   fail = Bwd . const . fail
 instance MonadError e m => MonadError e (Bwd m u) where

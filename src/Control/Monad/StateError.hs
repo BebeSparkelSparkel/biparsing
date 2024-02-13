@@ -22,10 +22,10 @@ import Control.Monad.Unrecoverable (MonadUnrecoverable, throwUnrecoverable, Unre
 import Control.Monad.TransformerBaseMonad (TransformerBaseMonad, LiftBaseMonad, liftBaseMonad)
 import Control.Monad.MonadProgenitor (MonadProgenitor)
 import Control.Lens (makeLenses)
+import Control.Monad (MonadPlus)
+import Control.Applicative (Alternative, empty, (<|>))
 
 import Control.Exception (IOException)
-import GHC.Err (undefined)
-import Control.Monad.Trans.Error (Error, noMsg)
 
 -- * Allow errors to be combined with state information.
 
@@ -61,13 +61,13 @@ instance WrapErrorWithState (ErrorState e s) s (ErrorState e s) where
   type StateForError (ErrorState e s) s (ErrorState e s) = s
   wrapErrorWithState' = ErrorState . _error
   stateForError = id
-instance Error (ErrorState e p) where
-  noMsg = undefined
 
 deriving instance MonadPlus m => Alternative (StateErrorT 'NewtypeInstance s m)
 instance (Monoid e, MonadError (ErrorState e s) m, MonadPlus m) => Alternative (StateErrorT 'ErrorStateInstance s m) where
   empty = throwError mempty
   StateErrorT' x <|> StateErrorT' y = StateErrorT' $ x <|> y
+instance Alt m => Alt (StateErrorT i s m) where
+  StateErrorT' x <!> StateErrorT' y = StateErrorT' $ x <!> y
 
 deriving instance MonadPlus m => MonadPlus (StateErrorT 'NewtypeInstance s m)
 deriving instance (Monoid e, MonadError (ErrorState e s) m, MonadPlus m) => MonadPlus (StateErrorT 'ErrorStateInstance s m)

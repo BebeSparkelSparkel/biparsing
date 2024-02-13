@@ -3,6 +3,7 @@
 module Prelude
   ( module Biparse.Biparser
   , module Biparse.Biparser.StateReaderWriter
+  , module Biparse.Context.Index
   , module Biparse.General
   , module Biparse.Text
   , module Biparse.Text.Context.LineColumn
@@ -12,17 +13,22 @@ module Prelude
   , module Control.Monad.ChangeMonad
   , module Control.Monad.EitherString
   , module Control.Monad.Except
+  , module Control.Monad.RWS
   , module Control.Monad.State
   , module Control.Monad.StateError
+  , module Control.Monad.Trans.Class
   , module Control.Monad.Writer
   , module Data.Bifunctor
   , module Data.Bool
   , module Data.ByteString
+  , module Data.ByteString.Internal
   , module Data.Char
+  , module Data.Coerce
   , module Data.Either
   , module Data.Eq
   , module Data.Function
   , module Data.Functor
+  , module Data.Functor.Alt
   , module Data.Functor.Identity
   , module Data.Int
   , module Data.Kind
@@ -43,22 +49,17 @@ module Prelude
   , module Data.Word
   , module GHC.Err
   , module GHC.Float
+  , module GHC.Generics
   , module GHC.IO.Exception
+  , module GHC.Num
+  , module GHC.Real
+  , module Numeric.Natural
   , module System.IO
   , module System.IO.Error
   , module Test.Hspec
   , module Test.Hspec.QuickCheck
   , module Test.QuickCheck
   , module Text.Show
-  , module Numeric.Natural
-  , module GHC.Num
-  , module GHC.Generics
-  , module Data.Coerce
-  , module Data.ByteString.Internal
-  , module Biparse.Context.Index
-  , module Control.Monad.RWS
-  , module Control.Monad.Trans.Class
-  , module GHC.Real
 
   , fb
   , errorPosition
@@ -69,29 +70,34 @@ module Prelude
   , (>>>)
   ) where
 
-import Data.ByteString.Internal (w2c, c2w)
 import Biparse.Biparser hiding (Biparser, Iso, Unit, Const, ConstU)
 import Biparse.Biparser.StateReaderWriter (Biparser, Iso, Unit, Const, ConstU, runForward, runBackward, evalForward)
+import Biparse.Context.Index (IndexContext, IndexPosition(IndexPosition), ErrorIndex(ErrorIndex), EISP)
 import Biparse.General
 import Biparse.Text (CharElement)
 import Biparse.Text.Context.LineColumn (LineColumn, UnixLC, LinesOnly, ColumnsOnly, Position(Position), subState, ErrorPosition(ErrorPosition), startLineColumn, NoUpdate)
-import Biparse.Context.Index (IndexContext, IndexPosition(IndexPosition), ErrorIndex(ErrorIndex), EISP)
 import Biparse.Utils (headAlt)
-import Control.Applicative (pure, (<|>), (<*), (*>), (<*>), empty, liftA2, Alternative)
-import Control.Monad ((>>=), return, (>>), fail, MonadPlus, MonadFail, Monad)
+import Control.Applicative (pure, (<*), (*>), (<*>), empty, liftA2)
+import Control.Monad ((>>=), return, (>>), fail, MonadPlus, MonadFail, Monad, void)
+import Control.Monad.ChangeMonad (ChangeMonad, ChangeFunction, changeMonad', ResultMonad(ResultingMonad))
 import Control.Monad.EitherString (EitherString(EValue), isString)
 import Control.Monad.Except (MonadError(throwError,catchError))
+import Control.Monad.RWS (RWST)
 import Control.Monad.State (MonadState, get, put)
 import Control.Monad.StateError (StateErrorT, ErrorInstance(NewtypeInstance,ErrorStateInstance), ErrorState(ErrorState))
+import Control.Monad.Trans.Class (MonadTrans, lift)
 import Control.Monad.Writer (WriterT(runWriterT), MonadWriter)
 import Data.Bifunctor (first)
 import Data.Bool (Bool(True,False), otherwise, (&&), bool)
 import Data.ByteString (ByteString)
+import Data.ByteString.Internal (w2c, c2w)
 import Data.Char (Char, isDigit)
+import Data.Coerce (coerce)
 import Data.Either (Either(Left,Right), fromRight, isLeft, isRight, either)
 import Data.Eq (Eq, (==), (/=))
 import Data.Function ((.), ($), const, id, flip, (&))
 import Data.Functor (Functor(fmap), (<$>), ($>), (<&>))
+import Data.Functor.Alt (Alt, (<!>))
 import Data.Functor.Identity (Identity(Identity, runIdentity))
 import Data.Int (Int)
 import Data.Kind (Type)
@@ -112,7 +118,11 @@ import Data.Void (Void)
 import Data.Word (Word, Word8)
 import GHC.Err (undefined)
 import GHC.Float (Double)
+import GHC.Generics (Generic)
 import GHC.IO.Exception (IOException)
+import GHC.Num ((+), (-))
+import GHC.Real (fromIntegral)
+import Numeric.Natural (Natural)
 import System.IO (IO, FilePath)
 import System.IO.Error (isUserError)
 import Test.Hspec
@@ -120,14 +130,6 @@ import Test.Hspec.QuickCheck
 import Test.QuickCheck
 import Test.QuickCheck.Instances.Text ()
 import Text.Show (Show(show))
-import Numeric.Natural (Natural)
-import GHC.Num ((+), (-))
-import GHC.Generics (Generic)
-import Data.Coerce (coerce)
-import Control.Monad.RWS (RWST)
-import Control.Monad.ChangeMonad (ChangeMonad, ChangeFunction, changeMonad', ResultMonad(ResultingMonad))
-import Control.Monad.Trans.Class (MonadTrans, lift)
-import GHC.Real (fromIntegral)
 
 import GHC.Exts (IsList, fromList, Item)
 import GHC.Exts qualified

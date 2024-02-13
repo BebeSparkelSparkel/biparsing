@@ -6,6 +6,8 @@ module Control.Monad.UndefinedBackwards
 
 import GHC.Err (undefined)
 import Control.Monad.ChangeMonad (ChangeMonad, changeMonad')
+import Control.Monad (MonadPlus)
+import Control.Applicative (Alternative)
 
 data UndefinedBackwards w a
 

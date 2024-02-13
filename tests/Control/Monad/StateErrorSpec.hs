@@ -6,7 +6,7 @@ spec :: Spec
 spec = do
   describe "Alternative" do
     it "empty" $ limit $
-      runSET @() (empty :: StateErrorT 'ErrorStateInstance (Position () Text) (Either (ErrorState String (Position () Text))) ()) "abc" `shouldSatisfy` errorPosition 1 1
+      runSET @() (fail "" :: StateErrorT 'ErrorStateInstance (Position () Text) (Either (ErrorState String (Position () Text))) ()) "abc" `shouldSatisfy` errorPosition 1 1
 
   describe "MonadError" do
     it "catch state is the last state before fail" $ limit do

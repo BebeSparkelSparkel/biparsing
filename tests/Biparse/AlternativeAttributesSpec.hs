@@ -7,7 +7,7 @@ spec :: Spec
 spec = do
   describe "runAtt" do
     let bp :: Iso () IO IO () () (Identity String) Char
-        bp = runAtt @'[Bool] $ a @Bool one <|>> emptyAtt
+        bp = runAtt @'[Bool] $ a @Bool one <!>> failAtt
 
     describe "forward" do
       let f = runForward @() bp
@@ -19,8 +19,8 @@ spec = do
   describe "totalAtt" do
     let bp :: Iso () IO IO () () (Identity String) Char
         bp = runAtt @'[ 'True, 'False] $
-          (a @'True one <|>> emptyAtt) `totalAtt`
-          a @'False \x -> x <|> pure 'x'
+          (a @'True one <!>> failAtt) `totalAtt`
+          a @'False \x -> x <!> pure 'x'
 
     describe "forward" do
       let f = runForward @() bp

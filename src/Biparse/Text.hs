@@ -4,8 +4,6 @@ module Biparse.Text
   ( CharElement
   , char
   , string
-  --, lines
-  --, lines'
   ) where
 
 import Biparse.Biparser (Biparser, upon, one, SubElement, SubState, ElementContext, Const, SubStateContext)
@@ -27,7 +25,7 @@ char :: forall c s m n u text char.
   -- m
   , MonadState s m
   , MonadFail m
-  , Alternative m
+  , Alt m
   -- n
   , MonadWriter text n
   , MonadFail n

@@ -12,6 +12,7 @@ dependencies:
   - mtl
   - transformers
   - containers
+  - semigroupoids
 
 default-extensions:
   - BlockArguments

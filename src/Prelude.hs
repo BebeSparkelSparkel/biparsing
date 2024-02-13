@@ -43,14 +43,15 @@ module Prelude
   , module Data.EqElement
   , module Data.Default
   , module GHC.Real
+  , module Data.Functor.Alt
   ) where
 
 import Text.Printf (IsChar, fromChar, toChar)
 import Control.Monad.RWS (RWST)
 import GHC.TypeLits (KnownSymbol, Symbol, KnownChar)
 import Biparse.Utils (headAlt, tailAlt, initAlt, headTailAlt, lastAlt, (^:^), (<$$>), ConvertIntegral(convertIntegral), shouldBe, symbol)
-import Control.Applicative (Applicative((<*>),pure), (*>), (<*), liftA2, Alternative(empty,(<|>)))
-import Control.Monad (Monad((>>=),return), when, unless, MonadFail(fail), MonadPlus, guard, (=<<), (>=>), (<=<))
+import Control.Applicative (Applicative((<*>),pure), (*>), (<*), liftA2)
+import Control.Monad (Monad((>>=),return), when, unless, MonadFail(fail), (=<<), (>=>), (<=<))
 import Control.Monad.EitherString (EitherString)
 import Control.Monad.Except (MonadError(throwError, catchError))
 import Control.Monad.Extra (ifM)
@@ -88,4 +89,4 @@ import Text.Show (Show(show))
 import Data.EqElement (EqElement)
 import Data.Default (Default, def)
 import GHC.Real (fromIntegral)
-
+import Data.Functor.Alt (Alt, (<!>))

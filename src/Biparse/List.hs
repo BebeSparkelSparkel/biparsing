@@ -32,7 +32,7 @@ module Biparse.List
   , tailAlt
   ) where
 
-import Biparse.Biparser (Biparser(Biparser), forward, backward, Iso, SubElement, SubState, emptyForward, one, try, mono, ElementContext, FixFail, fix, peek, Unit, UpdateStateWithSubState, isNull, breakWhen', GetSubState, upon, uponM, UpdateStateWithElement, SubStateContext)
+import Biparse.Biparser (Biparser(Biparser), forward, backward, Iso, SubElement, SubState, one, try, mono, ElementContext, FixFail, fix, peek, Unit, UpdateStateWithSubState, isNull, breakWhen', GetSubState, upon, uponM, UpdateStateWithElement, SubStateContext, forwardFail)
 import Biparse.General (take, takeNot, memptyWrite, BreakWhen, rest, stripPrefix)
 import Data.List.NonEmpty (NonEmpty, nonEmpty)
 import Control.Profunctor.FwdBwd (MapMs(mapMs))
@@ -44,7 +44,7 @@ replicateBiparserT :: forall c s m n u v.
   , Monad m
   -- n
   , MonadFail n
-  , Alternative n
+  , Alt n
   )
   => Int
   -> Biparser c s m n u v
@@ -57,16 +57,21 @@ replicateBiparserT = \case
     return $ v `cons` vs
   where
   emptyFail :: Int -> n a -> n a
-  emptyFail n = (<|> (fail $ "Expected " <> show n <> " more elements but there are none left."))
+  emptyFail n = (<!> (fail $ "Expected " <> show n <> " more elements but there are none left."))
 
 -- | Takes
-takeElementsWhile :: forall c s m n ss se.
-   ( IsSequence ss
-   , MonadFail m
-   , MonadPlus m
+takeElementsWhile :: forall c s m n ss se e.
+   ( MonadFail m
    , MonadState s m
+   , MonadError e m
+   , Alt m
+   -- n
    , MonadWriter ss n
-   , Alternative n
+   , MonadFail n
+   , Alt n
+   -- substate
+   , IsSequence ss
+   -- context
    , ElementContext c s
    -- assignments
    , ss ~ SubState s
@@ -77,19 +82,19 @@ takeElementsWhile :: forall c s m n ss se.
 takeElementsWhile f =
   try do
     x <- one `uponM` headAlt
-    unless (f x) emptyForward
+    unless (f x) forwardFail
     cons x <$> takeElementsWhile f `uponM` tailAlt
-  <|> return mempty
+  <!> return mempty
 
 -- | Take N elements
 takeN :: forall c m n a ss se.
   -- m
   ( MonadFail m
-  , Alternative m
   , MonadState a m
+  , Alt m
   -- n
   , MonadWriter ss n
-  , Alternative n
+  , MonadFail n
   -- substate
   , IsSequence ss
   , GetSubState a
@@ -106,9 +111,10 @@ takeN n = if n > 0
 
 type Many c s m n =
   ( Monoid (SubState s)
-  , MonadPlus m
-  , Monad n
-  , Alternative n
+  , Monad m
+  , Alt m
+  , MonadFail n
+  , Alt n
   )
 
 -- | Applies given biparser zero or more times.
@@ -121,15 +127,16 @@ many x =
   do
     y <- x `uponM` headAlt
     cons y <$> many x `uponM` tailAlt
-  <|> pure mempty
+  <!> pure mempty
 
 manyId :: forall c s m n u v.
   ( FixFail m
+  , Monad m
+  , Alt m
   , FixFail n
   , Monoid (SubState s)
-  , MonadPlus m
-  , Monad n
-  , Alternative n
+  , MonadFail n
+  , Alt n
   )
   => Biparser c s m n u v
   -> Biparser c s Identity Identity [u] [v]
@@ -164,13 +171,16 @@ someIso :: forall c s m n a.
 someIso = some
 
 -- | Consume all state till null. Any fail causes all to fail.
-all :: forall c s m n u v ss.
-  ( Monoid ss
+all :: forall c s m n u v ss e.
+  -- m
+  ( MonadState s m
+  , MonadError e m
+  -- n
+  , MonadFail n
+  -- substate
+  , Monoid ss
   , MonoFoldable ss
   , GetSubState s
-  , MonadState s m
-  , Monad n
-  , Alternative n
   , ss ~ SubState s
   )
   => Biparser c s m n u   v
@@ -191,6 +201,7 @@ splitElem :: forall c s m n ss se m' n'.
   , Show se
   -- context
   , ElementContext c s
+  -- assignments
   , m' ~ StateT s Maybe
   , n' ~ WriterT ss Maybe
   , se ~ SubElement s
@@ -203,7 +214,7 @@ splitElem x = liftStateMaybe $ correctEmpty splitter
   splitter :: Iso c m' n' s [ss]
   splitter = do
     y <- fromList <$> manyIso (takeNot x) `uponM` fmap toList . headAlt
-    take x *> (cons y <$> splitter `uponM` tailAlt) <|> pure (singleton y)
+    take x *> (cons y <$> splitter `uponM` tailAlt) <!> pure (singleton y)
   correctEmpty :: Iso c m' n' s [ss] -> Iso c m' n' s [ss]
   correctEmpty = mono \case
     [y] | null y -> mempty
@@ -244,8 +255,8 @@ liftStateMaybe = mapMs
    pure y
  )
 
-splitWith :: forall c s m n ss.
-  ( BreakWhen c s m n ss
+splitWith :: forall c s m n ss e.
+  ( BreakWhen c s m n ss e
   , UpdateStateWithSubState c s
   )
   => Unit c s m n
@@ -256,18 +267,19 @@ splitWith x
         hs <- so `uponM` initAlt 
         l <- rest `uponM` lastAlt
         return $ hs `snoc` l
-  <|> singleton <$> rest `upon` const mempty
+  <!> singleton <$> rest `upon` const mempty
   where
   so = ifM isNull
     (pure mempty)
-    (breakWhen' x `uponM` headAlt ^:^ (so <|> pure mempty) `uponM` tailAlt)
+    (breakWhen' x `uponM` headAlt ^:^ (so <!> pure mempty) `uponM` tailAlt)
 
 -- | Runs 'predicate' and if 'predicate' returns 'True' then run 'produce'. Repeat until 'predicate' returns 'False'. The 'predicate' does not modify the state nor does it write.
 whileM :: forall c s m n u v ss.
-  ( MonadPlus m
-  , MonadState s m
+  ( MonadState s m
+  , Alt m
   , MonadWriter ss n
-  , Alternative n
+  , MonadFail n
+  , Alt n
   , ss ~ SubState s
   )
   => Biparser c s m n u Bool
@@ -277,15 +289,16 @@ whileM predicate produce = whileM' (peek $ memptyWrite predicate) produce
 
 -- | Like 'whileM' but the predicate does modify the state and writes.
 whileM' :: forall c s m n u v.
-  ( MonadPlus m
-  , Monad n
-  , Alternative n
+  ( Monad m
+  , Alt m
+  , MonadFail n
+  , Alt n
   , Monoid (SubState s)
   )
   => Biparser c s m n u Bool
   -> Biparser c s m n u v
   -> Biparser c s m n [u] [v]
-whileM' predicate produce = ifM (predicate `uponM` headAlt <|> pure False)
+whileM' predicate produce = ifM (predicate `uponM` headAlt <!> pure False)
   (produce `uponM` headAlt ^:^ whileM' predicate produce `uponM` tailAlt)
   (pure mempty)
 
@@ -293,7 +306,6 @@ whileM' predicate produce = ifM (predicate `uponM` headAlt <|> pure False)
 -- For backward: 'produce' is run fore every 'u' in '[u]' and 'predicate' is run at the end.
 whileFwdAllBwd :: forall c s m n u v.
   ( Monad m
-  , Alternative m
   , Monad n
   )
   => Biparser c s m n () Bool
@@ -308,15 +320,15 @@ whileFwdAllBwd predicate produce = Biparser
 
 -- | Like 'whileFwdAllBwd' but runs 'produce' until 'predicate' succeeds.
 untilFwdSuccessBwdAll :: forall c s m n u v.
-  ( Monoid (SubState s)
-  , MonadPlus m
+  ( Monad m
+  , Alt m
   , Monad n
-  , Alternative n
+  , Alt n
   )
   => Biparser c s m n u v
   -> Unit c s m n
   -> Biparser c s m n [u] [v]
-untilFwdSuccessBwdAll produce predicate = whileFwdAllBwd (False <$ predicate <|> pure True) produce
+untilFwdSuccessBwdAll produce predicate = whileFwdAllBwd (False <$ predicate <!> pure True) produce
 
 -- | Should be able to use ghosts of departed prrofs to get rid of partial head tail
 --whileId :: forall c s u v.
@@ -330,9 +342,7 @@ untilFwdSuccessBwdAll produce predicate = whileFwdAllBwd (False <$ predicate <|>
 --  (pure mempty)
 
 --untilM :: forall c s m n u v.
---  ( MonadPlus m
---  , Monad n
---  , Alternative n
+--  ( Monad n
 --  , Monoid (SubState s)
 --  )
 --  => Biparser c s m n u Bool
@@ -341,9 +351,7 @@ untilFwdSuccessBwdAll produce predicate = whileFwdAllBwd (False <$ predicate <|>
 --untilM = undefined
 --
 --untilM' :: forall c s m n u v.
---  ( MonadPlus m
 --  , Monad n
---  , Alternative n
 --  , Monoid (SubState s)
 --  )
 --  => Biparser c s m n u Bool
@@ -392,8 +400,7 @@ untilExclusive' = untilClusive \f x -> (f mempty, x)
 type UntilClusive c s m n =
   ( Monoid (SubState s)
   , Monad m
-  , Monad n
-  , Alternative n
+  , MonadFail n
   )
 
 -- | Builder for 'untilInclusive' and 'untilExclusive'.
@@ -411,20 +418,23 @@ untilClusive f p bp = uncurry f <$> uc
     then pure (id, x)
     else first (cons x .) <$> uc `uponM` tailAlt
 
-intersperse :: forall c s m n u fu v fv v' ss.
+intersperse :: forall c s m n u fu v fv v' ss e.
   -- m
-  ( MonadPlus m
-  , MonadState s m
+  ( MonadState s m
+  , MonadFail m
+  , MonadError e m
+  , Alt m
   -- n
   , MonadWriter ss n
-  , Alternative n
+  , MonadFail n
+  , Alt n
   -- lists
   , MonoFoldable fu
   , Element fu ~ u
   , IsSequence fv
   , Element fv ~ v
   -- assignments
-  , ss ~ SubState s
+  -- , ss ~ SubState s
   )
   => Biparser c s m n u v
   -> (forall u'. Biparser c s m n u' v')
@@ -438,8 +448,8 @@ intersperse x y = fromList <$> intersperse' `upon` toList
         do
           _ <- y
           xs' <- intersperse' `uponM` tailAlt
-          bool (pure xs') empty $ null xs'
-        <|> pure mempty
+          bool (pure xs') (fail "Could not intersperse between no elements.") $ null xs'
+        <!> pure mempty
       pure $ cons x' xs
-    <|> pure mempty
+    <!> pure mempty
 

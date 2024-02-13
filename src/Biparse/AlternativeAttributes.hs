@@ -9,10 +9,10 @@ module Biparse.AlternativeAttributes
   , AA
   , A
   , a
-  , (<|>>)
+  , (<!>>)
   , runAtt
   , totalAtt
-  , emptyAtt
+  , failAtt
   ) where
 
 import Data.Diverse.TypeLevel (Complement)
@@ -42,12 +42,15 @@ totalAtt :: forall implemented a b last total.
   -> AA total b
 totalAtt (AA x) (A f) = AA $ f x
 
-emptyAtt :: Alternative f => AA '[] (f a)
-emptyAtt = AA empty
+--emptyAtt :: Alternative f => AA '[] (f a)
+--emptyAtt = AA empty
 
-infixr 9 <|>>
-(<|>>) :: forall {k} (a :: k) (as :: [k]) f b. Alternative f => A a (f b) -> AA as (f b) -> AA (a : as) (f b)
-A x <|>> AA y = AA $ x <|> y
+failAtt :: MonadFail m => AA '[] (m a)
+failAtt = AA $ fail "failAtt"
+
+infixr 9 <!>>
+(<!>>) :: forall {k} (a :: k) (as :: [k]) f b. Alt f => A a (f b) -> AA as (f b) -> AA (a : as) (f b)
+A x <!>> AA y = AA $ x <!> y
 
 type HasAll required implemented = Complement required implemented ~ '[]
 

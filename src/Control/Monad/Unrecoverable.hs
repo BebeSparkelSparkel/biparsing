@@ -5,6 +5,9 @@ module Control.Monad.Unrecoverable
   , MonadUnrecoverable(..)
   ) where
 
+import Control.Monad (MonadPlus)
+import Control.Applicative (Alternative, empty, (<|>))
+
 -- * UnrecoverableT
 
 newtype UnrecoverableT e m a = UnrecoverableT {runUnrecoverableT :: m (Either e a)}
@@ -21,6 +24,9 @@ instance Monad m => Applicative (UnrecoverableT e m) where
 instance (Monad m, Alternative m) => Alternative (UnrecoverableT e m) where
   empty = UnrecoverableT empty
   UnrecoverableT x <|> UnrecoverableT y = UnrecoverableT $ x <|> y
+
+instance Alt m => Alt (UnrecoverableT e m) where
+  UnrecoverableT x <!> UnrecoverableT y = UnrecoverableT $ x <!> y
 
 instance (Monad m, Alternative m) => MonadPlus (UnrecoverableT e m)
 

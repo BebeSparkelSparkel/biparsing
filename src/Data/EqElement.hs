@@ -10,10 +10,15 @@ import Data.Function ((.), ($))
 import Data.Functor (fmap)
 import Data.Maybe (Maybe(Just,Nothing))
 import Data.MonoTraversable (Element, otoList)
-import Data.Sequences (IsSequence, singleton, splitWhen, fromList)
+import Data.MonoTraversable.Unprefixed ()
+import Data.Sequences (IsSequence, singleton, splitWhen, fromList, isPrefixOf, drop, lengthIndex)
+import Data.MonoTraversable.Unprefixed (null)
+import Data.Monoid (mempty)
 
-import Data.ByteString qualified as S
+import Data.ByteString qualified as BS
+import Data.ByteString.Lazy qualified as BL
 import Data.ByteString.Search qualified as SS
+import Data.ByteString.Lazy.Search qualified as SL
 import Data.List qualified as List
 import Data.List.Split qualified as List
 import Data.Sequence qualified as Seq
@@ -31,22 +36,34 @@ instance Eq a => EqElement [a] where
   stripPrefix = List.stripPrefix
   splitSeq = List.splitOn
 
-instance EqElement S.ByteString where
+instance EqElement BS.ByteString where
   stripPrefix x y
-    | x `S.isPrefixOf` y = Just (S.drop (S.length x) y)
+    | x `isPrefixOf` y = Just (drop (lengthIndex x) y)
     | otherwise = Nothing
   splitElem sep s
-    | S.null s = [S.empty]
-    | otherwise = S.split sep s
+    | null s = [mempty]
+    | otherwise = BS.split sep s
   splitSeq sep s
-    | S.null sep = (:) S.empty $ List.map singleton $ S.unpack s
-    | S.null s = [S.empty]
+    | null sep = (:) mempty $ List.map singleton $ BS.unpack s
+    | null s = [mempty]
     | otherwise = SS.split sep s
+
+instance EqElement BL.ByteString where
+  stripPrefix x y
+    | x `isPrefixOf` y = Just (drop (lengthIndex x) y)
+    | otherwise = Nothing
+  splitElem sep s
+    | null s = [mempty]
+    | otherwise = BL.split sep s
+  splitSeq sep s
+    | null sep = (:) mempty $ List.map singleton $ BL.unpack s
+    | null s = [mempty]
+    | otherwise = SL.split (BL.toStrict sep) s
 
 instance EqElement T.Text where
   stripPrefix = T.stripPrefix
   splitSeq sep
-    | T.null sep = (:) T.empty . List.map singleton . T.unpack
+    | null sep = (:) mempty . List.map singleton . T.unpack
     | otherwise = T.splitOn sep
 
 instance Eq a => EqElement (Seq.Seq a)

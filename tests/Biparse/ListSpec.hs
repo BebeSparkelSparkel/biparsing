@@ -71,7 +71,7 @@ spec = do
     fb @() "with takeTri"
       (   many
       $   try (takeTri "TRUE" True 1)
-      <|>      takeTri "FALSE" False 0
+      <!>      takeTri "FALSE" False 0
       :: Biparser () (Identity [String]) Maybe Maybe () () [Bool] [Int])
       ()
       ()
@@ -113,7 +113,7 @@ spec = do
       it "prints all" $ b [1,1,1] >>= (`shouldBe` ([1,1,1], [1,1,1]))
 
   fb @() "all"
-    (all $ takeUni 'a' <|> takeUni 'b' :: Iso UnixLC (FM Text) IO () () (Position () Text) [Char])
+    (all $ takeUni 'a' <!> takeUni 'b' :: Iso UnixLC (FM Text) IO () () (Position () Text) [Char])
     ()
     ()
     (\f -> do
@@ -285,7 +285,7 @@ spec = do
   --    it "takes all" $ b ["a","b"] `shouldBe` Identity (["a","b"],"ab")
 
   fb @() "whileFwdAllBwd"
-    (whileFwdAllBwd (take 3 $> False <|> pure True) one :: Iso () EitherString EitherString () () (Identity [Int]) [Int])
+    (whileFwdAllBwd (take 3 $> False <!> pure True) one :: Iso () EitherString EitherString () () (Identity [Int]) [Int])
     ()
     ()
     (\f -> do
@@ -329,7 +329,8 @@ spec = do
       it "middle match" $ b "abcd" >>= (`shouldBe` ("abc","abc"))
 
   fb @() "intersperse"
-    (intersperse (one >>= \x -> if x == 'x' then pure x else empty) (one `upon` const ',' >>= \x -> if x == ',' then pure x else empty)
+    (intersperse (one >>= \x -> if x == 'x' then pure x else fail "not x")
+      (one `upon` const ',' >>= \x -> if x == ',' then pure x else fail "not ,")
       :: Iso ColumnsOnly (FM String) EitherString () () (Position () String) [Char])
     ()
     ()

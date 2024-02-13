@@ -49,16 +49,16 @@ lineBreakerString' = \case
   Unix    -> lineBreakerString @'Unix
   Windows -> lineBreakerString @'Windows
 
-lineBreakType :: forall c m n a text se.
-  ( Take c a m n text se
-  , Take' c a m n text se
+lineBreakType :: forall c m n a text se e.
+  ( Take c a m n text se e
+  , Take' c a m n text se LineBreakType e
+  , Alt n
   , CharElement a se
-  , Alternative n
   , IsString text
   ) => Iso c m n a LineBreakType
 lineBreakType
   =   takeDi  (char @(FromLeft (LineBreaker 'Unix)))    Unix
-  <|> takeDi' (lineBreakerString @'Windows) Windows
+  <!> takeDi' (lineBreakerString @'Windows) Windows
 
 lines :: forall (lb :: LineBreakType) c m n a text up.
   ( LineSplitter (LineBreaker lb) up c m n a

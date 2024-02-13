@@ -27,11 +27,13 @@ module Biparse.Utils
   , shouldBe
   ) where
 
-import Control.Applicative (Applicative, Alternative((<|>)), pure, empty, liftA2)
+import Control.Applicative (Applicative, pure, liftA2)
+import Control.Monad (MonadFail, fail)
 import Data.Char (Char)
 import Data.Eq (Eq((==)))
 import Data.Function ((.), flip, ($), id)
 import Data.Functor (Functor, (<$), fmap)
+import Data.Functor.Alt (Alt, (<!>))
 import Data.Kind (Type)
 import Data.Maybe (maybe)
 import Data.MonoTraversable (headMay, lastMay, MonoFoldable, Element)
@@ -39,15 +41,15 @@ import Data.Proxy (Proxy(Proxy))
 import Data.Sequences (IsSequence, initMay, tailMay)
 import Data.String (String, IsString(fromString))
 import GHC.Exts (IsList, toList, Item)
-import GHC.Int (Int)
+import GHC.Int (Int, Int64)
 import GHC.Integer (Integer)
 import GHC.Real (fromIntegral)
 import GHC.TypeLits (KnownSymbol, symbolVal, KnownChar, charVal)
 import Numeric.Natural (Natural)
 import Text.Printf (IsChar(fromChar))
 
-(|>) :: Alternative f => f a -> a -> f a
-x |> y = x <|> pure y
+(|>) :: (Applicative f, Alt f) => f a -> a -> f a
+x |> y = x <!> pure y
 
 infixr 5 ^:^
 (^:^) :: Applicative f => f a -> f [a] -> f [a]
@@ -65,23 +67,24 @@ infixr 9 >>>
 (>>>) :: (a -> b) -> (b -> c) -> a -> c
 (>>>) = flip (.)
 
-headAlt :: forall a n. (Alternative n, MonoFoldable a) => a -> n (Element a)
-headAlt = maybe empty pure . headMay
+headAlt :: forall a n. (MonadFail n, MonoFoldable a) => a -> n (Element a)
+headAlt = maybe (fail "Could not take the head of the collection.") pure . headMay
 
-lastAlt :: forall a n. (Alternative n, MonoFoldable a) => a -> n (Element a)
-lastAlt = maybe empty pure . lastMay
+lastAlt :: forall a n. (MonadFail n, MonoFoldable a) => a -> n (Element a)
+lastAlt = maybe (fail "Could not take the last element of the collection.") pure . lastMay
 
-tailAlt :: forall a n. (Alternative n, IsSequence a) => a -> n a
-tailAlt = maybe empty pure . tailMay
+tailAlt :: forall a n. (MonadFail n, IsSequence a) => a -> n a
+tailAlt = maybe (fail "Could not take the tail of the collection.") pure . tailMay
 
-initAlt :: forall a n. (Alternative n, IsSequence a) => a -> n a
-initAlt = maybe empty pure . initMay
+initAlt :: forall a n. (MonadFail n, IsSequence a) => a -> n a
+initAlt = maybe (fail "Could not take the inital elements of the collection.") pure . initMay
 
-headTailAlt :: (IsSequence b, Alternative m) => b -> m (Element b, b)
+headTailAlt :: (IsSequence b, MonadFail m) => b -> m (Element b, b)
 headTailAlt x = liftA2 (,) (headAlt x) (tailAlt x)
 
 class ConvertIntegral a b where convertIntegral :: a -> b
 instance ConvertIntegral Natural Int where convertIntegral = fromIntegral
+instance ConvertIntegral Natural Int64 where convertIntegral = fromIntegral
 instance ConvertIntegral Natural Integer where convertIntegral = fromIntegral
 
 type ConvertStringInstanceSelector :: Type -> Type -> Type
@@ -110,6 +113,6 @@ symbol = fromString $ symbolVal $ Proxy @s
 char :: forall c a. (KnownChar c, IsChar a) => a
 char = fromChar $ charVal $ Proxy @c
 
-shouldBe :: (Eq a, Alternative m) => a -> a -> m a
-shouldBe x y = if x == y then pure x else empty
+shouldBe :: (Eq a, MonadFail m) => a -> a -> m a
+shouldBe x y = if x == y then pure x else (fail "x should be y but it is not.")
 

@@ -38,9 +38,6 @@ import Control.Monad.UndefinedBackwards (UndefinedBackwards)
 import Data.EqElement (splitElem, splitSeq)
 import Data.MonoTraversable.Unprefixed (intercalate)
 
-import GHC.Err (undefined)
-import Control.Monad.Trans.Error qualified as E
-
 -- * Contexts
 type UnixLC = LineColumn 'Unix
 type WindowsLC = LineColumn 'Windows
@@ -51,7 +48,7 @@ data ColumnsOnly
 data LineColumnUnknownBreak
 data NoUpdate
 
--- * Postion state
+-- * Position state
 
 data Position dataId text = Position
   { _dataId :: dataId -- | could be FilePath
@@ -139,8 +136,6 @@ instance IsList ss => IsList (Position () ss) where
 -- * Positional Errors
 
 data ErrorPosition dataId = ErrorPosition dataId Int Int String deriving (Show, Eq)
-
-instance E.Error (ErrorPosition dataId) where strMsg = undefined
 
 instance WrapErrorWithState String (Position dataId text) (ErrorPosition dataId) where
   type StateForError String (Position dataId text) (ErrorPosition dataId) = Position dataId text

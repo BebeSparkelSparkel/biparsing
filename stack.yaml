@@ -1,8 +1,13 @@
-resolver: lts-20.24
+resolver: nightly-2024-02-11
+system-ghc: true
+skip-ghc-check: true
 
 extra-deps:
   - github: BebeSparkelSparkel/mono-traversable
     commit: c302c973de6090656177cc27cc62e3fb83118af3
     subdirs:
       - mono-traversable
-  #- ../mono-traversable/mono-traversable
+
+  - transformers-0.6.1.1
+  - exceptions-0.10.7@sha256:a85a0fc00c7eb309f7f8fef84f8c8d915d16b416b9dbfa803b5718a9960aff93,2808
+  - mtl-2.3.1@sha256:5377696d7315e2ef31a8d15d67b22d733c20cac2caf8b26756ff8524c8217e6d,1868

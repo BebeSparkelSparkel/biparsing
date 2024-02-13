@@ -108,7 +108,7 @@ spec = do
 
     describe "Alternative" do
       fb @() "Identity"
-        (peek (takeUni 'x') <|> takeUni 'a' :: Iso () IO IO () () (Identity String) Char)
+        (peek (takeUni 'x') <!> takeUni 'a' :: Iso () IO IO () () (Identity String) Char)
         ()
         ()
         (\f -> do
@@ -128,7 +128,7 @@ spec = do
           it "prints second" $ b 'a' >>= (`shouldBe` ('a',"a"))
 
       fb @() "LineColumn"
-        (peek (takeUni 'x') <|> takeUni 'a' :: Iso UnixLC (FM String) IO () () (Position () String) Char)
+        (peek (takeUni 'x') <!> takeUni 'a' :: Iso UnixLC (FM String) IO () () (Position () String) Char)
         ()
         ()
         (\f -> do
@@ -153,7 +153,7 @@ spec = do
       it "success" $ f "abc" `shouldBe` Right ('a', Position () 1 3 "c")
       
       it "does not consume state in failed attempt" do
-        runForward @() (bp <|> takeUni 'c') "cde" `shouldBe` Right ('c', Position () 1 2 "de")
+        runForward @() (bp <!> takeUni 'c') "cde" `shouldBe` Right ('c', Position () 1 2 "de")
 
       it "fails if no alternate" do
         f "" `shouldSatisfy` errorPosition 1 1
@@ -162,7 +162,7 @@ spec = do
         it "prints correctly" $ b 'a' >>= (`shouldBe` ('a',"ab"))
 
         it "prints second if first fails (more of a test for the Biparser Alternative instance and should proabaly moved there)" do
-          x <- runBackward (setBackward bp (const empty) <|> bp) () () 'z'
+          x <- runBackward (setBackward bp (const empty) <!> bp) () () 'z'
           x `shouldBe` ('z',"zb")
       
   describe "isNull" do

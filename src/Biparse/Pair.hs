@@ -2,21 +2,19 @@ module Biparse.Pair
   ( tupleFst
   ) where
 
-import Biparse.Biparser (Iso, upon, SubState)
+import Biparse.Biparser (Iso, upon)
 
 -- | Used to match and fill the first element in the tuple
 tupleFst :: forall c m n s a b.
-  ( MonadPlus m
+  ( MonadFail m
   , Eq a
-  , Monad n
-  , Alternative n
-  , Monoid (SubState s)
+  , MonadFail n
   )
   => a
   -> Iso c m n s (a,b)
   -> Iso c m n s b
 tupleFst x i = do
   (y,z) <- i `upon` (x,)
-  unless (x == y) empty
+  unless (x == y) (fail "first tuple value does not match given")
   return z
 

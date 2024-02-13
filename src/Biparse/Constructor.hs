@@ -32,7 +32,8 @@ import Control.Profunctor.FwdBwd (BwdMonad, Comap, FwdBwd, pattern FwdBwd, Fwd, 
 import Control.Profunctor.FwdBwd qualified as FB
 
 newtype Constructor s m n u v = Constructor' {deconstruct :: FwdBwd (ReaderT s m) (StateT s n) u v}
-  deriving (Functor, Applicative, Alternative, Monad, MonadFail)
+  deriving (Functor, Applicative, Monad, MonadFail)
+instance (Alt m, Alt n) => Alt (Constructor s m n u) where Constructor' x <!> Constructor' y = Constructor' $ x <!> y
 pattern Constructor :: ReaderT s m v -> (u -> StateT s n v) -> Constructor s m n u v
 pattern Constructor fw bw = Constructor' (FwdBwd fw bw)
 {-# COMPLETE Constructor #-}
@@ -96,7 +97,7 @@ type FocusOne is c s m m' n n' ss se =
   -- m
   , MonadState s m
   , MonadFail m
-  , Alternative m
+  , Alt m
   -- n
   , MonadWriter ss n
   -- assignments
@@ -159,7 +160,6 @@ focus f g (Biparser fw bw) (ConstructorUnT fw' bw') = Biparser
 
 lensBiparse :: forall s s' m n u v.
   ( MonadFail m
-  , Alternative m
   , Monad n
   )
   => Traversal' s s'
@@ -178,7 +178,6 @@ lensBiparse t (Biparser fw bw) = Constructor
 -- | Expect 'x' at 't' forward and set 'x' at 't' backwards.
 expect :: forall s m n u v.
   ( MonadFail m
-  , Alternative m
   , Eq v
   , Show v
   , Monad n

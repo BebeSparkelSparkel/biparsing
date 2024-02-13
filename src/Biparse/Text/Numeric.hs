@@ -4,6 +4,8 @@
 module Biparse.Text.Numeric
   ( NaturalConstraints
   , naturalBaseTen
+  , charToDigitMay
+  , charToDigit
   , naturalBaseTen'
   , IntConstraints
   , intBaseTen
@@ -30,7 +32,7 @@ import GHC.Float (Float, Double)
 import GHC.Num ((*), negate, Integer, abs)
 import GHC.Real (Fractional, (^^), Integral)
 import Numeric (showHex)
-import Safe (readMay)
+import Safe (readMay, indexMay)
 import Data.Sequences qualified
 import Data.Ix (Ix, index)
 
@@ -66,9 +68,14 @@ naturalBaseTen = do
     fail $ "Could not parse " <> show cs <> " to a base 10 natural."
   else pure $ toEnum $ foldl' (\x c -> x * 10 + charToDigit c) 0 ds
 
+charToDigitMay :: (Ix char, IsChar char) => char -> Maybe Int
+charToDigitMay = indexMay digitRange
 
 charToDigit :: (Ix char, IsChar char) => char -> Int
-charToDigit = index (fromChar '0', fromChar '9')
+charToDigit = index digitRange
+
+digitRange :: IsChar char => (char, char)
+digitRange = (fromChar '0', fromChar '9')
 
 naturalBaseTen' :: forall number c s m n char.
   ( NaturalConstraints c s m n number char
@@ -76,72 +83,81 @@ naturalBaseTen' :: forall number c s m n char.
   ) => Iso c m n s number
 naturalBaseTen' = naturalBaseTen
 
-instance IntConstraints c s m n Int   char => IsoClass c m n s Int   where iso = intBaseTen
-instance IntConstraints c s m n Int8  char => IsoClass c m n s Int8  where iso = intBaseTen
-instance IntConstraints c s m n Int16 char => IsoClass c m n s Int16 where iso = intBaseTen
-instance IntConstraints c s m n Int32 char => IsoClass c m n s Int32 where iso = intBaseTen
-instance IntConstraints c s m n Int64 char => IsoClass c m n s Int64 where iso = intBaseTen
+instance IntConstraints c s m n Int   char e => IsoClass c m n s Int   where iso = intBaseTen
+instance IntConstraints c s m n Int8  char e => IsoClass c m n s Int8  where iso = intBaseTen
+instance IntConstraints c s m n Int16 char e => IsoClass c m n s Int16 where iso = intBaseTen
+instance IntConstraints c s m n Int32 char e => IsoClass c m n s Int32 where iso = intBaseTen
+instance IntConstraints c s m n Int64 char e => IsoClass c m n s Int64 where iso = intBaseTen
 
-type IntConstraints c s m n number char =
+type IntConstraints c s m n number char e =
   ( NaturalConstraints c s m n number char
-  , MonadPlus m
-  , Alternative n
+  -- m
+  , MonadError e m
+  , Alt m
+  -- n
+  , Alt n
+  -- number
   , Num number
   , Ord number
+  , Show number
+  -- context
   , ElementContext c s
   )
 
-intBaseTen :: forall c s m n number char.
-  ( IntConstraints c s m n number char
-  , Show number
-  ) => Iso c m n s number
+intBaseTen :: forall c s m n number char e.
+  IntConstraints c s m n number char e
+  => Iso c m n s number
 intBaseTen = do
   s <- sign
   n <- naturalBaseTen `upon` abs
   pure $ s n
 
-type RealConstrints c s m n number ss char =
+type RealConstrints c s m n number ss char e =
   ( NaturalConstraints c s m n number char
-  , MonadPlus m
-  , ElementContext c s
-  , Show ss
-  , Alternative n
+  -- m
+  , Alt m
+  , MonadError e m
+  -- n
+  , Alt n
+  -- number
   , Num number
   , Ord number
+  , Show number
+  , Read number
+  -- context
+  , ElementContext c s
+  -- substate
+  , Show ss
   , ss ~ SubState s
   )
 
-instance RealConstrints c s m n Float  ss char => IsoClass c m n s Float  where iso = realBaseTen
-instance RealConstrints c s m n Double ss char => IsoClass c m n s Double where iso = realBaseTen
+instance RealConstrints c s m n Float  ss char e => IsoClass c m n s Float  where iso = realBaseTen
+instance RealConstrints c s m n Double ss char e => IsoClass c m n s Double where iso = realBaseTen
 
 -- | Only wirtes digits and not powers of 10.
-scientific :: forall c s m n number ss char.
-  ( Fractional number
-  , RealConstrints c s m n number ss char
-  , Show number
-  , Read number
+scientific :: forall c s m n number ss char e.
+  ( RealConstrints c s m n number ss char e
+  , Fractional number
   ) => Iso c m n s number
 scientific = do
   digits <- realBaseTen
   power :: Maybe Integer <- comap (const Nothing) $ optional do
-    take (fromChar 'E') <|> take (fromChar 'e')
+    take (fromChar 'E') <!> take (fromChar 'e')
     intBaseTen
   pure $ maybe id ((*) . (10 ^^)) power $ digits
 
-realBaseTen :: forall c s m n number ss char.
-  ( RealConstrints c s m n number ss char
-  , Show number
-  , Read number
-  ) => Iso c m n s number
+realBaseTen :: forall c s m n number ss char e.
+  RealConstrints c s m n number ss char e
+  => Iso c m n s number
 realBaseTen =
   try do
     s <- sign
     ws <- digitsBaseTen `upon` abs
     ds <- comap (const mempty) $ ignoreBackward
       $   try (cons <$> (fromChar '.' <$ take (fromChar '.')) <*> digitsBaseTen)
-      <|> pure mempty
-    maybe empty (pure . s) $ readMay $ fmap toChar $ toList $ ws <> ds
-  <|> do
+      <!> pure mempty
+    maybe (fail "Could not read a realBaseTen.") (pure . s) $ readMay $ fmap toChar $ toList $ ws <> ds
+  <!> do
     cs <- peek $ Data.Sequences.take 20 <$> rest `upon` const mempty
     fail $ "Could not parse " <> show cs <> " to a base 10 real."
 
@@ -169,28 +185,34 @@ deduceSign x
   | x > 0 = Positive
   | otherwise = Zero
 
-sign :: forall c s m n number ss char.
-  ( CharElement s char
-  , MonadState s m
+sign :: forall c s m n number ss char e.
+  ( MonadState s m
   , MonadFail m
-  , MonadPlus m
-  , IsSequence ss
+  , Alt m
+  , MonadError e m
+  -- n
   , MonadWriter ss n
   , MonadFail n
-  , Alternative n
+  , Alt n
+  -- number
   , Num number
   , Ord number
+  -- substate
+  , IsSequence ss
+  , CharElement s char
+  -- context
   , ElementContext c s
+  -- assignments
   , ss ~ SubState s
   ) => Biparser c s m n number (number -> number)
-sign = comap deduceSign $ takeTri (fromChar '-') Negative negate <|> pure id
+sign = comap deduceSign $ takeTri (fromChar '-') Negative negate <!> pure id
 
 -- | Consume n hex characters lower or upper case. Print n hex characters with a case decided by 'charCase'.
 hex :: forall (charCase :: CharCase) c m n a number text char.
   -- m
   ( MonadState a m
   , MonadFail m
-  , Alternative m
+  , Alt m
   -- n
   , MonadWriter text n
   , MonadFail n

@@ -10,21 +10,22 @@ module Control.Monad.EitherString
   , eitherString
   ) where
 
+import Control.Applicative (Applicative, Alternative((<|>),empty))
+import Control.Lens (Prism, Prism', prism, prism')
+import Control.Monad (Monad, MonadFail(fail), MonadPlus)
+import Control.Monad.Except (MonadError)
 import Data.Bool (Bool)
+import Data.Coerce (coerce)
 import Data.Either (Either(Left,Right), fromLeft, fromRight, isLeft, either)
+import Data.Eq (Eq)
+import Data.Function ((.), ($))
+import Data.Functor (Functor)
+import Data.Functor.Alt (Alt, (<!>))
+import Data.Maybe (Maybe(Just,Nothing))
+import Data.Monoid ((<>))
+import Data.Ord (Ord)
 import Data.String (String)
 import Text.Show (Show, show)
-import Data.Ord (Ord)
-import Data.Eq (Eq)
-import Data.Functor (Functor)
-import Data.Function ((.), ($))
-import Control.Applicative (Applicative, Alternative((<|>),empty))
-import Control.Monad (Monad, MonadFail(fail), MonadPlus)
-import Data.Monoid ((<>))
-import Control.Lens (Prism, Prism', prism, prism')
-import Data.Maybe (Maybe(Just,Nothing))
-import Data.Coerce (coerce)
-import Control.Monad.Except (MonadError)
 
 newtype EitherString a = EitherString {runEitherString :: Either String a} deriving (Eq, Ord, Functor, Applicative, Monad)
 
@@ -43,6 +44,8 @@ instance Show a => Show (EitherString a) where
   show = \case
     EitherString (Right x) -> "EValue (" <> show x <> ")"
     EitherString (Left x) -> "EString " <> show x
+
+instance Alt EitherString where EitherString x <!> EitherString y = EitherString $ x <!> y
 
 pattern EString :: String -> EitherString a
 pattern EString x = EitherString (Left x)

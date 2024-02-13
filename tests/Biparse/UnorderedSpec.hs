@@ -15,8 +15,6 @@ spec = do
     (\f -> do
       it "in order" do
         let result = AllParserTypes 1 (Accumulating ["Not Default"]) (Optional $ Just True)
-        --result `shouldNotBe` def
-        --singleSuccessParser result `shouldNotBe` singleSuccessParser def
         accumulatingParser result `shouldNotBe` accumulatingParser def
         optionalParser result `shouldNotBe` optionalParser def
         f [One 1, Two "Not Default", Three True] `shouldBe` Right (result, Position () 4 1 mempty)
@@ -66,7 +64,7 @@ instance Arbitrary AllParserTypes where
 
 type IsoConstraints c m n a ss =
   ( T ~ SubElement a
-  , One c a m n ss
+  , One c a m n ss T
   , MonadFail n
   )
 

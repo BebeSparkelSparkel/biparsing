@@ -21,14 +21,16 @@ module Biparse.Biparser.Internal
   , comapEither
   , comapM
   , comapPred
+  , comapPredM
   , upon
   , uponMay
   , uponEither
   , uponM
   , uponPred
+  , uponPredM
   , mapWrite
   , onlyBackwards
-  , emptyForward
+  , forwardFail
   , ignoreForward
   , ignoreBackward
   , GetSubState(..)
@@ -41,6 +43,7 @@ module Biparse.Biparser.Internal
   , ReplaceSubState(..)
   , One
   , one
+  , oneFw
   , split
   , peek
   , try
@@ -61,6 +64,7 @@ import Control.Monad.Writer.Class (listen)
 import Control.Profunctor.FwdBwd (BwdMonad, Comap, FwdBwd, pattern FwdBwd, MapMs(mapMs), DualMap)
 import Control.Profunctor.FwdBwd qualified as FB
 import Data.Profunctor (Profunctor(dimap))
+import Control.Applicative qualified
 
 -- | Product type for simultainously constructing forward and backward running programs.
 newtype Biparser context s m n u v = Biparser' {unBiparser :: FwdBwd m n u v}
@@ -77,12 +81,6 @@ setBackward :: forall n c s m n' u u' v. Biparser c s m n u v -> (u' -> n' v) ->
 setBackward (Biparser fw _) = Biparser fw
 
 type instance BwdMonad () (Biparser _ _ _ n) = n
-deriving instance Monad n => Comap () (Biparser c s m n)
-deriving instance (Functor m, Functor n) => DualMap (Biparser c s m n u)
-deriving instance (MonadError e m, MonadError e n, Monoid (SubState s)) => MonadError e (Biparser c s m n u)
-instance (MonadUnrecoverable m, MonadUnrecoverable n, UnrecoverableError m ~ UnrecoverableError n) => MonadUnrecoverable (Biparser c s m n u) where
-  type UnrecoverableError (Biparser c s m n u) = UnrecoverableError (FwdBwd m n u)
-  throwUnrecoverable = Biparser' . throwUnrecoverable
 
 -- * Mapping Backward
 -- Used to converte @u@ to the correct type for the biparser.
@@ -102,30 +100,32 @@ comapM :: forall c s m n u u' v.
 comapM = FB.comapM @()
 
 comapMay :: forall c s m n u u' v.
-  ( Monad n
-  , Alternative n
-  )
+  MonadFail n
   => (u -> Maybe u')
   -> Biparser c s m n u' v
   -> Biparser c s m n u  v
-comapMay f (Biparser fw bw) = Biparser fw $ bw <=< maybe empty pure . f
+comapMay f (Biparser fw bw) = Biparser fw $ bw <=< maybe (fail "backward map to Maybe gave Nothing.") pure . f
 
 comapEither :: forall c s m n u u' v.
-  ( Applicative n
-  )
+  Applicative n
   => (u -> Either v u')
   -> Biparser c s m n u' v
   -> Biparser c s m n u  v
 comapEither f (Biparser fw bw) = Biparser fw $ either pure bw . f
 
 comapPred :: forall c s m n u v.
-  ( Monad n
-  , Alternative n
-  )
+  MonadFail n
   => (u -> Bool)
   -> Biparser c s m n u v
   -> Biparser c s m n u v
-comapPred p = comapM \u -> if p u then empty else pure u
+comapPred p = comapM \u -> if p u then (fail "backward predicate failed.") else pure u
+
+comapPredM :: forall c s m n u v.
+  MonadFail n
+  => (u -> n Bool)
+  -> Biparser c s m n u v
+  -> Biparser c s m n u v
+comapPredM p = comapM \u -> bool (fail "backward monadic predicate failed") (pure u) =<< p u
 
 infix 8 `upon`
 upon :: forall c s m n u u' v.
@@ -145,9 +145,7 @@ uponM = flip comapM
 
 infix 8 `uponMay`
 uponMay :: forall c s m n u u' v.
-  ( Monad n
-  , Alternative n
-  )
+  MonadFail n
   => Biparser c s m n u' v
   -> (u -> Maybe u')
   -> Biparser c s m n u v
@@ -164,13 +162,19 @@ uponEither = flip comapEither
 
 infix 8 `uponPred`
 uponPred :: forall c s m n u v.
-  ( Monad n
-  , Alternative n
-  )
+  MonadFail n
   => Biparser c s m n u v
   -> (u -> Bool)
   -> Biparser c s m n u v
 uponPred = flip comapPred
+
+infix 8 `uponPredM`
+uponPredM :: forall c s m n u v.
+  MonadFail n
+  => Biparser c s m n u v
+  -> (u -> n Bool)
+  -> Biparser c s m n u v
+uponPredM = flip comapPredM
 
 -- * Map Backwards Write
 
@@ -250,12 +254,12 @@ fix (Biparser fw bw) = Biparser
 
 -- * Forward and Backward Divergence
 
-emptyForward :: forall c s m n u.
-  ( MonadPlus m
+forwardFail :: forall c s m n u.
+  ( MonadFail m
   , Applicative n
   )
   => Biparser c s m n u ()
-emptyForward = Biparser empty (const $ pure ())
+forwardFail = Biparser (fail "Purposely forward fail.") (const $ pure ())
 
 -- | Throws away the forward computation and returns 'x'. Only the backwards computation runs.
 ignoreForward :: forall c s m n u v.
@@ -317,8 +321,7 @@ type ElementContext context state = (GetSubState state, UpdateStateWithElement c
 
 -- | Update the state's context and substate.
 -- - @state@ is the old state
--- - @Int@ is the number of elements consumed
--- - @SubState state@ is nte new substate
+-- - @Index (SubState state)@ is the number of elements consumed
 -- - Returns the updated state
 class UpdateStateWithNConsumed context state where
   updateStateWithNConsumed :: state -> Index (SubState state) -> state
@@ -334,28 +337,45 @@ instance (Functor m, Functor n) => Functor (Biparser c s m n u) where
 -- Must be used to construct all other biparsers that have context.
 -- Used to ensure that context is updated correctly.
 
-type One c s m n ss =
+type One c s m n ss se =
   ( IsSequence ss
   , ElementContext c s
   -- m
   , MonadState s m
   , MonadFail m
-  , Alternative m
+  , Alt m
   -- n
   , MonadWriter ss n
   -- assignments
   , ss ~ SubState s
+  , se ~ SubElement s
   )
 -- | Takes and writes one element. Updates the context and substate.
-one :: forall c s m n ss. One c s m n ss => Iso c m n s (SubElement s)
-one = Biparser fw bw
+one :: forall c s m n ss se. One c s m n ss se => Iso c m n s se
+one = Biparser (oneFw @c) bw
   where
-  fw = do
-    s <- get
-    (x, ss) <- headTailAlt (getSubState s) <|> fail "Could not take one element. The container is empty."
-    put (updateElementContext @c s x ss) $> x
-  bw :: SubElement s -> n (SubElement s)
+  bw :: se -> n se
   bw c = tell (singleton c) $> c
+
+-- | Forward Only! Takes one element. Updates the context and substate.
+-- Useful for when forwards and backwards are to divergent to reasonably work with
+-- and you still want to correctly update the state.
+oneFw :: forall c s m ss se.
+  ( IsSequence ss
+  , ElementContext c s
+  -- m
+  , MonadState s m
+  , MonadFail m
+  , Alt m
+  -- assignments
+  , ss ~ SubState s
+  , se ~ SubElement s
+  ) => m se
+oneFw = do
+  s <- get
+  (x, ss) <- headTailAlt (getSubState s) <!> fail "Could not take one element. The container is empty."
+  put (updateElementContext @c s x ss) $> x
+
 
 -- | Takes and writes substate. Updates the context and substate.
 split :: forall c s m n ss.
@@ -387,23 +407,23 @@ peek (Biparser fw bw) = Biparser
 
 -- | Allows trying a forward. If the forward fails the state is returned to the value it was before running.
 -- ????? Unsure what should be done with the writer mondad
-try :: forall c s m n u v.
-  ( MonadPlus m
+try :: forall c s m n u v e.
+  ( MonadError e m
   , MonadState s m
   )
   => Biparser c s m n u v
   -> Biparser c s m n u v
 try (Biparser fw bw) = Biparser (tryState fw) bw
 
-tryState :: forall s m v.
-  ( Alternative m
-  , MonadState s m
+tryState :: forall s m v e.
+  ( MonadState s m
+  , MonadError e m
   )
   => m v
   -> m v
 tryState fw = do
   s <- get @s
-  fw <|> put s *> empty
+  catchError fw \e -> put s *> throwError e
 
 -- | Allows back to not execute and return 'x' if 'f' returns 'Nothing'
 optionalBack :: forall c s m n u u' v.
@@ -430,9 +450,11 @@ isNull = Biparser
   (pure . null)
 
 -- | 'x' does not succeed
-breakWhen' :: forall c s m n ss.
+breakWhen' :: forall c s m n ss e.
   ( MonadState s m
-  , Alternative m
+  , Alt m
+  , MonadError e m
+  , MonadFail m
   , MonadWriter ss n
   , SubStateContext c s
   , IsSequence ss
@@ -445,9 +467,9 @@ breakWhen' (Biparser fw bw) = Biparser fw' bw'
   fw' = do
     startState <- get
     let its = initTails $ getSubState @s startState
-    tryState $ maybe empty (pure . fst) =<< flip findM its \(h,t) -> do
+    tryState $ maybe (fail "Could not find break.") (pure . fst) =<< flip findM its \(h,t) -> do
       put $ updateSubStateContext @c startState h t
-      fw $> True <|> pure False
+      fw $> True <!> pure False
   bw' x = do
     tell x
     bw ()
@@ -504,24 +526,40 @@ resetState p (Biparser fw bw) = Biparser
     pure x
   bw
 
-instance (Monoid (SubState s), Monad m, Applicative n) => Applicative (Biparser c s m n u) where
+-- * Biparser Instances
+
+deriving instance Monad n => Comap () (Biparser c s m n)
+
+deriving instance (Functor m, Functor n) => DualMap (Biparser c s m n u)
+
+deriving instance (MonadError e m, MonadError e n) => MonadError e (Biparser c s m n u)
+
+instance (MonadUnrecoverable m, MonadUnrecoverable n, UnrecoverableError m ~ UnrecoverableError n) => MonadUnrecoverable (Biparser c s m n u) where
+  type UnrecoverableError (Biparser c s m n u) = UnrecoverableError (FwdBwd m n u)
+  throwUnrecoverable = Biparser' . throwUnrecoverable
+
+instance (Applicative m, Applicative n) => Applicative (Biparser c s m n u) where
   pure v = Biparser (pure v) (const $ pure v)
   Biparser fw bw <*> Biparser fw' bw' = Biparser
     (fw <*> fw')
     (\u -> bw u <*> bw' u)
 
-instance (Monoid (SubState s), MonadPlus m, Alternative n) => Alternative (Biparser c s m n u) where
-  empty = Biparser empty (const empty)
+instance (Control.Applicative.Alternative m, Control.Applicative.Alternative n) => Control.Applicative.Alternative (Biparser c s m n u) where
+  empty = Biparser Control.Applicative.empty (const Control.Applicative.empty)
   Biparser fw bw <|> Biparser fw' bw' =
-    Biparser (fw <|> fw') (\u -> bw u <|> bw' u)
+    Biparser (fw Control.Applicative.<|> fw') (\u -> bw u Control.Applicative.<|> bw' u)
 
-instance (Monoid (SubState s), Monad m, Monad n) => Monad (Biparser c s m n u) where
+instance (Alt m, Alt n) => Alt (Biparser c s m n u) where
+  Biparser fw bw <!> Biparser fw' bw' =
+    Biparser (fw <!> fw') (\u -> bw u <!> bw' u)
+
+instance (Monad m, Monad n) => Monad (Biparser c s m n u) where
   pu >>= kw = Biparser fw bw
     where
     fw = forward pu >>= forward . kw
     bw u = backward pu u >>= ($ u) . backward . kw
 
-instance (Monoid (SubState s), MonadFail m, MonadFail n) => MonadFail (Biparser c s m n u) where
+instance (MonadFail m, MonadFail n) => MonadFail (Biparser c s m n u) where
   fail x = Biparser (fail x) (const $ fail x)
 
 instance (Functor m, Functor n) => Profunctor (Biparser c s m n) where
