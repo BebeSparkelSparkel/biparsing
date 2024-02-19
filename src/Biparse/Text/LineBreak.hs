@@ -49,9 +49,9 @@ lineBreakerString' = \case
   Unix    -> lineBreakerString @'Unix
   Windows -> lineBreakerString @'Windows
 
-lineBreakType :: forall c m n a text se e.
-  ( Take c a m n text se e
-  , Take' c a m n text se LineBreakType e
+lineBreakType :: forall c m n a text se w e.
+  ( Take c a m n text se w e
+  , Take' c a m n text se w LineBreakType e
   , Alt n
   , CharElement a se
   , IsString text
@@ -88,10 +88,11 @@ class LineSplitter (lb :: Either Char Symbol) (up :: Bool) c m n a where
   lineSplitter :: Iso c m n a [SubState a]
 instance
   ( MonadState a m
-  , MonadWriter ss n
+  , MonadWriter w n
   , KnownChar char
   , IsSequence ss
   , CharElement a se
+  , ConvertElement c se w
   , ElementContext c a
   , ss ~ SubState a
   , se ~ SubElement a
@@ -99,12 +100,14 @@ instance
   lineSplitter = splitElem @c @a @m @n (char @char)
 instance
   ( MonadState a m
-  , MonadWriter ss n
+  , MonadWriter w n
   , KnownSymbol sym
   , EqElement ss
   , CharElement a se
   , IsString ss
   , Show ss
+  , ConvertSequence c ss w
+  , ConvertElement c se w
   , SubStateContext c a
   , ElementContext c a
   , ss ~ SubState a

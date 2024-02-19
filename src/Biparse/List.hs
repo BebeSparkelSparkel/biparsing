@@ -60,17 +60,19 @@ replicateBiparserT = \case
   emptyFail n = (<!> (fail $ "Expected " <> show n <> " more elements but there are none left."))
 
 -- | Takes
-takeElementsWhile :: forall c s m n ss se e.
+takeElementsWhile :: forall c s m n ss se w e.
    ( MonadFail m
    , MonadState s m
    , MonadError e m
    , Alt m
    -- n
-   , MonadWriter ss n
+   , MonadWriter w n
    , MonadFail n
    , Alt n
    -- substate
    , IsSequence ss
+   -- w
+   , ConvertElement c se w
    -- context
    , ElementContext c s
    -- assignments
@@ -87,18 +89,20 @@ takeElementsWhile f =
   <!> return mempty
 
 -- | Take N elements
-takeN :: forall c m n a ss se.
+takeN :: forall c m n a ss se w.
   -- m
   ( MonadFail m
   , MonadState a m
   , Alt m
   -- n
-  , MonadWriter ss n
+  , MonadWriter w n
   , MonadFail n
   -- substate
   , IsSequence ss
   , GetSubState a
   , UpdateStateWithElement c a
+  -- w
+  , ConvertElement c se w
   -- assignments
   , ss ~ SubState a
   , se ~ SubElement a
@@ -190,20 +194,22 @@ all x = ifM isNull (pure mempty) do
   cons y <$> all x `uponM` tailAlt
 
 -- | Splits the substate on given element
-splitElem :: forall c s m n ss se m' n'.
+splitElem :: forall c s m n ss se w m' n'.
   -- m
   ( MonadState s m
   -- n
-  , MonadWriter ss n
+  , MonadWriter w n
   -- substate
   , IsSequence ss
   , Eq se
   , Show se
+  -- w
+  , ConvertElement c se w
   -- context
   , ElementContext c s
   -- assignments
   , m' ~ StateT s Maybe
-  , n' ~ WriterT ss Maybe
+  , n' ~ WriterT w Maybe
   , se ~ SubElement s
   , ss ~ SubState s
   )
@@ -221,26 +227,28 @@ splitElem x = liftStateMaybe $ correctEmpty splitter
     [] -> [mempty]
     y -> y
 
-splitOn :: forall c s m n ss m' n'.
+splitOn :: forall c s m n ss w m' n'.
   ( MonadState s m
-  , MonadWriter ss n
+  , MonadWriter w n
   , Show ss
   , EqElement ss
+  , ConvertSequence c ss w
+  , ConvertElement c (SubElement s) w
   , ElementContext c s
   , SubStateContext c s
   , ss ~ SubState s
   , m' ~ StateT s Maybe
-  , n' ~ WriterT ss Maybe
+  , n' ~ WriterT w Maybe
   )
   => ss
   -> Iso c m n s [ss]
 splitOn = liftStateMaybe . splitWith @c @s @m' @n' . stripPrefix
 
-liftStateMaybe :: forall c s m n u v ss.
+liftStateMaybe :: forall c s m n u v w.
   ( MonadState s m
-  , MonadWriter ss n
+  , MonadWriter w n
   )
-  => Biparser c s (StateT s Maybe) (WriterT ss Maybe) u v
+  => Biparser c s (StateT s Maybe) (WriterT w Maybe) u v
   -> Biparser c s m n u v
 liftStateMaybe = mapMs
  (\x -> do
@@ -255,9 +263,10 @@ liftStateMaybe = mapMs
    pure y
  )
 
-splitWith :: forall c s m n ss e.
-  ( BreakWhen c s m n ss e
+splitWith :: forall c s m n ss se w e.
+  ( BreakWhen c s m n ss se w e
   , UpdateStateWithSubState c s
+  , ConvertSequence c ss w
   )
   => Unit c s m n
   -> Iso c m n s [ss]
@@ -274,12 +283,13 @@ splitWith x
     (breakWhen' x `uponM` headAlt ^:^ (so <!> pure mempty) `uponM` tailAlt)
 
 -- | Runs 'predicate' and if 'predicate' returns 'True' then run 'produce'. Repeat until 'predicate' returns 'False'. The 'predicate' does not modify the state nor does it write.
-whileM :: forall c s m n u v ss.
+whileM :: forall c s m n u v ss w.
   ( MonadState s m
   , Alt m
-  , MonadWriter ss n
+  , MonadWriter w n
   , MonadFail n
   , Alt n
+  , Monoid ss
   , ss ~ SubState s
   )
   => Biparser c s m n u Bool
@@ -418,14 +428,14 @@ untilClusive f p bp = uncurry f <$> uc
     then pure (id, x)
     else first (cons x .) <$> uc `uponM` tailAlt
 
-intersperse :: forall c s m n u fu v fv v' ss e.
+intersperse :: forall c s m n u fu v fv v' w e.
   -- m
   ( MonadState s m
   , MonadFail m
   , MonadError e m
   , Alt m
   -- n
-  , MonadWriter ss n
+  , MonadWriter w n
   , MonadFail n
   , Alt n
   -- lists

@@ -33,16 +33,19 @@ module Biparse.General
   , failBackward
   ) where
 
+import Data.Sequences qualified as MT
 import Control.Profunctor.FwdBwd (endoSecond)
-import Biparse.Biparser (Biparser, Iso, Unit, unit, one, try, SubState, SubElement, ElementContext, SubStateContext, split, Const, mapWrite, Unit, ignoreForward, upon, uponM, comap, comapM, count, resetState)
+import Biparse.Biparser (Biparser, Iso, Unit, unit, one, try, SubState, SubElement, ElementContext, SubStateContext, split, Const, mapWrite, Unit, ignoreForward, upon, uponM, comapM, count, resetState, splitFw)
 import Data.Bool qualified
 import Data.EqElement qualified
 import Control.Profunctor.FwdBwd (firstM)
 import Data.Set (Set, member)
 
-identity :: forall c s m n ss.
+identity :: forall c s m n ss w.
   ( MonadState s m
-  , MonadWriter ss n
+  , MonadWriter w n
+  , Monoid ss
+  , ConvertSequence c ss w
   , SubStateContext c s
   , ss ~ SubState s
   )
@@ -54,14 +57,14 @@ identity = split do
 
 -- * Take for single elements
 
-type Take c s m n ss se e =
+type Take c s m n ss se w e =
   -- m
   ( MonadState s m
   , MonadFail m
   , MonadError e m
   , Alt m
   -- n
-  , MonadWriter (SubState s) n
+  , MonadWriter w n
   , MonadFail n
   -- context
   , ElementContext c s
@@ -69,22 +72,24 @@ type Take c s m n ss se e =
   , Show (SubElement s)
   , Eq (SubElement s)
   , IsSequence (SubState s)
+  -- w
+  , ConvertElement c se w
   -- assignments
   , ss ~ SubState s
   , se ~ SubElement s
   )
 
 -- | Assumes but disregards the writer context
-take :: forall c s m n u ss se e. Take c s m n ss se e => se -> Const c s m n u
+take :: forall c s m n u ss se w e. Take c s m n ss se w e => se -> Const c s m n u
 take takeWrite = unit $ takeUnit takeWrite
 
 -- | Discards the match
-takeUnit :: forall c s m n ss se e. Take c s m n ss se e => se -> Unit c s m n
+takeUnit :: forall c s m n ss se w e. Take c s m n ss se w e => se -> Unit c s m n
 takeUnit takeWrite = void $ takeUni takeWrite `upon` const takeWrite
 
 -- | Returns the match
-takeUni :: forall c s m n ss se e.
-  Take c s m n ss se e
+takeUni :: forall c s m n ss se w e.
+  Take c s m n ss se w e
   => se
   -> Iso c m n s se
 takeUni takeWriteMatchReturn = try do
@@ -92,8 +97,8 @@ takeUni takeWriteMatchReturn = try do
   unless (takeWriteMatchReturn == y) $ expectedFail takeWriteMatchReturn y
   return y
 
-takeDi :: forall c s m n u ss se e.
-  ( Take c s m n ss se e
+takeDi :: forall c s m n u ss se w e.
+  ( Take c s m n ss se w e
   , Eq u
   , Show u
   , Alt n
@@ -104,8 +109,8 @@ takeDi :: forall c s m n u ss se e.
 takeDi takeWrite matchReturn = takeTri takeWrite matchReturn matchReturn
 
 -- | Allows 'SubElement s'`, 'u', and 'v' to be fixed which works well with Alternative.
-takeTri :: forall c s m n u v ss se e.
-  ( Take c s m n ss se e
+takeTri :: forall c s m n u v ss se w e.
+  ( Take c s m n ss se w e
   , Eq u
   , Show u
   , Alt n
@@ -122,8 +127,8 @@ takeTri takeWrite toMatch toReturn = try do
 expectedFail :: (MonadFail m, Show a, Show b) => a -> b -> m ()
 expectedFail x y = fail $ "Expected a " <> show x <> " but received a " <> show y
 
-takeNot :: forall c s m n ss se e.
-  Take c s m n ss se e
+takeNot :: forall c s m n ss se w e.
+  Take c s m n ss se w e
   => se
   -> Iso c m n s se
 takeNot x = try do
@@ -133,18 +138,19 @@ takeNot x = try do
 
 -- * Take for prefixes
 
-type Take' c s m n ss se u e =
+type Take' c s m n ss se w u e =
   -- m
   ( MonadState s m
   , MonadFail m
   , MonadError e m
   , Alt m
   -- n
-  , MonadWriter ss n
+  , MonadWriter w n
   , MonadFail n
   -- substate
   , Show ss
   , EqElement ss
+  , ConvertSequence c ss w
   -- context
   , SubStateContext c s
   -- u
@@ -155,17 +161,17 @@ type Take' c s m n ss se u e =
   , se ~ SubElement s
   )
 
-takeDi' :: forall c s m n u ss se e.
-  Take' c s m n ss se u e
+takeDi' :: forall c s m n u ss se w e.
+  Take' c s m n ss se w u e
   => ss
   -> u
   -> Iso c m n s u
 takeDi' takeWrite matchReturn = takeTri' takeWrite matchReturn matchReturn
 
 -- | Allows 'SubState c s'`, 'u', and 'v' to be fixed which works well with Alternative.
-takeTri' :: forall c s m n u v ss se e.
-  Take' c s m n ss se u e
-  => SubState s
+takeTri' :: forall c s m n u v ss se w e.
+  Take' c s m n ss se w u e
+  => ss
   -> u
   -> v
   -> Biparser c s m n u v
@@ -175,26 +181,34 @@ takeTri' takeWrite toMatch toReturn = try do
 
 -- * Take while predicate
 
-type TakeWhile c s m n se =
+type TakeWhile c s m n ss se w =
   ( SubStateContext c s
-  , IsSequence (SubState s)
+  , IsSequence ss
   , MonadState s m
-  , MonadWriter (SubState s) n
+  , MonadWriter w n
+  , ConvertSequence c ss w
+  , ss ~ SubState s
   , se ~ SubElement s
   )
 
-takeWhile :: forall c s m n se.
-  TakeWhile c s m n se
+takeWhile :: forall c s m n ss se w.
+  TakeWhile c s m n ss se w
   => (se -> Bool)
   -> Iso c m n s (SubState s)
 takeWhile = split . state . span
 
 -- | Drop forward elements while predicate is true.
-dropWhile :: forall c s m n u se.
-  TakeWhile c s m n se
+dropWhile :: forall c s m n u ss se w.
+  ( SubStateContext c s
+  , IsSequence ss
+  , MonadState s m
+  , MonadWriter w n
+  , ss ~ SubState s
+  , se ~ SubElement s
+  )
   => (se -> Bool)
   -> Const c s m n u
-dropWhile = void . comap (const mempty) . takeWhile
+dropWhile f = splitFw $ StateT $ return . MT.span f
 
 -- | Run until returns True
 skipUntil :: forall c s m n u.
@@ -219,36 +233,44 @@ untilJust x = maybe (untilJust x) pure =<< x
 
 -- * Pad
 
-type Pad c s m n u v ss i se =
+type Pad c s m n u v ss i se w j =
   -- m
   ( MonadState s m
   -- n
-  , MonadWriter ss n
+  , MonadWriter w n
   -- substate
   , IsSequence ss
   , SubStateContext c s
   , Eq se
-  -- i
   , Ord i
   , Num i
   , ConvertIntegral Natural i
+  , ConvertSequence c ss w
+  -- w
+  , IsSequence w
+  , Element w ~ se
+  , Num j
+  , Ord j
+  , ConvertIntegral Natural j
   -- Assignments
   , ss ~ SubState s
   , se ~ SubElement s
   , i ~ Index ss
+  , j ~ Index w
   )
 
 -- | Consumes the pad 'c' charcaters forward. Prepends the pad 'c' caracters backwards to ensure there are 'n' charcaters written.
-pad :: forall c s m n u v ss i se.
-  Pad c s m n u v ss i se
+-- Probably best to roll your own if using a writer type like 'String' that has as slow length function.
+pad :: forall c s m n u v ss i se w j.
+  Pad c s m n u v ss i se w j
   => Natural
   -> se
   -> Biparser c s m n u v
   -> Biparser c s m n u v
 pad n c = padTemplate (== c) n c
 
-padSet :: forall c s m n u v ss i se.
-  ( Pad c s m n u v ss i se
+padSet :: forall c s m n u v ss i se w j.
+  ( Pad c s m n u v ss i se w j
   , Ord se
   )
   => Natural
@@ -258,8 +280,8 @@ padSet :: forall c s m n u v ss i se.
   -> Biparser c s m n u v
 padSet n c cs = padTemplate (`member` cs) n c
 
-padTemplate :: forall c s m n u v ss i se.
-  Pad c s m n u v ss i se
+padTemplate :: forall c s m n u v ss i se w j.
+  Pad c s m n u v ss i se w j
   => (se -> Bool)
   -> Natural
   -> se
@@ -274,8 +296,8 @@ padTemplate dropPred (convertIntegral -> n) c x = do
       else replicate (n - l) c <> y
 
 -- | Gives the pad count found for forward (number of c + number consumed by x). Just returns n backwards.
-padCount :: forall c s m n u v ss i se.
-  Pad c s m n u v ss i se
+padCount :: forall c s m n u v ss i se w j.
+  Pad c s m n u v ss i se w j
   => Natural
   -> se
   -> Biparser c s m n u v
@@ -284,23 +306,31 @@ padCount n c x = endoSecond (first $ const n) $ count $ pad n c x
 
 -- * Break
 
-type BreakWhen c s m n ss e =
-  ( IsSequence ss
-  , MonadState s m
+type BreakWhen c s m n ss se w e =
+  -- m
+  ( MonadState s m
   , MonadFail m
   , MonadError e m
   , Alt m
-  , MonadWriter ss n
+  -- n
+  , MonadWriter w n
   , MonadFail n
   , Alt n
+  -- substate
+  , IsSequence ss
+  -- w
+  , ConvertElement c se w
+  -- context
   , ElementContext c s
+  -- assignments
   , ss ~ SubState s
+  , se ~ SubElement s
   )
 
 -- | Breaks off the substate head when 'x' succeeds. Writes x after given 'ss'.
 -- DEV NOTE: Seems like there could be a more simplistic solution.
-breakWhen :: forall c s m n ss e.
-  BreakWhen c s m n ss e
+breakWhen :: forall c s m n ss se w e.
+  BreakWhen c s m n ss se w e
   => Unit c s m n
   -> Iso c m n s ss
 breakWhen x
@@ -329,10 +359,14 @@ breakWhen x
 --          cons y <$> breakWhen' x `uponM` tailAlt
 
 -- | Consumes rest/all of substate and writes given
-rest :: forall c s m n ss.
+rest :: forall c s m n ss w.
   ( MonadState s m
-  , MonadWriter ss n
+  , MonadWriter w n
   , SubStateContext c s
+  -- substate
+  , Monoid ss
+  , ConvertSequence c ss w
+  -- assignments
   , ss ~ SubState s
   )
   => Iso c m n s ss
@@ -380,14 +414,15 @@ optional x = Just <$> try x `uponM` maybe (fail "") pure <!> pure Nothing
 
 -- * Stripping
 
-stripPrefix :: forall c s m n ss u.
+stripPrefix :: forall c s m n ss w u.
   ( ss ~ SubState s
   , EqElement ss
   , SubStateContext c s
   , Show ss
   , MonadState s m
   , MonadFail m
-  , MonadWriter ss n
+  , MonadWriter w n
+  , ConvertSequence c ss w
   )
   => ss
   -> Const c s m n u
@@ -403,23 +438,24 @@ stripPrefix pre = unit $ void s `upon` const pre
 -- * Counting
 
 -- | Counts 0 or more elements
-countElement :: forall c s m n se.
-  ( FromNatural (Index (SubState s))
+countElement :: forall c s m n ss se w.
+  ( FromNatural (Index ss)
   , Eq se
-  , TakeWhile c s m n se
+  , TakeWhile c s m n ss se w
   )
   => se
   -> Iso c m n s Natural
 countElement x = toEnum . length <$> takeWhile (== x) `upon` flip replicate x . fromNatural
 
 -- | Counts 1 or more elements
-countElementSome :: forall c s m n ss se.
+countElementSome :: forall c s m n ss se w.
   ( FromNatural (Index ss)
   , SubStateContext c s
   , IsSequence ss
   , MonadState s m
   , MonadFail m
-  , MonadWriter ss n
+  , MonadWriter w n
+  , ConvertSequence c ss w
   , MonadFail n
   , Eq se
   , se ~ SubElement s
@@ -444,8 +480,8 @@ not :: forall c s m n u.
 not = fmap Data.Bool.not
 
 -- | Causes backward to write nothing.
-memptyWrite :: forall c s m n u v ss.
-  MonadWriter ss n
+memptyWrite :: forall c s m n u v w.
+  MonadWriter w n
   => Biparser c s m n u v
   -> Biparser c s m n u v
 memptyWrite = flip mapWrite (const mempty)

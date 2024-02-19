@@ -1,4 +1,5 @@
 {-# LANGUAGE NoImplicitPrelude #-}
+{-# OPTIONS_GHC -Wno-missing-import-lists #-}
 module Prelude
   ( module Biparse.Utils
   , module Control.Applicative
@@ -49,7 +50,7 @@ module Prelude
 import Text.Printf (IsChar, fromChar, toChar)
 import Control.Monad.RWS (RWST)
 import GHC.TypeLits (KnownSymbol, Symbol, KnownChar)
-import Biparse.Utils (headAlt, tailAlt, initAlt, headTailAlt, lastAlt, (^:^), (<$$>), ConvertIntegral(convertIntegral), shouldBe, symbol)
+import Biparse.Utils hiding (char)
 import Control.Applicative (Applicative((<*>),pure), (*>), (<*), liftA2)
 import Control.Monad (Monad((>>=),return), when, unless, MonadFail(fail), (=<<), (>=>), (<=<))
 import Control.Monad.EitherString (EitherString)
@@ -71,7 +72,7 @@ import Data.Functor.Identity (Identity(Identity,runIdentity))
 import Data.Int (Int)
 import Data.Kind (Type, Constraint)
 import Data.Maybe (Maybe(Just,Nothing), maybe, fromMaybe)
-import Data.MonoTraversable (MonoFoldable, headMay, Element, lastMay)
+import Data.MonoTraversable (MonoFoldable, MonoPointed, headMay, Element, lastMay)
 import Data.MonoTraversable.Unprefixed (for_, null, length, toList, foldl')
 import Data.Monoid (Monoid(mempty))
 import Data.Ord (Ord, (>), (<), (>=))

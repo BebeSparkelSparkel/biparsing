@@ -79,3 +79,9 @@ instance ChangeMonad () (EIP e ss) (Either (ErrorIndex ss)) where
   changeMonad' = first
 type instance ChangeFunction () (EIP e ss) (Either (ErrorIndex ss)) = ErrorState e (IndexPosition ss) -> ErrorIndex ss
 
+-- * Convert Instance Contexts
+
+instance ConvertSequence IndexContext a a where convertSequence = id
+
+instance (e ~ Element seq, MonoPointed seq) => ConvertElement IndexContext e seq where convertElement = singleton
+

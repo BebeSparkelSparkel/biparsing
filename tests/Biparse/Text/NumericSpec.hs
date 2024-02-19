@@ -11,7 +11,7 @@ import Numeric (showHex)
 spec :: Spec
 spec = do
   fb @() "naturalBaseTen"
-    (naturalBaseTen :: Iso UnixLC (FM Text) IO () () (Position () Text) Word)
+    (naturalBaseTen :: Iso UnixLC (FM Text) IO () Text () (Position () Text) Word)
     ()
     ()
     (\f -> do
@@ -24,7 +24,7 @@ spec = do
         b 123 >>= (`shouldBe` (123, "123"))
 
   fb @() "intBaseTen"
-    (intBaseTen :: Iso UnixLC (FM Text) IO () () (Position () Text) Int)
+    (intBaseTen :: Iso UnixLC (FM Text) IO () Text () (Position () Text) Int)
     ()
     ()
     (\f -> do
@@ -41,7 +41,7 @@ spec = do
       integerBackward b
 
   fb @() "scientific"
-    (scientific :: Iso ColumnsOnly (FM Text) IO () () (Position () Text) Double)
+    (scientific :: Iso ColumnsOnly (FM Text) IO () Text () (Position () Text) Double)
     ()
     ()
     (\f -> do
@@ -56,14 +56,14 @@ spec = do
       realBackward b
 
   fb @() "realBaseTen"
-    (realBaseTen :: Iso UnixLC (FM String) IO () () (Position () String) Double)
+    (realBaseTen :: Iso UnixLC (FM String) IO () String () (Position () String) Double)
     ()
     ()
     realForward
     realBackward
 
   fb @() "hex"
-    (hex @'LowerCase 2 :: Iso UnixLC (FM String) IO () () (Position () String) HexWord8)
+    (hex @'LowerCase 2 :: Iso UnixLC (FM String) IO () String () (Position () String) HexWord8)
     ()
     ()
     (\f -> do

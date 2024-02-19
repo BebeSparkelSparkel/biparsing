@@ -9,7 +9,7 @@ import Data.Default (Default(def))
 spec :: Spec
 spec = do
   fb @() "AllParserTypes"
-    (unorderedDef :: Iso LinesOnly (FM Ts) EitherString () () (Position () Ts) AllParserTypes)
+    (unorderedDef :: Iso LinesOnly (FM Ts) EitherString () Ts () (Position () Ts) AllParserTypes)
     ()
     ()
     (\f -> do
@@ -64,7 +64,7 @@ instance Arbitrary AllParserTypes where
 
 type IsoConstraints c m n a ss =
   ( T ~ SubElement a
-  , One c a m n ss T
+  , One c a m n ss T ss
   , MonadFail n
   )
 

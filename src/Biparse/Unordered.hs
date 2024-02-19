@@ -209,7 +209,7 @@ instance
 instance
   ( MakeWriter c m n a f
   , MakeWriter c m n a g
-  , MonadWriter ss n
+  , MonadWriter w n
   , Monad m
   , ss ~ SubState a
   ) => MakeWriter c m n a (f :*: g) where

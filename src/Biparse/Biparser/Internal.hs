@@ -45,6 +45,7 @@ module Biparse.Biparser.Internal
   , one
   , oneFw
   , split
+  , splitFw
   , peek
   , try
   , optionalBack
@@ -54,9 +55,12 @@ module Biparse.Biparser.Internal
   , ask'
   , asks'
   , resetState
+  , ConvertElement(..)
+  , ConvertSequence(..)
   ) where
 
 import Biparse.FixFail (FixFail(fixFail))
+import Control.Applicative qualified
 import Control.Monad.Extra (findM)
 import Control.Monad.Reader.Class (MonadReader(ask), asks)
 import Control.Monad.Unrecoverable (MonadUnrecoverable, UnrecoverableError, throwUnrecoverable)
@@ -64,7 +68,6 @@ import Control.Monad.Writer.Class (listen)
 import Control.Profunctor.FwdBwd (BwdMonad, Comap, FwdBwd, pattern FwdBwd, MapMs(mapMs), DualMap)
 import Control.Profunctor.FwdBwd qualified as FB
 import Data.Profunctor (Profunctor(dimap))
-import Control.Applicative qualified
 
 -- | Product type for simultainously constructing forward and backward running programs.
 newtype Biparser context s m n u v = Biparser' {unBiparser :: FwdBwd m n u v}
@@ -179,10 +182,10 @@ uponPredM = flip comapPredM
 -- * Map Backwards Write
 
 infix 8 `mapWrite`
-mapWrite :: forall c s m n u v ss.
-  MonadWriter ss n
+mapWrite :: forall c s m n u v w.
+  MonadWriter w n
   => Biparser c s m n u v
-  -> (ss -> ss)
+  -> (w -> w)
   -> Biparser c s m n u v
 mapWrite (Biparser fw bw) f = Biparser fw $
   pass . fmap (,f) . bw
@@ -337,7 +340,7 @@ instance (Functor m, Functor n) => Functor (Biparser c s m n u) where
 -- Must be used to construct all other biparsers that have context.
 -- Used to ensure that context is updated correctly.
 
-type One c s m n ss se =
+type One c s m n ss se w =
   ( IsSequence ss
   , ElementContext c s
   -- m
@@ -345,17 +348,19 @@ type One c s m n ss se =
   , MonadFail m
   , Alt m
   -- n
-  , MonadWriter ss n
+  , MonadWriter w n
+  , ConvertElement c se w
+  -- w
   -- assignments
   , ss ~ SubState s
   , se ~ SubElement s
   )
 -- | Takes and writes one element. Updates the context and substate.
-one :: forall c s m n ss se. One c s m n ss se => Iso c m n s se
+one :: forall c s m n ss se w. One c s m n ss se w => Iso c m n s se
 one = Biparser (oneFw @c) bw
   where
   bw :: se -> n se
-  bw c = tell (singleton c) $> c
+  bw c = tell (convertElement @c c) $> c
 
 -- | Forward Only! Takes one element. Updates the context and substate.
 -- Useful for when forwards and backwards are to divergent to reasonably work with
@@ -376,13 +381,13 @@ oneFw = do
   (x, ss) <- headTailAlt (getSubState s) <!> fail "Could not take one element. The container is empty."
   put (updateElementContext @c s x ss) $> x
 
-
 -- | Takes and writes substate. Updates the context and substate.
-split :: forall c s m n ss.
+split :: forall c s m n ss w.
   ( SubState s ~ ss
   , SubStateContext c s
   , MonadState s m
-  , MonadWriter ss n
+  , MonadWriter w n
+  , ConvertSequence c ss w
   )
   => StateT ss m ss
   -> Iso c m n s ss
@@ -394,7 +399,23 @@ split splitSubState = Biparser fw bw
     put $ updateSubStateContext @c s start end
     return start
   bw :: ss -> n ss
-  bw x = tell x $> x
+  bw x = tell (convertSequence @c x) $> x
+
+-- | Takes and writes substate. Updates the context and substate.
+splitFw :: forall c s m n ss u.
+  ( MonadState s m
+  , Applicative n
+  , SubStateContext c s
+  , ss ~ SubState s
+  )
+  => StateT ss m ss
+  -> Const c s m n u
+splitFw splitSubState = Biparser
+  do
+    s <- get
+    (start, end) <- runStateT @ss splitSubState $ getSubState @s s
+    put $ updateSubStateContext @c s start end
+ $ const $ pure ()
 
 -- | Modifies forward so that the Biparser does not modify the outside state.
 peek :: forall c s m n u v.
@@ -450,12 +471,13 @@ isNull = Biparser
   (pure . null)
 
 -- | 'x' does not succeed
-breakWhen' :: forall c s m n ss e.
+breakWhen' :: forall c s m n ss w e.
   ( MonadState s m
   , Alt m
   , MonadError e m
   , MonadFail m
-  , MonadWriter ss n
+  , MonadWriter w n
+  , ConvertSequence c ss w
   , SubStateContext c s
   , IsSequence ss
   , ss ~ SubState s
@@ -471,17 +493,19 @@ breakWhen' (Biparser fw bw) = Biparser fw' bw'
       put $ updateSubStateContext @c startState h t
       fw $> True <!> pure False
   bw' x = do
-    tell x
+    tell $ convertSequence @c x
     bw ()
     return x
 
 -- | Counts the number of elements consumed and written.
 -- DEV NOTE: Sucky slow implementation.
-count :: forall c s m n u v ss.
+count :: forall c s m n u v ss w.
   -- m
   ( MonadState s m
   -- n
-  , MonadWriter ss n
+  , MonadWriter w n
+  -- w
+  , MonoFoldable w
   -- substate
   , GetSubState s
   , MonoFoldable ss
@@ -498,7 +522,7 @@ count (Biparser fw bw) = Biparser
     let c = fromIntegral $ length (getSubState @s s) - length (getSubState @s s')
     pure (c, x)
   \u -> do
-    (x,w) <- listen @ss $ bw u
+    (x,w) <- listen $ bw u
     pure (fromIntegral $ length w, x)
 
 -- | Return provided value forward and return reader value backward.

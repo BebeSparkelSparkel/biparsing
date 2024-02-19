@@ -8,7 +8,7 @@ import Data.Text qualified as T
 spec :: Spec
 spec = do
   fb @() "takeElementsWhile"
-    (fmap w2c <$> takeElementsWhile (isDigit . w2c) `upon` fmap c2w :: Iso () IO IO () () (Identity ByteString) String)
+    (fmap w2c <$> takeElementsWhile (isDigit . w2c) `upon` fmap c2w :: Iso () IO IO () ByteString () (Identity ByteString) String)
     ()
     ()
     (\f -> do
@@ -30,7 +30,7 @@ spec = do
       it "prints none" $ b mempty >>= (`shouldBe` (mempty, mempty))
 
   fb @() "takeN"
-    (takeN 2 :: Iso IndexContext (EISP [Int]) EitherString () () (IndexPosition [Int]) [Int])
+    (takeN 2 :: Iso IndexContext (EISP [Int]) EitherString () [Int] () (IndexPosition [Int]) [Int])
     ()
     ()
     (\f -> do
@@ -53,7 +53,7 @@ spec = do
 
   describe "many" do
     fb @() "with takeUni"
-      (many $ takeUni 'a' :: Iso () IO IO () () (Identity Text) [Char])
+      (many $ takeUni 'a' :: Iso () IO IO () Text () (Identity Text) [Char])
       ()
       ()
       (\f -> do
@@ -72,7 +72,7 @@ spec = do
       (   many
       $   try (takeTri "TRUE" True 1)
       <!>      takeTri "FALSE" False 0
-      :: Biparser () (Identity [String]) Maybe Maybe () () [Bool] [Int])
+      :: Biparser () (Identity [String]) Maybe Maybe () [String] () [Bool] [Int])
       ()
       ()
       (\f -> do
@@ -96,7 +96,7 @@ spec = do
             `shouldBe` Just (mempty, mempty)
 
   fb @() "some"
-    (some (takeUni 1) :: Iso () IO IO () () (Identity [Int]) (NonEmpty Int))
+    (some (takeUni 1) :: Iso () IO IO () [Int] () (Identity [Int]) (NonEmpty Int))
     ()
     ()
     (\f -> do
@@ -113,7 +113,7 @@ spec = do
       it "prints all" $ b [1,1,1] >>= (`shouldBe` ([1,1,1], [1,1,1]))
 
   fb @() "all"
-    (all $ takeUni 'a' <!> takeUni 'b' :: Iso UnixLC (FM Text) IO () () (Position () Text) [Char])
+    (all $ takeUni 'a' <!> takeUni 'b' :: Iso UnixLC (FM Text) IO () Text () (Position () Text) [Char])
     ()
     ()
     (\f -> do
@@ -141,7 +141,7 @@ spec = do
         b "abc" `shouldThrow` isUserError
 
   describe "splitElem" do
-    let bp :: Iso () IO IO () () (Identity Text) [Text]
+    let bp :: Iso () IO IO () Text () (Identity Text) [Text]
         bp = splitElem ':'
         f = runForward @() bp
         b = runBackward bp () ()
@@ -164,7 +164,7 @@ spec = do
       ef string >>= (`shouldNotBe` [mempty])
 
   fb @() "splitOn"
-    (splitOn "ab" :: Iso () IO IO () () (Identity Text) [Text])
+    (splitOn "ab" :: Iso () IO IO () Text () (Identity Text) [Text])
     ()
     ()
     (\f -> do
@@ -199,7 +199,7 @@ spec = do
         x `shouldBe` (xs,"abcdababefab")
 
   fb @() "whileM"
-    (whileM (peek (memptyWrite one >>= \x -> pure $ x /= 'x')) one :: Iso () IO IO () () (Identity Text) [Char])
+    (whileM (peek (memptyWrite one >>= \x -> pure $ x /= 'x')) one :: Iso () IO IO () Text () (Identity Text) [Char])
     ()
     ()
     (\f -> do
@@ -285,7 +285,7 @@ spec = do
   --    it "takes all" $ b ["a","b"] `shouldBe` Identity (["a","b"],"ab")
 
   fb @() "whileFwdAllBwd"
-    (whileFwdAllBwd (take 3 $> False <!> pure True) one :: Iso () EitherString EitherString () () (Identity [Int]) [Int])
+    (whileFwdAllBwd (take 3 $> False <!> pure True) one :: Iso () EitherString EitherString () [Int] () (Identity [Int]) [Int])
     ()
     ()
     (\f -> do
@@ -298,7 +298,7 @@ spec = do
       it "some u" $ b [0,1,2] `shouldBe` EValue ([0,1,2],[0,1,2,3])
 
   fb @() "untilFwdSuccessBwdAll"
-    (one `untilFwdSuccessBwdAll` take 3 :: Iso () EitherString EitherString () () (Identity [Int]) [Int])
+    (one `untilFwdSuccessBwdAll` take 3 :: Iso () EitherString EitherString () [Int] () (Identity [Int]) [Int])
     ()
     ()
     (\f -> do
@@ -311,7 +311,7 @@ spec = do
       it "some u" $ b [0,1,2] `shouldBe` EValue ([0,1,2],[0,1,2,3])
 
   fb @() "untilInclusive"
-    (untilInclusive (== 'c') one :: Iso UnixLC (FM (Seq Char)) IO () () (Position () (Seq Char)) String)
+    (untilInclusive (== 'c') one :: Iso UnixLC (FM (Seq Char)) IO () (Seq Char) () (Position () (Seq Char)) String)
     ()
     ()
     (\f -> do
@@ -331,7 +331,7 @@ spec = do
   fb @() "intersperse"
     (intersperse (one >>= \x -> if x == 'x' then pure x else fail "not x")
       (one `upon` const ',' >>= \x -> if x == ',' then pure x else fail "not ,")
-      :: Iso ColumnsOnly (FM String) EitherString () () (Position () String) [Char])
+      :: Iso ColumnsOnly (FM String) EitherString () String () (Position () String) [Char])
     ()
     ()
     (\f -> do

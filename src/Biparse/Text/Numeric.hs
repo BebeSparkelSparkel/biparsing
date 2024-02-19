@@ -37,29 +37,31 @@ import Data.Sequences qualified
 import Data.Ix (Ix, index)
 
 
-instance NaturalConstraints c s m n Word   char => IsoClass c m n s Word   where iso = naturalBaseTen
-instance NaturalConstraints c s m n Word8  char => IsoClass c m n s Word8  where iso = naturalBaseTen
-instance NaturalConstraints c s m n Word16 char => IsoClass c m n s Word16 where iso = naturalBaseTen
-instance NaturalConstraints c s m n Word32 char => IsoClass c m n s Word32 where iso = naturalBaseTen
-instance NaturalConstraints c s m n Word64 char => IsoClass c m n s Word64 where iso = naturalBaseTen
+instance NaturalConstraints c s m n Word   text char w => IsoClass c m n s Word   where iso = naturalBaseTen
+instance NaturalConstraints c s m n Word8  text char w => IsoClass c m n s Word8  where iso = naturalBaseTen
+instance NaturalConstraints c s m n Word16 text char w => IsoClass c m n s Word16 where iso = naturalBaseTen
+instance NaturalConstraints c s m n Word32 text char w => IsoClass c m n s Word32 where iso = naturalBaseTen
+instance NaturalConstraints c s m n Word64 text char w => IsoClass c m n s Word64 where iso = naturalBaseTen
 
-type NaturalConstraints c s m n number char =
+type NaturalConstraints c s m n number text char w =
   ( CharElement s char
   , Ix char
-  , IsSequence (SubState s)
+  , IsSequence text
   , MonadState s m
   , MonadFail m
-  , MonadWriter (SubState s) n
+  , MonadWriter w n
   , MonadFail n
   , SubStateContext c s
   , Enum number
-  , Show (SubState s)
+  , Show number
+  , Show text
+  , ConvertSequence c text w
+  , text ~ SubState s
   )
 
-naturalBaseTen :: forall c s m n number char.
-  ( NaturalConstraints c s m n number char
-  , Show number
-  ) => Iso c m n s number
+naturalBaseTen :: forall c s m n number text char w.
+  NaturalConstraints c s m n number text char w
+  => Iso c m n s number
 naturalBaseTen = do
   ds <- digitsBaseTen
   if null ds
@@ -77,20 +79,19 @@ charToDigit = index digitRange
 digitRange :: IsChar char => (char, char)
 digitRange = (fromChar '0', fromChar '9')
 
-naturalBaseTen' :: forall number c s m n char.
-  ( NaturalConstraints c s m n number char
-  , Show number
-  ) => Iso c m n s number
+naturalBaseTen' :: forall number c s m n text char w.
+  NaturalConstraints c s m n number text char w
+  => Iso c m n s number
 naturalBaseTen' = naturalBaseTen
 
-instance IntConstraints c s m n Int   char e => IsoClass c m n s Int   where iso = intBaseTen
-instance IntConstraints c s m n Int8  char e => IsoClass c m n s Int8  where iso = intBaseTen
-instance IntConstraints c s m n Int16 char e => IsoClass c m n s Int16 where iso = intBaseTen
-instance IntConstraints c s m n Int32 char e => IsoClass c m n s Int32 where iso = intBaseTen
-instance IntConstraints c s m n Int64 char e => IsoClass c m n s Int64 where iso = intBaseTen
+instance IntConstraints c s m n Int   text char w e => IsoClass c m n s Int   where iso = intBaseTen
+instance IntConstraints c s m n Int8  text char w e => IsoClass c m n s Int8  where iso = intBaseTen
+instance IntConstraints c s m n Int16 text char w e => IsoClass c m n s Int16 where iso = intBaseTen
+instance IntConstraints c s m n Int32 text char w e => IsoClass c m n s Int32 where iso = intBaseTen
+instance IntConstraints c s m n Int64 text char w e => IsoClass c m n s Int64 where iso = intBaseTen
 
-type IntConstraints c s m n number char e =
-  ( NaturalConstraints c s m n number char
+type IntConstraints c s m n number text char w e =
+  ( NaturalConstraints c s m n number text char w
   -- m
   , MonadError e m
   , Alt m
@@ -102,18 +103,21 @@ type IntConstraints c s m n number char e =
   , Show number
   -- context
   , ElementContext c s
+  -- w
+  , ConvertSequence c text w
+  , ConvertElement c char w
   )
 
-intBaseTen :: forall c s m n number char e.
-  IntConstraints c s m n number char e
+intBaseTen :: forall c s m n number text char w e.
+  IntConstraints c s m n number text char w e
   => Iso c m n s number
 intBaseTen = do
   s <- sign
   n <- naturalBaseTen `upon` abs
   pure $ s n
 
-type RealConstrints c s m n number ss char e =
-  ( NaturalConstraints c s m n number char
+type RealConstrints c s m n number text char w e =
+  ( NaturalConstraints c s m n number text char w
   -- m
   , Alt m
   , MonadError e m
@@ -126,17 +130,20 @@ type RealConstrints c s m n number ss char e =
   , Read number
   -- context
   , ElementContext c s
-  -- substate
-  , Show ss
-  , ss ~ SubState s
+  -- text
+  , Show text
+  , text ~ SubState s
+  -- w
+  , ConvertSequence c text w
+  , ConvertElement c char w
   )
 
-instance RealConstrints c s m n Float  ss char e => IsoClass c m n s Float  where iso = realBaseTen
-instance RealConstrints c s m n Double ss char e => IsoClass c m n s Double where iso = realBaseTen
+instance RealConstrints c s m n Float  text char w e => IsoClass c m n s Float  where iso = realBaseTen
+instance RealConstrints c s m n Double text char w e => IsoClass c m n s Double where iso = realBaseTen
 
 -- | Only wirtes digits and not powers of 10.
-scientific :: forall c s m n number ss char e.
-  ( RealConstrints c s m n number ss char e
+scientific :: forall c s m n number text char w e.
+  ( RealConstrints c s m n number text char w e
   , Fractional number
   ) => Iso c m n s number
 scientific = do
@@ -146,8 +153,8 @@ scientific = do
     intBaseTen
   pure $ maybe id ((*) . (10 ^^)) power $ digits
 
-realBaseTen :: forall c s m n number ss char e.
-  RealConstrints c s m n number ss char e
+realBaseTen :: forall c s m n number text char w e.
+  RealConstrints c s m n number text char w e
   => Iso c m n s number
 realBaseTen =
   try do
@@ -162,15 +169,16 @@ realBaseTen =
     fail $ "Could not parse " <> show cs <> " to a base 10 real."
 
 -- DEV NOTE: show should not be used
-digitsBaseTen :: forall c m n s u ss char.
+digitsBaseTen :: forall c m n s u text char w.
   ( CharElement s char
   , Show u
-  , IsSequence ss
+  , IsSequence text
   , MonadState s m
-  , MonadWriter ss n
+  , MonadWriter w n
+  , ConvertSequence c text w
   , SubStateContext c s
-  , ss ~ SubState s
-  ) => Biparser c s m n u ss
+  , text ~ SubState s
+  ) => Biparser c s m n u text
 digitsBaseTen = split (state $ span $ isDigit . toChar) `upon` fromList . fmap fromChar . show
 
 data Sign = Positive | Negative | Zero deriving (Show, Eq)
@@ -185,39 +193,43 @@ deduceSign x
   | x > 0 = Positive
   | otherwise = Zero
 
-sign :: forall c s m n number ss char e.
+sign :: forall c s m n number text char w e.
   ( MonadState s m
   , MonadFail m
   , Alt m
   , MonadError e m
   -- n
-  , MonadWriter ss n
+  , MonadWriter w n
   , MonadFail n
   , Alt n
   -- number
   , Num number
   , Ord number
-  -- substate
-  , IsSequence ss
+  -- text
+  , IsSequence text
   , CharElement s char
+  -- w
+  , ConvertElement c char w
   -- context
   , ElementContext c s
   -- assignments
-  , ss ~ SubState s
+  , text ~ SubState s
   ) => Biparser c s m n number (number -> number)
 sign = comap deduceSign $ takeTri (fromChar '-') Negative negate <!> pure id
 
 -- | Consume n hex characters lower or upper case. Print n hex characters with a case decided by 'charCase'.
-hex :: forall (charCase :: CharCase) c m n a number text char.
+hex :: forall (charCase :: CharCase) c m n a number text char w.
   -- m
   ( MonadState a m
   , MonadFail m
   , Alt m
   -- n
-  , MonadWriter text n
+  , MonadWriter w n
   , MonadFail n
   -- text
   , IsSequence text
+  -- w
+  , ConvertElement c char w
   -- char
   , CharElement a char
   -- number

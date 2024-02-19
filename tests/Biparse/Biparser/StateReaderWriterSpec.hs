@@ -12,9 +12,9 @@ spec = do
   describe "zoom" do
     fb @() "[Text] -> Text, one line"
       (BSRW.zoom @ElementToList @LinesOnly @Either
-        (one :: Iso LinesOnly (FM [Text]) IO () () (Position () [Text]) Text)
+        (one :: Iso LinesOnly (FM [Text]) IO () [Text] () (Position () [Text]) Text)
         (naturalBaseTen' @Word)
-      :: Iso LinesOnly (FM [Text]) IO () () (Position () [Text]) Word)
+      :: Iso LinesOnly (FM [Text]) IO () [Text] () (Position () [Text]) Word)
       ()
       ()
       (\f -> do
@@ -39,7 +39,7 @@ spec = do
           one
           (naturalBaseTen' @Int)
         )
-      :: Iso UnixLC (FM Text) IO () () (Position () Text) [Int])
+      :: Iso UnixLC (FM Text) IO () Text () (Position () Text) [Int])
       ()
       ()
       (\f -> do
@@ -65,7 +65,7 @@ spec = do
           b [123,456] >>= (`shouldBe` ([123,456], "123\n456"))
 
   describe "runForward" do
-    let bp :: Unit UnixLC (Position () String) (FM String) IO () ()
+    let bp :: Unit UnixLC (Position () String) (FM String) IO () String ()
         bp = take 'a' *> take 'b'
         f :: Position () String -> Either (ErrorPosition ()) ((), Position () String)
         f = runForward @() bp
@@ -77,7 +77,7 @@ spec = do
       f "az" `shouldSatisfy` errorPosition 1 2
 
   it "runBackward" do
-    let bp :: Iso () IO EitherString Char () (Identity ByteString) ByteString
+    let bp :: Iso () IO EitherString Char ByteString () (Identity ByteString) ByteString
         bp = do
           c <- ask' undefined
           cons (c2w c) <$> rest

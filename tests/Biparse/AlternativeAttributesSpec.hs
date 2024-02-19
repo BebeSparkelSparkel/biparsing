@@ -6,7 +6,7 @@ import Biparse.AlternativeAttributes
 spec :: Spec
 spec = do
   describe "runAtt" do
-    let bp :: Iso () IO IO () () (Identity String) Char
+    let bp :: Iso () IO IO () String () (Identity String) Char
         bp = runAtt @'[Bool] $ a @Bool one <!>> failAtt
 
     describe "forward" do
@@ -17,7 +17,7 @@ spec = do
       it "fails" $ f mempty `shouldThrow` isUserError
 
   describe "totalAtt" do
-    let bp :: Iso () IO IO () () (Identity String) Char
+    let bp :: Iso () IO IO () String () (Identity String) Char
         bp = runAtt @'[ 'True, 'False] $
           (a @'True one <!>> failAtt) `totalAtt`
           a @'False \x -> x <!> pure 'x'

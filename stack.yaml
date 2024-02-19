@@ -4,7 +4,7 @@ skip-ghc-check: true
 
 extra-deps:
   - github: BebeSparkelSparkel/mono-traversable
-    commit: c302c973de6090656177cc27cc62e3fb83118af3
+    commit: 02a37e7144db00d9e3cf08f37c8a14ac23b4a731
     subdirs:
       - mono-traversable
 

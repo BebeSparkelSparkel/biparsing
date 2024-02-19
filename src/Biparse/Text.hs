@@ -18,16 +18,17 @@ type CharElement s char =
   , SubElement s ~ char
   )
 
-char :: forall c s m n u text char.
+char :: forall c s m n u text char w.
   ( IsSequence text
   , ElementContext c s
   , CharElement s char
+  , ConvertElement c char w
   -- m
   , MonadState s m
   , MonadFail m
   , Alt m
   -- n
-  , MonadWriter text n
+  , MonadWriter w n
   , MonadFail n
   -- assignments
   , text ~ SubState s
@@ -39,13 +40,20 @@ char c = do
   c'' <- one `upon` const c'
   unless (c' == c'') $ fail $ "Did not find expected character " <> show c <> " and instead found " <> show c''
 
-string :: forall c s m n u text.
-  ( EqElement text
-  , Show text
-  , MonadState s m
+string :: forall c s m n u text w.
+  -- m
+  ( MonadState s m
   , MonadFail m
-  , MonadWriter text n
+  -- n
+  , MonadWriter w n
+  -- text
+  , EqElement text
+  , Show text
+  , ConvertSequence c text w
+  -- w
+  -- context
   , SubStateContext c s
+  -- assignments
   , text ~ SubState s
   )
   => text

@@ -7,7 +7,7 @@ spec = do
   describe "take" do
     describe "IdentityState" do
       fb @() "uni"
-        (take 'a' :: Unit () (Identity Text) IO IO () ())
+        (take 'a' :: Unit () (Identity Text) IO IO () Text ())
         ()
         ()
         (\f -> do
@@ -22,7 +22,7 @@ spec = do
           it "print one" $ b () >>= (`shouldBe` ((), "a"))
 
       fb @() "di"
-        (take 'a' *> take 'b' :: Unit () (Identity Text) IO IO () ())
+        (take 'a' *> take 'b' :: Unit () (Identity Text) IO IO () Text ())
         ()
         ()
         (\f -> do
@@ -33,7 +33,7 @@ spec = do
 
     describe "LineColumn" do
       fb @() "uni"
-        (take 'a' :: Unit UnixLC (Position () Text) (FM Text) Maybe () ())
+        (take 'a' :: Unit UnixLC (Position () Text) (FM Text) Maybe () Text ())
         ()
         ()
         (\f -> do
@@ -48,7 +48,7 @@ spec = do
           it "print one" $ b () `shouldBe` Just ((), "a")
 
       fb @() "di"
-        (take 'a' *> take 'b' :: Unit UnixLC (Position () Text) (FM Text) Maybe () ())
+        (take 'a' *> take 'b' :: Unit UnixLC (Position () Text) (FM Text) Maybe () Text ())
         ()
         ()
         (\f -> do
@@ -63,7 +63,7 @@ spec = do
           it "print two" $ b () `shouldBe` Just ((), "ab")
 
   fb @() "takeUni"
-   (takeUni 'a' :: Iso UnixLC (FM Text) Maybe () () (Position () Text) Char)
+   (takeUni 'a' :: Iso UnixLC (FM Text) Maybe () Text () (Position () Text) Char)
    ()
    ()
    (\f -> do
@@ -73,7 +73,7 @@ spec = do
 
   describe "takeDi" do
     fb @() "Identity"
-      (takeDi 'x' 1 :: Iso () IO IO () () (Identity Text) Int)
+      (takeDi 'x' 1 :: Iso () IO IO () Text () (Identity Text) Int)
       ()
       ()
       (\f -> do
@@ -84,7 +84,7 @@ spec = do
       \_ -> pure ()
 
     fb @() "LineColumn"
-      (takeDi 'x' 1 :: Iso UnixLC (FM Text) Maybe () () (Position () Text) Int)
+      (takeDi 'x' 1 :: Iso UnixLC (FM Text) Maybe () Text () (Position () Text) Int)
       ()
       ()
       (\f -> do
@@ -96,7 +96,7 @@ spec = do
 
   describe "takeNot" do
     fb @() "Identity"
-      (takeNot 'A' :: Iso () IO IO () () (Identity String) Char)
+      (takeNot 'A' :: Iso () IO IO () String () (Identity String) Char)
       ()
       ()
       (\f -> do
@@ -111,7 +111,7 @@ spec = do
           b 'A' `shouldThrow` isUserError
 
     fb @() "LineColumn"
-      (takeNot 'A' :: Iso UnixLC (FM String) Maybe () () (Position () String) Char)
+      (takeNot 'A' :: Iso UnixLC (FM String) Maybe () String () (Position () String) Char)
       ()
       ()
       (\f -> do
@@ -126,7 +126,7 @@ spec = do
           b 'A' `shouldBe` Nothing
 
   fb @() "takeWhile"
-    (takeWhile (/= 'x') :: Iso UnixLC (FM Text) IO () () (Position () Text) Text)
+    (takeWhile (/= 'x') :: Iso UnixLC (FM Text) IO () Text () (Position () Text) Text)
     ()
     ()
     (\f -> do
@@ -146,7 +146,7 @@ spec = do
       it "has x" $ b "axc" >>= (`shouldBe` ("axc", "axc"))
 
   fb @() "dropWhile"
-    (dropWhile (== 1) :: Iso LinesOnly (FM (Vector Int)) EitherString () () (Position () (Vector Int)) ())
+    (dropWhile (== 1) :: Iso LinesOnly (FM (Vector Int)) EitherString () (Vector Int) () (Position () (Vector Int)) ())
     ()
     ()
     (\f -> do
@@ -159,7 +159,7 @@ spec = do
       it "success" $ b () `shouldBe` EValue ((), mempty)
 
   fb @() "skipUntil"
-    (skipUntil $ (> 2) <$> one :: Const LinesOnly (Position () [Int]) (FM [Int]) EitherString () () Int)
+    (skipUntil $ (> 2) <$> one :: Const LinesOnly (Position () [Int]) (FM [Int]) EitherString () [Int] () Int)
     ()
     ()
     (\f -> do
@@ -173,7 +173,7 @@ spec = do
       it "success" $ b 5 `shouldBe` EValue ((), [5])
 
   fb @() "untilJust"
-    (untilJust $ bool Nothing (Just ()) . (> 2) <$> one :: Biparser LinesOnly (Position () [Int]) (FM [Int]) EitherString () () Int ())
+    (untilJust $ bool Nothing (Just ()) . (> 2) <$> one :: Biparser LinesOnly (Position () [Int]) (FM [Int]) EitherString () [Int] () Int ())
     ()
     ()
     (\f -> do
@@ -187,7 +187,7 @@ spec = do
       it "success" $ b 5 `shouldBe` EValue ((), [5])
 
   fb @() "pad"
-    (pad 4 'x' naturalBaseTen :: Iso UnixLC (FM Text) IO () () (Position () Text) Int)
+    (pad 4 'x' naturalBaseTen :: Iso UnixLC (FM Text) IO () Text () (Position () Text) Int)
     ()
     ()
     (\f -> do
@@ -218,7 +218,7 @@ spec = do
         b 12345 >>= (`shouldBe` (12345, "12345"))
 
   fb @() "padSet"
-    (padSet 4 'x' ['x','y'] naturalBaseTen :: Iso UnixLC (FM (Seq Char)) IO () () (Position () (Seq Char)) Int)
+    (padSet 4 'x' ['x','y'] naturalBaseTen :: Iso UnixLC (FM (Seq Char)) IO () (Seq Char) () (Position () (Seq Char)) Int)
     ()
     ()
     (\f -> do
@@ -256,7 +256,7 @@ spec = do
           | otherwise -> mempty
       bs = replicate nb 'b'
       cs = replicate nc 'c'
-      bp :: Biparser () (Identity (Seq Char)) (FM (Seq Char)) (Either String) () () (Seq Char) (Natural, Seq Char)
+      bp :: Biparser () (Identity (Seq Char)) (FM (Seq Char)) (Either String) () (Seq Char) () (Seq Char) (Natural, Seq Char)
       bp = padCount n' 'a' $ takeWhile (== 'b')
       f = runForward @() bp
       b = runBackward bp () ()
@@ -268,7 +268,7 @@ spec = do
         b bs `shouldBe` Right ((n', bs), as' <> bs)
 
   fb @() "breakWhen"
-    (breakWhen $ stripPrefix "ab" :: Iso UnixLC (FM (Seq Char)) IO () () (Position () (Seq Char)) (Seq Char))
+    (breakWhen $ stripPrefix "ab" :: Iso UnixLC (FM (Seq Char)) IO () (Seq Char) () (Position () (Seq Char)) (Seq Char))
     ()
     ()
     (\f -> do
@@ -297,7 +297,7 @@ spec = do
       it "contains break" $ b "cdab" >>= (`shouldBe` ("cdab", "cdabab"))
 
   fb @() "rest"
-    (rest :: Iso () (FM (Identity (Vector Int))) EitherString () () (Identity (Vector Int)) (Vector Int))
+    (rest :: Iso () (FM (Identity (Vector Int))) EitherString () (Vector Int) () (Identity (Vector Int)) (Vector Int))
     ()
     ()
     (\f -> do
@@ -312,7 +312,7 @@ spec = do
   fb @() "optionMaybe"
     ((,) <$> optionMaybe (takeUni 1 `upon` mapBool $> "one")
          <*> optionMaybe (takeUni 2 `upon` mapBool $> "two")
-    :: Biparser () (Identity (Vector Int)) IO IO () () Bool (Maybe String, Maybe String))
+    :: Biparser () (Identity (Vector Int)) IO IO () (Vector Int) () Bool (Maybe String, Maybe String))
     ()
     ()
     (\f -> do
@@ -335,7 +335,7 @@ spec = do
 
   describe "stripPrefix" do
     fb @() "Identity"
-      (stripPrefix "abc" :: Unit () (Identity Text) IO IO () ())
+      (stripPrefix "abc" :: Unit () (Identity Text) IO IO () Text ())
       ()
       ()
       (\f -> do
@@ -349,7 +349,7 @@ spec = do
         it "prints prefix" $ b () >>= (`shouldBe` ((), "abc"))
     
     fb @() "LineColumn"
-      (stripPrefix "abc" :: Unit UnixLC (Position () Text) (FM Text) IO () ())
+      (stripPrefix "abc" :: Unit UnixLC (Position () Text) (FM Text) IO () Text ())
       ()
       ()
       (\f -> do
@@ -363,7 +363,7 @@ spec = do
         it "prints prefix" $ b () >>= (`shouldBe` ((), "abc"))
 
   fb @() "not"
-    (not $ (== 'x') <$> one :: Biparser () (Identity String) IO IO () () Char Bool)
+    (not $ (== 'x') <$> one :: Biparser () (Identity String) IO IO () String () Char Bool)
     ()
     ()
     (\f -> do

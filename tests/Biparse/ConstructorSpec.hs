@@ -13,7 +13,7 @@ spec = do
         expect _1 1
         x <- exposes (^. _2)
         return $ x + 1
-      :: Biparser () (Identity [(Int,Double)]) EitherString EitherString () () [(Int,Double)] Double)
+      :: Biparser () (Identity [(Int,Double)]) EitherString EitherString () [(Int,Double)] () [(Int,Double)] Double)
       ()
       ()
       (\f -> do
@@ -31,7 +31,7 @@ spec = do
   describe "lensBiparse" do
     let lb :: Constructor ([Int],()) EitherString EitherString () ()
         lb = lensBiparse _1
-          (take 1 :: Biparser () (Identity [Int]) EitherString EitherString () () () ())
+          (take 1 :: Unit () (Identity [Int]) EitherString EitherString () [Int] ())
 
     describe "forward" do
       let f = runForwardC lb

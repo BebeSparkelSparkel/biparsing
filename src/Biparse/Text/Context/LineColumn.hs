@@ -198,9 +198,10 @@ type instance UpdateSuperState NoUpdate               = 'False
 
 instance
   ( MonadState (Position d text) m
+  , MonadWriter w n
   , EqElement text
   , IsChar (Element text)
-  , MonadWriter text n
+  , ConvertSequence c text w
   , KnownChar char
   , text ~ SubState (Position d text)
   ) => LineSplitter ('Left char) 'False c m n (Position d text) where
@@ -212,7 +213,7 @@ instance
         [x] | null x -> mempty
         x -> x
     \ls -> do
-      tell $ intercalate (singleton c) ls
+      tell $ convertSequence @c $ intercalate (singleton c) ls
       pure ls
     where
     c = char @char
@@ -220,8 +221,9 @@ instance
 instance
   ( MonadState (Position d text) m
   , EqElement text
-  , MonadWriter text n
+  , MonadWriter w n
   , IsString text
+  , ConvertSequence c text w
   , KnownSymbol sym
   , text ~ SubState (Position d text)
   ) => LineSplitter ('Right sym) 'False c m n (Position d text) where
@@ -233,8 +235,24 @@ instance
         [x] | null x -> mempty
         x -> x
     \ls -> do
-      tell $ intercalate sym ls
+      tell $ convertSequence @c $ intercalate sym ls
       pure ls
     where
     sym = symbol @sym
+
+-- * Convert Instance Contexts
+
+instance ConvertSequence UnixLC                 a a where convertSequence = id
+instance ConvertSequence WindowsLC              a a where convertSequence = id
+instance ConvertSequence LinesOnly              a a where convertSequence = id
+instance ConvertSequence ColumnsOnly            a a where convertSequence = id
+instance ConvertSequence LineColumnUnknownBreak a a where convertSequence = id
+instance ConvertSequence NoUpdate               a a where convertSequence = id
+
+instance (e ~ Element seq, MonoPointed seq) => ConvertElement UnixLC                 e seq where convertElement = singleton
+instance (e ~ Element seq, MonoPointed seq) => ConvertElement WindowsLC              e seq where convertElement = singleton
+instance (e ~ Element seq, MonoPointed seq) => ConvertElement LinesOnly              e seq where convertElement = singleton
+instance (e ~ Element seq, MonoPointed seq) => ConvertElement ColumnsOnly            e seq where convertElement = singleton
+instance (e ~ Element seq, MonoPointed seq) => ConvertElement LineColumnUnknownBreak e seq where convertElement = singleton
+instance (e ~ Element seq, MonoPointed seq) => ConvertElement NoUpdate               e seq where convertElement = singleton
 

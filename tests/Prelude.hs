@@ -21,6 +21,7 @@ module Prelude
   , module Data.Bifunctor
   , module Data.Bool
   , module Data.ByteString
+  , module Data.ByteString.Builder
   , module Data.ByteString.Internal
   , module Data.Char
   , module Data.Coerce
@@ -76,7 +77,7 @@ import Biparse.Context.Index (IndexContext, IndexPosition(IndexPosition), ErrorI
 import Biparse.General
 import Biparse.Text (CharElement)
 import Biparse.Text.Context.LineColumn (LineColumn, UnixLC, LinesOnly, ColumnsOnly, Position(Position), subState, ErrorPosition(ErrorPosition), startLineColumn, NoUpdate)
-import Biparse.Utils (headAlt)
+import Biparse.Utils (headAlt, ConvertSequence, convertSequence)
 import Control.Applicative (pure, (<*), (*>), (<*>), empty, liftA2)
 import Control.Monad ((>>=), return, (>>), fail, MonadPlus, MonadFail, Monad, void)
 import Control.Monad.ChangeMonad (ChangeMonad, ChangeFunction, changeMonad', ResultMonad(ResultingMonad))
@@ -90,6 +91,7 @@ import Control.Monad.Writer (WriterT(runWriterT), MonadWriter)
 import Data.Bifunctor (first)
 import Data.Bool (Bool(True,False), otherwise, (&&), bool)
 import Data.ByteString (ByteString)
+import Data.ByteString.Builder (Builder)
 import Data.ByteString.Internal (w2c, c2w)
 import Data.Char (Char, isDigit)
 import Data.Coerce (coerce)
@@ -135,19 +137,20 @@ import GHC.Exts (IsList, fromList, Item)
 import GHC.Exts qualified
 import Text.Printf (IsChar, fromChar, toChar)
 import System.Timeout (timeout)
+import Data.ByteString.Builder qualified
 
-fb :: forall is c s m m' n r ws u v.
+fb :: forall is c s m m' n r w ws u v.
   ( m' ~ ResultingMonad m is
   , ChangeMonad is m m'
   , ResultMonad m is
   , Functor n
   )
   => String
-  -> Biparser c s m n r ws u v
+  -> Biparser c s m n r w ws u v
   -> r
   -> ws
   -> ((s -> m' (v, s)) -> Spec)
-  -> ((u -> n (v, SubState s)) -> Spec)
+  -> ((u -> n (v, w)) -> Spec)
   -> Spec
 fb describeLabel bp r ws fws bws = describe describeLabel do
   describe "forward" $ fws $ runForward @is bp
@@ -188,4 +191,9 @@ instance IsList a => IsList (Identity a) where
   type Item (Identity a) = Item a
   fromList = Identity . fromList
   toList = GHC.Exts.toList . runIdentity
+
+instance Eq Builder where x == y = Data.ByteString.Builder.toLazyByteString x == Data.ByteString.Builder.toLazyByteString y
+
+instance ConvertSequence c String Text where convertSequence = fromString
+instance ConvertSequence c String ByteString where convertSequence = fromString
 

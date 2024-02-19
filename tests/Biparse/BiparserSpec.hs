@@ -17,7 +17,7 @@ spec = do
   describe "one" do
     describe "Identity" do
       fb @() "id"
-        (one :: Iso () IO IO () () (Identity String) Char)
+        (one :: Iso () IO IO () String () (Identity String) Char)
         ()
         ()
         (\f -> do
@@ -32,7 +32,7 @@ spec = do
           it "typical use" $ b 'a' >>= (`shouldBe` ('a',"a"))
 
       fb @() "tuple"
-        ((,) <$> one `upon` fst <*> one `upon` snd :: Iso () IO IO () () (Identity String) (Char,Char))
+        ((,) <$> one `upon` fst <*> one `upon` snd :: Iso () IO IO () String () (Identity String) (Char,Char))
         ()
         ()
         (\f -> do
@@ -44,7 +44,7 @@ spec = do
           it "used twice" $ b ('a','b') >>= (`shouldBe` (('a','b'),"ab"))
 
     fb @() "LineColumn"
-      (one :: Iso UnixLC (FM Text) IO () () (Position () Text) Char)
+      (one :: Iso UnixLC (FM Text) IO () Text () (Position () Text) Char)
       ()
       ()
       (\f -> do
@@ -59,7 +59,7 @@ spec = do
         it "write char" $ b 'd' >>= (`shouldBe` ('d', "d"))
 
     fb @() "LineColumn [Text]"
-      (one :: Iso LinesOnly (FM [Text]) IO () () (Position () [Text]) Text)
+      (one :: Iso LinesOnly (FM [Text]) IO () [Text] () (Position () [Text]) Text)
       ()
       ()
       (\f -> do
@@ -70,17 +70,28 @@ spec = do
       \b -> do
         it "print string" $ b "abc" >>= (`shouldBe` ("abc", ["abc"]))
 
+    fb @() "Differing parser and printer type"
+      (one :: Iso UnixLC (FM ByteString) EitherString () Builder () (Position () ByteString) Word8)
+      ()
+      ()
+      (\f -> do
+        it "ByteString" do
+          f "abc" `shouldBe` Right (fromChar 'a', Position () 1 2 "bc")
+      )
+      \b -> do
+        it "Builder" do
+          b (fromChar 'd') `shouldBe` EValue (fromChar 'd', "d")
+
   describe "split" do
-    let takeTwo :: Iso () IO IO () () (Identity String) String
-        takeTwo = split do
+    fb @() "Identity"
+      -- take two
+      (( split do
           x <- get
           y <- maybe empty (pure . \(f,s) -> f:s:[]) $
             liftA2 (,) (headMay x) (index x 1)
           put $ drop 2 x
           return y
-
-    fb @() "Identity"
-      takeTwo
+      ) :: Iso () IO IO () String () (Identity String) String)
       ()
       ()
       (\f -> do
@@ -93,9 +104,25 @@ spec = do
 
         it "prints all" $ b "abc" >>= (`shouldBe` ("abc","abc"))
 
+    fb @() "Differing parser and printer type"
+      (( split do
+        s <- get
+        put ""
+        return s
+      ) :: Iso ColumnsOnly (FM String) EitherString () Text () (Position () String) String)
+      ()
+      ()
+      (\f -> do
+        it "String" do
+          f "abc" `shouldBe` Right ("abc", Position () 1 4 "")
+      )
+      \b -> do
+        it "Text" do
+          b "abc" `shouldBe` EValue ("abc" :: String, "abc" :: Text)
+
   describe "peek" do
     fb @() "simple"
-      (peek one :: Iso () IO IO () () (Identity String) Char)
+      (peek one :: Iso () IO IO () String () (Identity String) Char)
       ()
       ()
       (\f -> do
@@ -108,7 +135,7 @@ spec = do
 
     describe "Alternative" do
       fb @() "Identity"
-        (peek (takeUni 'x') <!> takeUni 'a' :: Iso () IO IO () () (Identity String) Char)
+        (peek (takeUni 'x') <!> takeUni 'a' :: Iso () IO IO () String () (Identity String) Char)
         ()
         ()
         (\f -> do
@@ -128,7 +155,7 @@ spec = do
           it "prints second" $ b 'a' >>= (`shouldBe` ('a',"a"))
 
       fb @() "LineColumn"
-        (peek (takeUni 'x') <!> takeUni 'a' :: Iso UnixLC (FM String) IO () () (Position () String) Char)
+        (peek (takeUni 'x') <!> takeUni 'a' :: Iso UnixLC (FM String) IO () String () (Position () String) Char)
         ()
         ()
         (\f -> do
@@ -144,7 +171,7 @@ spec = do
           it "prints second" $ b 'a' >>= (`shouldBe` ('a',"a"))
 
   describe "try" do
-    let bp :: Biparser ColumnsOnly (Position () (Seq Char)) (FM (Seq Char)) IO () () Char Char
+    let bp :: Biparser ColumnsOnly (Position () (Seq Char)) (FM (Seq Char)) IO () (Seq Char) () Char Char
         bp = try $ one <* take 'b'
         f = runForward @() bp
         b = runBackward bp () ()
@@ -167,7 +194,7 @@ spec = do
       
   describe "isNull" do
     fb @() "Identity"
-      (isNull :: ConstU () (Identity String) Identity Identity () () [()] Bool)
+      (isNull :: ConstU () (Identity String) Identity Identity () String () [()] Bool)
       ()
       ()
       (\f -> do
@@ -181,7 +208,7 @@ spec = do
         it "false" $ b [()] `shouldBe` Identity (False,mempty)
 
     fb @() "LineColumn"
-      (isNull :: ConstU UnixLC (Position () String) Identity Identity () () [()] Bool)
+      (isNull :: ConstU UnixLC (Position () String) Identity Identity () String () [()] Bool)
       ()
       ()
       (\f -> do
@@ -196,7 +223,7 @@ spec = do
 
   describe "breakWhen'" do
     fb @() "LineColumn"
-      (breakWhen' $ stripPrefix "ab" :: Iso UnixLC (FM String) IO () () (Position () String) String)
+      (breakWhen' $ stripPrefix "ab" :: Iso UnixLC (FM String) IO () ByteString () (Position () String) String)
       ()
       ()
       (\f -> do
@@ -225,7 +252,7 @@ spec = do
         it "contains break" $ b "cdab" >>= (`shouldBe` ("cdab", "cdabab"))
 
     fb @() "Identity"
-      (breakWhen' $ stripPrefix "ab" :: Iso () IO IO () () (Identity String) String)
+      (breakWhen' $ stripPrefix "ab" :: Iso () IO IO () String () (Identity String) String)
       ()
       ()
       (\f -> do
@@ -255,7 +282,7 @@ spec = do
 
   describe "count" do
     fb @() "ElementContext" 
-      (count $ takeElementsWhile (== 'a') :: Biparser UnixLC (Position () Text) (FM Text) IO () () [Char] (Natural,[Char]))
+      (count $ takeElementsWhile (== 'a') :: Biparser UnixLC (Position () Text) (FM Text) IO () Text () [Char] (Natural,[Char]))
       ()
       ()
       (\f -> do
@@ -270,7 +297,7 @@ spec = do
           in b xs >>= (`shouldBe` ((fromIntegral $ length xs, xs), fromString xs))
 
     fb @() "SubStateContext" 
-      (count $ takeWhile (== 'a') :: Biparser UnixLC (Position () Text) (FM Text) IO () () Text (Natural,Text))
+      (count $ takeWhile (== 'a') :: Biparser UnixLC (Position () Text) (FM Text) IO () Text () Text (Natural,Text))
       ()
       ()
       (\f -> do
@@ -287,10 +314,10 @@ spec = do
   describe "zoom" do
 
     fb @() "Biparser success"
-      (BB.zoom @UnixLC @UnixLC @UnixLC @'(StateErrorT,Either) @(N UnixLC (Position () [String]) EitherString () ())
+      (BB.zoom @UnixLC @UnixLC @UnixLC @'(StateErrorT,Either) @(N UnixLC (Position () [String]) EitherString () [String] ())
         (lines @'Unix)
         (all $ MT.reverse <$> one)
-      :: Iso UnixLC (FM String) EitherString () () (Position () String) [String])
+      :: Iso UnixLC (FM String) EitherString () String () (Position () String) [String])
       ()
       ()
       (\f -> do

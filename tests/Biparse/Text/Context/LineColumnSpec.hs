@@ -51,7 +51,7 @@ spec = do
       prop "writes all" \t -> b t >>= (`shouldBe` (t, t))
 
   describe "add position to error" do
-    let bp :: Const UnixLC (Position () Text) (Either (ErrorState String (Position () Text))) IO () () ()
+    let bp :: Const UnixLC (Position () Text) (Either (ErrorState String (Position () Text))) IO () Text () ()
         bp = take 'a' *> take 'b'
         f :: Position () Text -> Either (ErrorPosition ()) ((), Position () Text)
         f = runForward @() bp
@@ -59,5 +59,5 @@ spec = do
     it "empty" do
       f "" `shouldSatisfy` errorPosition 1 1
 
-type IsoLocal text a = Iso UnixLC (FM text) IO () () (Position () text) a
+type IsoLocal text a = Iso UnixLC (FM text) IO () Text () (Position () text) a
 

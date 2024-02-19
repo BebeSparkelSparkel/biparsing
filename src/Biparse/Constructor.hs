@@ -90,7 +90,7 @@ uponM = flip comapM
 
 -- * Focus on the head element
 
-type FocusOne is c s m m' n n' ss se =
+type FocusOne is c s m m' n n' ss se w =
   ( IsSequence ss
   , GetSubState s
   , UpdateStateWithElement c s
@@ -99,7 +99,9 @@ type FocusOne is c s m m' n n' ss se =
   , MonadFail m
   , Alt m
   -- n
-  , MonadWriter ss n
+  , MonadWriter w n
+  -- w
+  , ConvertElement c se w
   -- assignments
   , ss ~ SubState s
   , se ~ SubElement s
@@ -110,16 +112,16 @@ type FocusOne is c s m m' n n' ss se =
 -- | 'focus' with 'one' and a 'Default' value.
 -- When forward, runs the 'Constructor' one the first sub-element.
 -- When backward, run the 'Constructor' on the 'Default' value of 'se'.
-focusOneDef :: forall is m' n' se c s m n u v ss.
+focusOneDef :: forall is m' n' se c s m n u v ss w.
   ( Default se
-  , FocusOne is c s m m' n n' ss se
+  , FocusOne is c s m m' n n' ss se w
   )
   => Constructor se m' n' u v
   -> Biparser c s m n u v
 focusOneDef = focus @is pure (const def) one
 
-focusOne :: forall is m' n' se c s m n u v ss.
-  FocusOne is c s m m' n n' ss se
+focusOne :: forall is m' n' se c s m n u v ss w.
+  FocusOne is c s m m' n n' ss se w
   => (u -> n' se)
   -> Constructor se m' n' se v
   -> Biparser c s m n u v
@@ -158,12 +160,13 @@ focus f g (Biparser fw bw) (ConstructorUnT fw' bw') = Biparser
 
 -- * Constructor helper functions
 
-lensBiparse :: forall s s' m n u v.
+lensBiparse :: forall s s' m n w u v.
   ( MonadFail m
   , Monad n
+  , ConvertSequence () w s'
   )
   => Traversal' s s'
-  -> BSRW.Biparser () (Identity s') m n () () u v
+  -> BSRW.Biparser () (Identity s') m n () w () u v
   -> Constructor s m n u v
 lensBiparse t (Biparser fw bw) = Constructor
   do
@@ -172,7 +175,7 @@ lensBiparse t (Biparser fw bw) = Constructor
     pure v
   \u -> do
     (v,w) <- lift $ BSRW.runWriterT' $ bw u
-    assign t w
+    assign t $ convertSequence @() w
     pure v
 
 -- | Expect 'x' at 't' forward and set 'x' at 't' backwards.

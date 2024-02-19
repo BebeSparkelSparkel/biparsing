@@ -2,7 +2,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE UndecidableInstances #-}
 module Biparse.Utils
-  ( (|>)
+  ( (!>)
   , (^:^)
   , (<$$>)
   , (<$$)
@@ -14,14 +14,8 @@ module Biparse.Utils
   , initAlt
   , headTailAlt
   , ConvertIntegral(..)
-  , ConvertString'(..)
-  , ConvertString
-  , convertString
-  , ConvertStringInstanceSelector
-  , ConvertStringSelector
-  , IdentityInstance
-  , FromStringInstance
-  , ToStringInstance
+  , ConvertSequence(..)
+  , ConvertElement(..)
   , symbol
   , char
   , shouldBe
@@ -29,18 +23,15 @@ module Biparse.Utils
 
 import Control.Applicative (Applicative, pure, liftA2)
 import Control.Monad (MonadFail, fail)
-import Data.Char (Char)
 import Data.Eq (Eq((==)))
 import Data.Function ((.), flip, ($), id)
 import Data.Functor (Functor, (<$), fmap)
 import Data.Functor.Alt (Alt, (<!>))
-import Data.Kind (Type)
 import Data.Maybe (maybe)
-import Data.MonoTraversable (headMay, lastMay, MonoFoldable, Element)
+import Data.MonoTraversable (headMay, lastMay, MonoFoldable, Element, MonoPointed)
 import Data.Proxy (Proxy(Proxy))
-import Data.Sequences (IsSequence, initMay, tailMay)
-import Data.String (String, IsString(fromString))
-import GHC.Exts (IsList, toList, Item)
+import Data.Sequences (IsSequence, initMay, tailMay, singleton)
+import Data.String (IsString(fromString))
 import GHC.Int (Int, Int64)
 import GHC.Integer (Integer)
 import GHC.Real (fromIntegral)
@@ -48,8 +39,8 @@ import GHC.TypeLits (KnownSymbol, symbolVal, KnownChar, charVal)
 import Numeric.Natural (Natural)
 import Text.Printf (IsChar(fromChar))
 
-(|>) :: (Applicative f, Alt f) => f a -> a -> f a
-x |> y = x <!> pure y
+(!>) :: (Applicative f, Alt f) => f a -> a -> f a
+x !> y = x <!> pure y
 
 infixr 5 ^:^
 (^:^) :: Applicative f => f a -> f [a] -> f [a]
@@ -87,25 +78,11 @@ instance ConvertIntegral Natural Int where convertIntegral = fromIntegral
 instance ConvertIntegral Natural Int64 where convertIntegral = fromIntegral
 instance ConvertIntegral Natural Integer where convertIntegral = fromIntegral
 
-type ConvertStringInstanceSelector :: Type -> Type -> Type
-type family ConvertStringInstanceSelector a b where
-  ConvertStringInstanceSelector a a = IdentityInstance
-  ConvertStringInstanceSelector String _ = FromStringInstance
-  ConvertStringInstanceSelector _ String = ToStringInstance
-  ConvertStringInstanceSelector a b = ConvertStringSelector a b
-type ConvertStringSelector :: Type -> Type -> Type
-type family ConvertStringSelector a b
+class ConvertSequence context a b where convertSequence :: a -> b
+instance ConvertSequence () a a where convertSequence = id
 
-type ConvertString a b = ConvertString' (ConvertStringInstanceSelector a b) a b
-convertString :: forall a b. ConvertString a b => a -> b
-convertString = convertString' @(ConvertStringInstanceSelector a b)
-class ConvertString' is a b where convertString' :: a -> b
-data IdentityInstance
-instance ConvertString' IdentityInstance a a where convertString' = id
-data FromStringInstance
-instance IsString b => ConvertString' FromStringInstance String b where convertString' = fromString
-data ToStringInstance
-instance {-# OVERLAPPABLE #-} (IsList a, Item a ~ Char) => ConvertString' ToStringInstance a String where convertString' = toList
+class ConvertElement context a b where convertElement :: a -> b
+instance (e ~ Element seq, MonoPointed seq) => ConvertElement () e seq where convertElement = singleton
 
 symbol :: forall s a. (KnownSymbol s, IsString a) => a
 symbol = fromString $ symbolVal $ Proxy @s
