@@ -101,7 +101,7 @@ type FocusOne is c s m m' n n' ss se w =
   -- n
   , MonadWriter w n
   -- w
-  , ConvertElement c se w
+  , ConvertElement c se w n
   -- assignments
   , ss ~ SubState s
   , se ~ SubElement s
@@ -160,13 +160,13 @@ focus f g (Biparser fw bw) (ConstructorUnT fw' bw') = Biparser
 
 -- * Constructor helper functions
 
-lensBiparse :: forall s s' m n w u v.
+lensBiparse :: forall c w s s' m n u v.
   ( MonadFail m
   , Monad n
-  , ConvertSequence () w s'
+  , ConvertSequence c w s' (StateT s n)
   )
   => Traversal' s s'
-  -> BSRW.Biparser () (Identity s') m n () w () u v
+  -> BSRW.Biparser c (Identity s') m n () w () u v
   -> Constructor s m n u v
 lensBiparse t (Biparser fw bw) = Constructor
   do
@@ -175,7 +175,7 @@ lensBiparse t (Biparser fw bw) = Constructor
     pure v
   \u -> do
     (v,w) <- lift $ BSRW.runWriterT' $ bw u
-    assign t $ convertSequence @() w
+    assign t =<< convertSequence @c w
     pure v
 
 -- | Expect 'x' at 't' forward and set 'x' at 't' backwards.

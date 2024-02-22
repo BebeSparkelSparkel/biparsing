@@ -201,7 +201,7 @@ instance
   , MonadWriter w n
   , EqElement text
   , IsChar (Element text)
-  , ConvertSequence c text w
+  , ConvertSequence c text w n
   , KnownChar char
   , text ~ SubState (Position d text)
   ) => LineSplitter ('Left char) 'False c m n (Position d text) where
@@ -213,7 +213,7 @@ instance
         [x] | null x -> mempty
         x -> x
     \ls -> do
-      tell $ convertSequence @c $ intercalate (singleton c) ls
+      tell <=< convertSequence @c $ intercalate (singleton c) ls
       pure ls
     where
     c = char @char
@@ -223,7 +223,7 @@ instance
   , EqElement text
   , MonadWriter w n
   , IsString text
-  , ConvertSequence c text w
+  , ConvertSequence c text w n
   , KnownSymbol sym
   , text ~ SubState (Position d text)
   ) => LineSplitter ('Right sym) 'False c m n (Position d text) where
@@ -235,24 +235,24 @@ instance
         [x] | null x -> mempty
         x -> x
     \ls -> do
-      tell $ convertSequence @c $ intercalate sym ls
+      tell <=< convertSequence @c $ intercalate sym ls
       pure ls
     where
     sym = symbol @sym
 
 -- * Convert Instance Contexts
 
-instance ConvertSequence UnixLC                 a a where convertSequence = id
-instance ConvertSequence WindowsLC              a a where convertSequence = id
-instance ConvertSequence LinesOnly              a a where convertSequence = id
-instance ConvertSequence ColumnsOnly            a a where convertSequence = id
-instance ConvertSequence LineColumnUnknownBreak a a where convertSequence = id
-instance ConvertSequence NoUpdate               a a where convertSequence = id
+instance Applicative m => ConvertSequence UnixLC                 a a m where convertSequence = pure
+instance Applicative m => ConvertSequence WindowsLC              a a m where convertSequence = pure
+instance Applicative m => ConvertSequence LinesOnly              a a m where convertSequence = pure
+instance Applicative m => ConvertSequence ColumnsOnly            a a m where convertSequence = pure
+instance Applicative m => ConvertSequence LineColumnUnknownBreak a a m where convertSequence = pure
+instance Applicative m => ConvertSequence NoUpdate               a a m where convertSequence = pure
 
-instance (e ~ Element seq, MonoPointed seq) => ConvertElement UnixLC                 e seq where convertElement = singleton
-instance (e ~ Element seq, MonoPointed seq) => ConvertElement WindowsLC              e seq where convertElement = singleton
-instance (e ~ Element seq, MonoPointed seq) => ConvertElement LinesOnly              e seq where convertElement = singleton
-instance (e ~ Element seq, MonoPointed seq) => ConvertElement ColumnsOnly            e seq where convertElement = singleton
-instance (e ~ Element seq, MonoPointed seq) => ConvertElement LineColumnUnknownBreak e seq where convertElement = singleton
-instance (e ~ Element seq, MonoPointed seq) => ConvertElement NoUpdate               e seq where convertElement = singleton
+instance (e ~ Element seq, MonoPointed seq, Applicative m) => ConvertElement UnixLC                 e seq m where convertElement = pure . singleton
+instance (e ~ Element seq, MonoPointed seq, Applicative m) => ConvertElement WindowsLC              e seq m where convertElement = pure . singleton
+instance (e ~ Element seq, MonoPointed seq, Applicative m) => ConvertElement LinesOnly              e seq m where convertElement = pure . singleton
+instance (e ~ Element seq, MonoPointed seq, Applicative m) => ConvertElement ColumnsOnly            e seq m where convertElement = pure . singleton
+instance (e ~ Element seq, MonoPointed seq, Applicative m) => ConvertElement LineColumnUnknownBreak e seq m where convertElement = pure . singleton
+instance (e ~ Element seq, MonoPointed seq, Applicative m) => ConvertElement NoUpdate               e seq m where convertElement = pure . singleton
 

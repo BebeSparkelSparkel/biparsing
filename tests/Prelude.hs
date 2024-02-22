@@ -78,7 +78,7 @@ import Biparse.General
 import Biparse.Text (CharElement)
 import Biparse.Text.Context.LineColumn (LineColumn, UnixLC, LinesOnly, ColumnsOnly, Position(Position), subState, ErrorPosition(ErrorPosition), startLineColumn, NoUpdate)
 import Biparse.Utils (headAlt, ConvertSequence, convertSequence)
-import Control.Applicative (pure, (<*), (*>), (<*>), empty, liftA2)
+import Control.Applicative (Applicative, pure, (<*), (*>), (<*>), empty, liftA2)
 import Control.Monad ((>>=), return, (>>), fail, MonadPlus, MonadFail, Monad, void)
 import Control.Monad.ChangeMonad (ChangeMonad, ChangeFunction, changeMonad', ResultMonad(ResultingMonad))
 import Control.Monad.EitherString (EitherString(EValue), isString)
@@ -194,6 +194,6 @@ instance IsList a => IsList (Identity a) where
 
 instance Eq Builder where x == y = Data.ByteString.Builder.toLazyByteString x == Data.ByteString.Builder.toLazyByteString y
 
-instance ConvertSequence c String Text where convertSequence = fromString
-instance ConvertSequence c String ByteString where convertSequence = fromString
+instance Applicative m => ConvertSequence c String Text       m where convertSequence = pure . fromString
+instance Applicative m => ConvertSequence c String ByteString m where convertSequence = pure . fromString
 

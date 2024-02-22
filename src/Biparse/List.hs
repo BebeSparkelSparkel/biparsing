@@ -72,7 +72,7 @@ takeElementsWhile :: forall c s m n ss se w e.
    -- substate
    , IsSequence ss
    -- w
-   , ConvertElement c se w
+   , ConvertElement c se w n
    -- context
    , ElementContext c s
    -- assignments
@@ -102,7 +102,7 @@ takeN :: forall c m n a ss se w.
   , GetSubState a
   , UpdateStateWithElement c a
   -- w
-  , ConvertElement c se w
+  , ConvertElement c se w n
   -- assignments
   , ss ~ SubState a
   , se ~ SubElement a
@@ -204,7 +204,7 @@ splitElem :: forall c s m n ss se w m' n'.
   , Eq se
   , Show se
   -- w
-  , ConvertElement c se w
+  , ConvertElement c se w n'
   -- context
   , ElementContext c s
   -- assignments
@@ -232,8 +232,8 @@ splitOn :: forall c s m n ss w m' n'.
   , MonadWriter w n
   , Show ss
   , EqElement ss
-  , ConvertSequence c ss w
-  , ConvertElement c (SubElement s) w
+  , ConvertSequence c ss w n'
+  , ConvertElement c (SubElement s) w n'
   , ElementContext c s
   , SubStateContext c s
   , ss ~ SubState s
@@ -266,7 +266,7 @@ liftStateMaybe = mapMs
 splitWith :: forall c s m n ss se w e.
   ( BreakWhen c s m n ss se w e
   , UpdateStateWithSubState c s
-  , ConvertSequence c ss w
+  , ConvertSequence c ss w n
   )
   => Unit c s m n
   -> Iso c m n s [ss]

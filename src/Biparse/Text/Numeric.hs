@@ -55,7 +55,7 @@ type NaturalConstraints c s m n number text char w =
   , Enum number
   , Show number
   , Show text
-  , ConvertSequence c text w
+  , ConvertSequence c text w n
   , text ~ SubState s
   )
 
@@ -104,8 +104,8 @@ type IntConstraints c s m n number text char w e =
   -- context
   , ElementContext c s
   -- w
-  , ConvertSequence c text w
-  , ConvertElement c char w
+  , ConvertSequence c text w n
+  , ConvertElement c char w n
   )
 
 intBaseTen :: forall c s m n number text char w e.
@@ -134,8 +134,8 @@ type RealConstrints c s m n number text char w e =
   , Show text
   , text ~ SubState s
   -- w
-  , ConvertSequence c text w
-  , ConvertElement c char w
+  , ConvertSequence c text w n
+  , ConvertElement c char w n
   )
 
 instance RealConstrints c s m n Float  text char w e => IsoClass c m n s Float  where iso = realBaseTen
@@ -175,7 +175,7 @@ digitsBaseTen :: forall c m n s u text char w.
   , IsSequence text
   , MonadState s m
   , MonadWriter w n
-  , ConvertSequence c text w
+  , ConvertSequence c text w n
   , SubStateContext c s
   , text ~ SubState s
   ) => Biparser c s m n u text
@@ -209,7 +209,7 @@ sign :: forall c s m n number text char w e.
   , IsSequence text
   , CharElement s char
   -- w
-  , ConvertElement c char w
+  , ConvertElement c char w n
   -- context
   , ElementContext c s
   -- assignments
@@ -229,7 +229,7 @@ hex :: forall (charCase :: CharCase) c m n a number text char w.
   -- text
   , IsSequence text
   -- w
-  , ConvertElement c char w
+  , ConvertElement c char w n
   -- char
   , CharElement a char
   -- number

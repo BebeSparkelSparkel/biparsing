@@ -22,7 +22,7 @@ char :: forall c s m n u text char w.
   ( IsSequence text
   , ElementContext c s
   , CharElement s char
-  , ConvertElement c char w
+  , ConvertElement c char w n
   -- m
   , MonadState s m
   , MonadFail m
@@ -49,7 +49,7 @@ string :: forall c s m n u text w.
   -- text
   , EqElement text
   , Show text
-  , ConvertSequence c text w
+  , ConvertSequence c text w n
   -- w
   -- context
   , SubStateContext c s

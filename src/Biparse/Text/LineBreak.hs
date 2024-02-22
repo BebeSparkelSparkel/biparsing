@@ -92,7 +92,7 @@ instance
   , KnownChar char
   , IsSequence ss
   , CharElement a se
-  , ConvertElement c se w
+  , ConvertElement c se w (WriterT w Maybe)
   , ElementContext c a
   , ss ~ SubState a
   , se ~ SubElement a
@@ -106,8 +106,8 @@ instance
   , CharElement a se
   , IsString ss
   , Show ss
-  , ConvertSequence c ss w
-  , ConvertElement c se w
+  , ConvertSequence c ss w (WriterT w Maybe)
+  , ConvertElement c se w (WriterT w Maybe)
   , SubStateContext c a
   , ElementContext c a
   , ss ~ SubState a

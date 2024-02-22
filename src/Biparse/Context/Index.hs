@@ -81,7 +81,7 @@ type instance ChangeFunction () (EIP e ss) (Either (ErrorIndex ss)) = ErrorState
 
 -- * Convert Instance Contexts
 
-instance ConvertSequence IndexContext a a where convertSequence = id
+instance Applicative m => ConvertSequence IndexContext a a m where convertSequence = pure
 
-instance (e ~ Element seq, MonoPointed seq) => ConvertElement IndexContext e seq where convertElement = singleton
+instance (e ~ Element seq, MonoPointed seq, Applicative m) => ConvertElement IndexContext e seq m where convertElement = pure . singleton
 

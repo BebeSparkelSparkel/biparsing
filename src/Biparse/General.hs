@@ -45,7 +45,7 @@ identity :: forall c s m n ss w.
   ( MonadState s m
   , MonadWriter w n
   , Monoid ss
-  , ConvertSequence c ss w
+  , ConvertSequence c ss w n
   , SubStateContext c s
   , ss ~ SubState s
   )
@@ -73,7 +73,7 @@ type Take c s m n ss se w e =
   , Eq (SubElement s)
   , IsSequence (SubState s)
   -- w
-  , ConvertElement c se w
+  , ConvertElement c se w n
   -- assignments
   , ss ~ SubState s
   , se ~ SubElement s
@@ -150,7 +150,7 @@ type Take' c s m n ss se w u e =
   -- substate
   , Show ss
   , EqElement ss
-  , ConvertSequence c ss w
+  , ConvertSequence c ss w n
   -- context
   , SubStateContext c s
   -- u
@@ -186,7 +186,7 @@ type TakeWhile c s m n ss se w =
   , IsSequence ss
   , MonadState s m
   , MonadWriter w n
-  , ConvertSequence c ss w
+  , ConvertSequence c ss w n
   , ss ~ SubState s
   , se ~ SubElement s
   )
@@ -245,7 +245,7 @@ type Pad c s m n u v ss i se w j =
   , Ord i
   , Num i
   , ConvertIntegral Natural i
-  , ConvertSequence c ss w
+  , ConvertSequence c ss w n
   -- w
   , IsSequence w
   , Element w ~ se
@@ -319,7 +319,7 @@ type BreakWhen c s m n ss se w e =
   -- substate
   , IsSequence ss
   -- w
-  , ConvertElement c se w
+  , ConvertElement c se w n
   -- context
   , ElementContext c s
   -- assignments
@@ -365,7 +365,7 @@ rest :: forall c s m n ss w.
   , SubStateContext c s
   -- substate
   , Monoid ss
-  , ConvertSequence c ss w
+  , ConvertSequence c ss w n
   -- assignments
   , ss ~ SubState s
   )
@@ -422,7 +422,7 @@ stripPrefix :: forall c s m n ss w u.
   , MonadState s m
   , MonadFail m
   , MonadWriter w n
-  , ConvertSequence c ss w
+  , ConvertSequence c ss w n
   )
   => ss
   -> Const c s m n u
@@ -455,7 +455,7 @@ countElementSome :: forall c s m n ss se w.
   , MonadState s m
   , MonadFail m
   , MonadWriter w n
-  , ConvertSequence c ss w
+  , ConvertSequence c ss w n
   , MonadFail n
   , Eq se
   , se ~ SubElement s

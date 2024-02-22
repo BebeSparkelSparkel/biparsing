@@ -24,7 +24,7 @@ module Biparse.Utils
 import Control.Applicative (Applicative, pure, liftA2)
 import Control.Monad (MonadFail, fail)
 import Data.Eq (Eq((==)))
-import Data.Function ((.), flip, ($), id)
+import Data.Function ((.), flip, ($))
 import Data.Functor (Functor, (<$), fmap)
 import Data.Functor.Alt (Alt, (<!>))
 import Data.Maybe (maybe)
@@ -78,11 +78,11 @@ instance ConvertIntegral Natural Int where convertIntegral = fromIntegral
 instance ConvertIntegral Natural Int64 where convertIntegral = fromIntegral
 instance ConvertIntegral Natural Integer where convertIntegral = fromIntegral
 
-class ConvertSequence context a b where convertSequence :: a -> b
-instance ConvertSequence () a a where convertSequence = id
+class ConvertSequence context a b m where convertSequence :: a -> m b
+instance Applicative m => ConvertSequence () a a m where convertSequence = pure
 
-class ConvertElement context a b where convertElement :: a -> b
-instance (e ~ Element seq, MonoPointed seq) => ConvertElement () e seq where convertElement = singleton
+class ConvertElement context a b m where convertElement :: a -> m b
+instance (e ~ Element seq, MonoPointed seq, Applicative m) => ConvertElement () e seq m where convertElement = pure . singleton
 
 symbol :: forall s a. (KnownSymbol s, IsString a) => a
 symbol = fromString $ symbolVal $ Proxy @s

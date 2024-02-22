@@ -349,7 +349,7 @@ type One c s m n ss se w =
   , Alt m
   -- n
   , MonadWriter w n
-  , ConvertElement c se w
+  , ConvertElement c se w n
   -- w
   -- assignments
   , ss ~ SubState s
@@ -360,7 +360,7 @@ one :: forall c s m n ss se w. One c s m n ss se w => Iso c m n s se
 one = Biparser (oneFw @c) bw
   where
   bw :: se -> n se
-  bw c = tell (convertElement @c c) $> c
+  bw c = (tell =<< convertElement @c c) $> c
 
 -- | Forward Only! Takes one element. Updates the context and substate.
 -- Useful for when forwards and backwards are to divergent to reasonably work with
@@ -387,7 +387,7 @@ split :: forall c s m n ss w.
   , SubStateContext c s
   , MonadState s m
   , MonadWriter w n
-  , ConvertSequence c ss w
+  , ConvertSequence c ss w n
   )
   => StateT ss m ss
   -> Iso c m n s ss
@@ -399,7 +399,7 @@ split splitSubState = Biparser fw bw
     put $ updateSubStateContext @c s start end
     return start
   bw :: ss -> n ss
-  bw x = tell (convertSequence @c x) $> x
+  bw x = (tell =<< convertSequence @c x) $> x
 
 -- | Takes and writes substate. Updates the context and substate.
 splitFw :: forall c s m n ss u.
@@ -477,7 +477,7 @@ breakWhen' :: forall c s m n ss w e.
   , MonadError e m
   , MonadFail m
   , MonadWriter w n
-  , ConvertSequence c ss w
+  , ConvertSequence c ss w n
   , SubStateContext c s
   , IsSequence ss
   , ss ~ SubState s
@@ -493,7 +493,7 @@ breakWhen' (Biparser fw bw) = Biparser fw' bw'
       put $ updateSubStateContext @c startState h t
       fw $> True <!> pure False
   bw' x = do
-    tell $ convertSequence @c x
+    tell =<< convertSequence @c x
     bw ()
     return x
 
