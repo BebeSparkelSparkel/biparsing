@@ -7,18 +7,22 @@ module Prelude
   , module Control.Monad.EitherString
   , module Control.Monad.Except
   , module Control.Monad.Extra
+  , module Control.Monad.RWS
   , module Control.Monad.State
   , module Control.Monad.State.Class
+  , module Control.Monad.Trans.Class
   , module Control.Monad.Writer
   , module Control.Monad.Writer.Class
-  , module Control.Monad.Trans.Class
   , module Data.Bifunctor
   , module Data.Bool
   , module Data.Coerce
+  , module Data.Default
   , module Data.Either
   , module Data.Eq
+  , module Data.EqElement
   , module Data.Function
   , module Data.Functor
+  , module Data.Functor.Alt
   , module Data.Functor.Identity
   , module Data.Int
   , module Data.Kind
@@ -35,39 +39,36 @@ module Prelude
   , module Data.Void
   , module GHC.Enum
   , module GHC.Num
+  , module GHC.Real
+  , module GHC.TypeLits
   , module Numeric.Natural
+  , module Text.Printf
   , module Text.Read
   , module Text.Show
-  , module Control.Monad.RWS
-  , module GHC.TypeLits
-  , module Text.Printf
-  , module Data.EqElement
-  , module Data.Default
-  , module GHC.Real
-  , module Data.Functor.Alt
   ) where
 
-import Text.Printf (IsChar, fromChar, toChar)
-import Control.Monad.RWS (RWST)
-import GHC.TypeLits (KnownSymbol, Symbol, KnownChar)
 import Biparse.Utils hiding (char)
 import Control.Applicative (Applicative((<*>),pure), (*>), (<*), liftA2)
 import Control.Monad (Monad((>>=),return), when, unless, MonadFail(fail), (=<<), (>=>), (<=<))
 import Control.Monad.EitherString (EitherString)
 import Control.Monad.Except (MonadError(throwError, catchError))
 import Control.Monad.Extra (ifM)
-import Control.Monad.Trans.Class (MonadTrans, lift)
+import Control.Monad.RWS (RWST)
 import Control.Monad.State (StateT(StateT,runStateT), execState, execStateT)
 import Control.Monad.State.Class (MonadState(state,get,put), modify, gets)
+import Control.Monad.Trans.Class (MonadTrans, lift)
 import Control.Monad.Writer (WriterT(WriterT,runWriterT))
 import Control.Monad.Writer.Class (MonadWriter(tell,pass))
 import Data.Bifunctor (Bifunctor, first, second)
 import Data.Bool (Bool(True,False), otherwise, bool, (&&))
 import Data.Coerce (Coercible, coerce)
+import Data.Default (Default, def)
 import Data.Either (Either(Left,Right), fromRight, either)
 import Data.Eq (Eq((==)))
+import Data.EqElement (EqElement)
 import Data.Function (($), (.), (&), id, const, flip)
 import Data.Functor (Functor(fmap), (<$), ($>), (<$>), (<&>), void)
+import Data.Functor.Alt (Alt, (<!>))
 import Data.Functor.Identity (Identity(Identity,runIdentity))
 import Data.Int (Int)
 import Data.Kind (Type, Constraint)
@@ -84,10 +85,9 @@ import Data.Tuple (fst, snd, uncurry)
 import Data.Void (Void, absurd)
 import GHC.Enum (Enum, toEnum, fromEnum, pred, succ)
 import GHC.Num (Num, (+), (-))
+import GHC.Real (fromIntegral)
+import GHC.TypeLits (KnownSymbol, Symbol, KnownChar)
 import Numeric.Natural (Natural)
+import Text.Printf (IsChar, fromChar, toChar)
 import Text.Read (Read)
 import Text.Show (Show(show))
-import Data.EqElement (EqElement)
-import Data.Default (Default, def)
-import GHC.Real (fromIntegral)
-import Data.Functor.Alt (Alt, (<!>))

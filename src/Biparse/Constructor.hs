@@ -164,6 +164,7 @@ lensBiparse :: forall c w s s' m n u v.
   ( MonadFail m
   , Monad n
   , ConvertSequence c w s' (StateT s n)
+  , BSRW.BackwardC c
   )
   => Traversal' s s'
   -> BSRW.Biparser c (Identity s') m n () w () u v
@@ -174,7 +175,7 @@ lensBiparse t (Biparser fw bw) = Constructor
     (v, _) <- ReaderT $ const $ runStateErrorT fw s
     pure v
   \u -> do
-    (v,w) <- lift $ BSRW.runWriterT' $ bw u
+    (v,w) <- lift $ BSRW.runWriterT' @c $ bw u
     assign t =<< convertSequence @c w
     pure v
 

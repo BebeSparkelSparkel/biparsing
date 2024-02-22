@@ -24,6 +24,7 @@ import Control.Monad.MonadProgenitor (MonadProgenitor)
 import Control.Lens (makeLenses)
 import Control.Monad (MonadPlus)
 import Control.Applicative (Alternative, empty, (<|>))
+import Control.Monad.Reader.Class (MonadReader)
 
 import Control.Exception (IOException)
 
@@ -31,6 +32,7 @@ import Control.Exception (IOException)
 
 newtype StateErrorT (i :: ErrorInstance) s m a = StateErrorT' (StateT s m a)
   deriving (Functor, Applicative, Monad, MonadTrans)
+
 type M c s m = StateErrorT (ErrorContext c) s m
 
 {-# COMPLETE StateErrorT #-}
@@ -51,6 +53,7 @@ type family ErrorContext c
 type instance ErrorContext () = 'NewtypeInstance
 
 deriving instance Monad m => MonadState s (StateErrorT i s m)
+deriving instance MonadReader r m => MonadReader r (StateErrorT i s m)
 
 data ErrorState e s = ErrorState {_error :: e, _errorState :: s} deriving (Show, Eq)
 $(makeLenses ''ErrorState)
