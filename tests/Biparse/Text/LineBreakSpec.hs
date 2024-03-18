@@ -17,12 +17,12 @@ spec = do
           , IsString text
           , Show text
           , Monoid text
-          , LineSplitter (LineBreaker lb) (UpdateSuperState (LineColumn lb)) (LineColumn lb) (StateErrorT 'ErrorStateInstance (Position () text) (FM text)) (RWST () text () EitherString) (Position () text)
+          , LineSplitter (LineBreaker lb) (UpdateSuperState (LineColumn lb)) (LineColumn lb) (StateErrorT 'ErrorStateInstance (Position () text) (FM text)) (RWST () text () EitherString) (Position () text) [text]
           )
           => String
           -> Spec
         test = flip it let
-          f = runForward @() @(LineColumn lb) @_ @(FM text) @_ @EitherString @() @text @() $ lines @lb
+          f = evalForward @() @(LineColumn lb) @_ @(FM text) @_ @EitherString @() @text @() @_ @[text] $ lines @lb
           text :: Position () text
           text = startLineColumn $ repeatConcat numLines $ line $ lineBreakerString @lb
           in seq text $ limit $ f text `shouldSatisfy` isRight
@@ -30,7 +30,7 @@ spec = do
     test @'Windows @String "Windows String"
     test @'Windows @ByteString "Windows ByteString"
     test @'Windows @Text "Windows Text"
-    --test @'Windows @(Seq Char) "Windows (Seq Char)"
+    test @'Windows @(Seq Char) "Windows (Seq Char)"
     test @'Unix @String "Unix String"
     test @'Unix @ByteString "Unix ByteString"
     test @'Unix @Text "Unix Text"

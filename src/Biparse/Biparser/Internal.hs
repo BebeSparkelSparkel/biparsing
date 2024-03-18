@@ -22,18 +22,21 @@ module Biparse.Biparser.Internal
   , comapM
   , comapPred
   , comapPredM
+  , comapConst
   , upon
   , uponMay
   , uponEither
   , uponM
   , uponPred
   , uponPredM
+  , uponConst
   , mapWrite
   , onlyBackwards
   , forwardFail
   , ignoreForward
   , ignoreBackward
   , GetSubState(..)
+  , InitSuperState(..)
   , UpdateStateWithSubState(..)
   , SubStateContext
   , SubElement
@@ -65,6 +68,7 @@ import Control.Monad.Extra (findM)
 import Control.Monad.Reader.Class (MonadReader(ask), asks)
 import Control.Monad.Unrecoverable (MonadUnrecoverable, UnrecoverableError, throwUnrecoverable)
 import Control.Monad.Writer.Class (listen)
+import Control.Monad.Writer.Map (MapWriter, mapWriter, WriteType, ChangeWriteType)
 import Control.Profunctor.FwdBwd (BwdMonad, Comap, FwdBwd, pattern FwdBwd, MapMs(mapMs), DualMap)
 import Control.Profunctor.FwdBwd qualified as FB
 import Data.Profunctor (Profunctor(dimap))
@@ -130,6 +134,13 @@ comapPredM :: forall c s m n u v.
   -> Biparser c s m n u v
 comapPredM p = comapM \u -> bool (fail "backward monadic predicate failed") (pure u) =<< p u
 
+comapConst :: forall c s m n u u' v.
+  Monad n
+  => u'
+  -> Biparser c s m n u' v
+  -> Biparser c s m n u  v
+comapConst = FB.comap @() . const
+
 infix 8 `upon`
 upon :: forall c s m n u u' v.
   Monad n
@@ -179,6 +190,14 @@ uponPredM :: forall c s m n u v.
   -> Biparser c s m n u v
 uponPredM = flip comapPredM
 
+infix 8 `uponConst`
+uponConst :: forall c s m n u u' v.
+  Monad n
+  => Biparser c s m n u' v
+  -> u'
+  -> Biparser c s m n u  v
+uponConst = flip comapConst
+
 -- * Map Backwards Write
 
 infix 8 `mapWrite`
@@ -189,6 +208,11 @@ mapWrite :: forall c s m n u v w.
   -> Biparser c s m n u v
 mapWrite (Biparser fw bw) f = Biparser fw $
   pass . fmap (,f) . bw
+
+instance MapWriter n => MapWriter (Biparser c s m n u) where
+  type WriteType (Biparser _ _ _ n _) = WriteType n
+  type ChangeWriteType (Biparser c s m n u) w = Biparser c s m (ChangeWriteType n w) u
+  mapWriter f (Biparser fw bw) = Biparser fw (mapWriter f . bw)
 
 -- * Only Backwards
 
@@ -284,12 +308,21 @@ ignoreBackward = flip setBackward pure
 
 -- | Getter for the substate.
 class GetSubState state where
-  type SubState state
+  type SubState state :: Type
   getSubState :: state -> SubState state
 
 instance GetSubState (Identity s) where
   type SubState (Identity s) = s
   getSubState = runIdentity
+
+-- * SuperState
+
+type InitSuperState :: Type -> Type -> Constraint
+class InitSuperState c ss where
+  type SuperState c ss :: Type
+  fromSubState :: ss -> SuperState c ss
+
+-- * Updating State
 
 -- | Update the state's context and substate.
 -- Used when more than one element at a time should be consumed.
@@ -356,7 +389,7 @@ type One c s m n ss se w =
   , se ~ SubElement s
   )
 -- | Takes and writes one element. Updates the context and substate.
-one :: forall c s m n ss se w. One c s m n ss se w => Iso c m n s se
+one :: forall w c s m n ss se. One c s m n ss se w => Iso c m n s se
 one = Biparser (oneFw @c) bw
   where
   bw :: se -> n se

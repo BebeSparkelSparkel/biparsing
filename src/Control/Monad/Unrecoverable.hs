@@ -61,7 +61,7 @@ instance (MonadUnrecoverable m, Monad m) => MonadUnrecoverable (StateT s m) wher
   type UnrecoverableError (StateT _ m) = UnrecoverableError m
   throwUnrecoverable = lift . throwUnrecoverable
 
-instance (MonadUnrecoverable m, Monoid w, Monad m) => MonadUnrecoverable (RWST r w s m) where
-  type UnrecoverableError (RWST _ _ _ m) = UnrecoverableError m
-  throwUnrecoverable = lift . throwUnrecoverable
+--instance (MonadUnrecoverable m, Monoid w, Monad m) => MonadUnrecoverable (RWST r w s m) where
+--  type UnrecoverableError (RWST _ _ _ m) = UnrecoverableError m
+--  throwUnrecoverable = lift . throwUnrecoverable
 

@@ -39,13 +39,13 @@ type M c s m = StateErrorT (ErrorContext c) s m
 pattern StateErrorT :: (s -> m (a, s)) -> StateErrorT i s m a
 pattern StateErrorT z = StateErrorT' (StateT z)
 
-runStateErrorT :: StateErrorT i s m a -> s -> m (a, s)
+runStateErrorT :: forall i s m a. StateErrorT i s m a -> s -> m (a, s)
 runStateErrorT (StateErrorT x) = x
 
 -- | Used to determine the instances to use for error handling from the context
 data ErrorInstance
   = NewtypeInstance -- | Use the StateT instance
-  | ErrorStateInstance -- | Use MonadError (ErrorStateA e s) m
+  | ErrorStateInstance -- | Use MonadError (ErrorState e s) m
 
 type ErrorContext :: Type -> ErrorInstance
 type family ErrorContext c

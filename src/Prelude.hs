@@ -7,7 +7,6 @@ module Prelude
   , module Control.Monad.EitherString
   , module Control.Monad.Except
   , module Control.Monad.Extra
-  , module Control.Monad.RWS
   , module Control.Monad.State
   , module Control.Monad.State.Class
   , module Control.Monad.Trans.Class
@@ -53,7 +52,6 @@ import Control.Monad (Monad((>>=),return), when, unless, MonadFail(fail), (=<<),
 import Control.Monad.EitherString (EitherString)
 import Control.Monad.Except (MonadError(throwError, catchError))
 import Control.Monad.Extra (ifM)
-import Control.Monad.RWS (RWST)
 import Control.Monad.State (StateT(StateT,runStateT), execState, execStateT)
 import Control.Monad.State.Class (MonadState(state,get,put), modify, gets)
 import Control.Monad.Trans.Class (MonadTrans, lift)

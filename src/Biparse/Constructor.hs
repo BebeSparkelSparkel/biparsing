@@ -164,7 +164,7 @@ lensBiparse :: forall c w s s' m n u v.
   ( MonadFail m
   , Monad n
   , ConvertSequence c w s' (StateT s n)
-  , BSRW.BackwardC c
+  , BSRW.BackwardC c n w
   )
   => Traversal' s s'
   -> BSRW.Biparser c (Identity s') m n () w () u v

@@ -7,16 +7,16 @@ packages:
 - completed:
     name: mono-traversable
     pantry-tree:
-      sha256: 11f2f0ee1a045cab6488a109965d38a90c908ac26183efb82c6f18137885f32f
-      size: 763
-    sha256: 46f8cf4339ec71f7a68d431b66b7e0a3142652b41d4aef0fd3ec0766f89355de
-    size: 78727
+      sha256: 91b29c851e11db17358370cbe2bdbba1dc258b7f86a5e426701b488bb34a71c4
+      size: 875
+    sha256: 093f2cba8b2f1357d416cc2e9e6ffb70b89e8074e82a845f9e16434e70403199
+    size: 80062
     subdir: mono-traversable
-    url: https://github.com/BebeSparkelSparkel/mono-traversable/archive/02a37e7144db00d9e3cf08f37c8a14ac23b4a731.tar.gz
-    version: 1.0.15.3
+    url: https://github.com/snoyberg/mono-traversable/archive/0447f2583b7185fa9b2da64a6fe876bcffedd587.tar.gz
+    version: 1.0.17.0
   original:
     subdir: mono-traversable
-    url: https://github.com/BebeSparkelSparkel/mono-traversable/archive/02a37e7144db00d9e3cf08f37c8a14ac23b4a731.tar.gz
+    url: https://github.com/snoyberg/mono-traversable/archive/0447f2583b7185fa9b2da64a6fe876bcffedd587.tar.gz
 - completed:
     hackage: transformers-0.6.1.1@sha256:80d128763c6965dfcddca2155b3dec3bb1970d476f0c8cceb4bb28608ab75e7c,3243
     pantry-tree:

@@ -1,14 +1,13 @@
 module Biparse.BiparserSpec where
 
-import Biparse.List (takeElementsWhile)
-
 import Biparse.Biparser qualified as BB
 import Biparse.Biparser.StateReaderWriter (N)
 import Biparse.List (all)
+import Biparse.List (takeElementsWhile)
 import Biparse.Text.LineBreak (lines, LineBreakType(Unix))
 import Control.Lens (_3, (%~))
 import Control.Monad.EitherString (_EValue)
-import Control.Monad.RWS (mapRWST)
+import Control.Monad.RWS.CPS (mapRWST)
 import Data.Sequences qualified as MT
 import Text.Printf (IsChar(fromChar, toChar))
 
@@ -314,7 +313,7 @@ spec = do
   describe "zoom" do
 
     fb @() "Biparser success"
-      (BB.zoom @UnixLC @UnixLC @UnixLC @'(StateErrorT,Either) @(N UnixLC (Position () [String]) EitherString () [String] ())
+      (BB.zoom @UnixLC @UnixLC @UnixLC @'(StateErrorT,Either) @(N UnixLC EitherString () [String] ())
         (lines @'Unix)
         (all $ MT.reverse <$> one)
       :: Iso UnixLC (FM String) EitherString () String () (Position () String) [String])

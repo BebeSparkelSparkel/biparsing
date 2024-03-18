@@ -9,7 +9,7 @@ dependencies:
   - extra
   - lens
   - mono-traversable
-  - mtl
+  - mtl >= 2.3
   - transformers
   - containers
   - semigroupoids

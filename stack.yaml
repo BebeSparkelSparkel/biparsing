@@ -3,8 +3,8 @@ system-ghc: true
 skip-ghc-check: true
 
 extra-deps:
-  - github: BebeSparkelSparkel/mono-traversable
-    commit: 02a37e7144db00d9e3cf08f37c8a14ac23b4a731
+  - github: snoyberg/mono-traversable
+    commit: 0447f2583b7185fa9b2da64a6fe876bcffedd587
     subdirs:
       - mono-traversable
 

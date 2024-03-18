@@ -4,7 +4,9 @@
 module Biparse.Text.LineBreak
   ( LineBreakType(..)
   , lines
+  , lines'
   , linesOn
+  , linesOn'
   , lineBreakType
   , LineBreaker
   , LineBreakerString(..)
@@ -13,7 +15,7 @@ module Biparse.Text.LineBreak
   , LineSplitter(..)
   ) where
 
-import Biparse.Biparser (Iso, SubState, SubElement, SubStateContext, ElementContext)
+import Biparse.Biparser (Biparser, Iso, SubState, SubElement, SubStateContext, ElementContext, uponM)
 import Biparse.General (takeDi, takeDi', Take, Take')
 import Biparse.List (splitElem, splitOn)
 import Biparse.Utils (char)
@@ -61,31 +63,41 @@ lineBreakType
   <!> takeDi' (lineBreakerString @'Windows) Windows
 
 lines :: forall (lb :: LineBreakType) c m n a text up.
-  ( LineSplitter (LineBreaker lb) up c m n a
-  , text ~ SubState a
+  ( LineSplitter (LineBreaker lb) up c m n a [text]
   , up ~ UpdateSuperState c
-  )
-  => Iso c m n a [text]
-lines = lineSplitter @(LineBreaker lb) @(UpdateSuperState c)
+  ) => Iso c m n a [text]
+lines = lines' @lb
+
+lines' :: forall (lb :: LineBreakType) c m n a up seq.
+  ( LineSplitter (LineBreaker lb) up c m n a seq
+  , up ~ UpdateSuperState c
+  ) => Iso c m n a seq
+lines' = lineSplitter @(LineBreaker lb) @(UpdateSuperState c)
 
 linesOn :: forall c m n a text up.
-  ( LineSplitter (LineBreaker 'Unix) up c m n a
-  , LineSplitter (LineBreaker 'Windows) up c m n a
-  , text ~ SubState a
+  ( LineSplitter (LineBreaker 'Unix) up c m n a [text]
+  , LineSplitter (LineBreaker 'Windows) up c m n a [text]
   , up ~ UpdateSuperState c
-  )
-  => LineBreakType
+  ) => LineBreakType
   -> Iso c m n a [text]
-linesOn = \case
-  Unix -> lines @'Unix
-  Windows -> lines @'Windows
+linesOn = linesOn'
+
+linesOn' :: forall c m n a up seq.
+  ( LineSplitter (LineBreaker 'Unix) up c m n a seq
+  , LineSplitter (LineBreaker 'Windows) up c m n a seq
+  , up ~ UpdateSuperState c
+  ) => LineBreakType
+  -> Iso c m n a seq
+linesOn' = \case
+  Unix    -> lines' @'Unix
+  Windows -> lines' @'Windows
 
 -- | Used to indicate if 'updateElementContext' and 'updateSubStateContext' should be used. An optimization since 'lines' knows how to update the context without traverseing the consumed substate.
 type UpdateSuperState :: Type -> Bool
 type family UpdateSuperState a
 
-class LineSplitter (lb :: Either Char Symbol) (up :: Bool) c m n a where
-  lineSplitter :: Iso c m n a [SubState a]
+class LineSplitter (lb :: Either Char Symbol) (up :: Bool) c m n a seq where
+  lineSplitter :: Iso c m n a seq
 instance
   ( MonadState a m
   , MonadWriter w n
@@ -93,11 +105,13 @@ instance
   , IsSequence ss
   , CharElement a se
   , ConvertElement c se w (WriterT w Maybe)
+  , ConvertSequence c [ss] seq (Biparser c a m n seq)
+  , ConvertSequence c seq [ss] n
   , ElementContext c a
   , ss ~ SubState a
   , se ~ SubElement a
-  ) => LineSplitter ('Left char) 'True c m n a where
-  lineSplitter = splitElem @c @a @m @n (char @char)
+  ) => LineSplitter ('Left char) 'True c m n a seq where
+  lineSplitter = convertSequence @c =<< splitElem @c @a @m @n (char @char) `uponM` convertSequence @c
 instance
   ( MonadState a m
   , MonadWriter w n
@@ -108,10 +122,12 @@ instance
   , Show ss
   , ConvertSequence c ss w (WriterT w Maybe)
   , ConvertElement c se w (WriterT w Maybe)
+  , ConvertSequence c [ss] seq (Biparser c a m n seq)
+  , ConvertSequence c seq [ss] n
   , SubStateContext c a
   , ElementContext c a
   , ss ~ SubState a
   , se ~ SubElement a
-  ) => LineSplitter ('Right sym) 'True c m n a where
-  lineSplitter = splitOn (symbol @sym)
+  ) => LineSplitter ('Right sym) 'True c m n a seq where
+  lineSplitter = convertSequence @c =<< splitOn (symbol @sym) `uponM` convertSequence @c
 

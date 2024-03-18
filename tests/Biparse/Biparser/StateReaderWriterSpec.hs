@@ -36,7 +36,7 @@ spec = do
         (lines @'Unix)
         ( all
         $ BSRW.zoom @ElementToList @UnixLC @Either
-          one
+          (one @[Text])
           (naturalBaseTen' @Int)
         )
       :: Iso UnixLC (FM Text) IO () Text () (Position () Text) [Int])

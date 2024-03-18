@@ -36,7 +36,8 @@ import Control.Monad.ChangeMonad (ChangeMonad, ChangeFunction, changeMonad', Res
 import Control.Lens (makeLenses, (.~), (%~), _2, _Left, _Right, (^.))
 import Control.Monad.UndefinedBackwards (UndefinedBackwards)
 import Data.EqElement (splitElem, splitSeq)
-import Data.MonoTraversable.Unprefixed (intercalate)
+import Data.MonoTraversable.Unprefixed (foldr)
+import Data.Sequences (uncons)
 
 -- * Contexts
 type UnixLC = LineColumn 'Unix
@@ -142,9 +143,9 @@ instance WrapErrorWithState String (Position dataId text) (ErrorPosition dataId)
   wrapErrorWithState' msg (Position d l c _) = ErrorPosition d l c msg
   stateForError = id
 
-instance ResultMonad (Either (ErrorPosition dataId)) () where
-  type ResultingMonad (Either (ErrorPosition dataId)) () = Either (ErrorPosition dataId)
-  resultMonad = ()
+--instance ResultMonad (Either (ErrorPosition dataId)) () where
+--  type ResultingMonad (Either (ErrorPosition dataId)) () = Either (ErrorPosition dataId)
+--  resultMonad = ()
 
 type EEP dataId e text = Either (ErrorState e (Position dataId text))
 
@@ -186,7 +187,7 @@ type instance ChangeFunction () EitherString (SE _ _) = ()
 
 type instance ChangeFunction ListToElement (_ (UndefinedBackwards text)) (_ (UndefinedBackwards text)) = [text] -> text
 
-type instance ChangeFunction (LineColumn _) (RWST r [text] w m) (RWST r text w m) = [text] -> text
+--type instance ChangeFunction (LineColumn _) (RWST r [text] w m) (RWST r text w m) = [text] -> text
 
 -- * Line Break
 
@@ -201,44 +202,76 @@ instance
   , MonadWriter w n
   , EqElement text
   , IsChar (Element text)
-  , ConvertSequence c text w n
+  , ConvertSequence c [text] seq m
+  , IsSequence seq
+  , ConvertElement c (Element text) w n
+  , ConvertSequence c (Element seq) w n
   , KnownChar char
   , text ~ SubState (Position d text)
-  ) => LineSplitter ('Left char) 'False c m n (Position d text) where
+  ) => LineSplitter ('Left char) 'False c m n (Position d text) seq where
   lineSplitter = Biparser
     do
       p <- get
       put $ p & subState .~ mempty
-      pure case splitElem c $ p ^. subState of
-        [x] | null x -> mempty
-        x -> x
+      case splitElem c $ p ^. subState of
+        [x] | null x -> pure mempty
+        x -> convertSequence @c x
     \ls -> do
-      tell <=< convertSequence @c $ intercalate (singleton c) ls
+      tell =<< intersperseConvert @c c ls
+      -- tell <=< convertSequence @c $ intersperse (singleton c) ls
       pure ls
     where
     c = char @char
+
+intersperseConvert :: forall c e n seq seq'.
+  ( IsSequence seq
+  , ConvertElement c e seq' n
+  , ConvertSequence c (Element seq) seq' n
+  , Monoid seq'
+  , Monad n
+  ) => e -> seq -> n seq'
+intersperseConvert x ys = do
+  y <- convertElement @c x
+  intercalateConvert @c y ys
 
 instance
   ( MonadState (Position d text) m
   , EqElement text
   , MonadWriter w n
   , IsString text
-  , ConvertSequence c text w n
+  , IsString w
+  , IsSequence seq
+  , ConvertSequence c [text] seq m
+  , ConvertSequence c (Element seq) w n
   , KnownSymbol sym
   , text ~ SubState (Position d text)
-  ) => LineSplitter ('Right sym) 'False c m n (Position d text) where
+  ) => LineSplitter ('Right sym) 'False c m n (Position d text) seq where
   lineSplitter = Biparser
     do
-      p <- get
+      p :: Position d text <- get
       put $ p & subState .~ mempty
-      pure case splitSeq sym $ p ^. subState of
-        [x] | null x -> mempty
-        x -> x
+      case splitSeq sym $ p ^. subState of
+        [x] | null x -> pure mempty
+        x -> convertSequence @c x
     \ls -> do
-      tell <=< convertSequence @c $ intercalate sym ls
+      tell =<< intercalateConvert @c sym ls
       pure ls
     where
+    sym :: IsString a => a
     sym = symbol @sym
+
+intercalateConvert :: forall c n seq seq'.
+  ( IsSequence seq
+  , ConvertSequence c (Element seq) seq' n
+  , Monoid seq'
+  , Applicative n
+  ) => seq' -> seq -> n seq'
+intercalateConvert inter = uncons >>> maybe (pure mempty) \(h,ts) -> liftA2 (<>)
+  (convertSequence @c h)
+  $ foldr
+      (\x xs -> (inter <>) <$> liftA2 (<>) (convertSequence @c x) xs)
+      (pure mempty)
+      ts
 
 -- * Convert Instance Contexts
 

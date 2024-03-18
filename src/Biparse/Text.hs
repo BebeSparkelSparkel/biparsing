@@ -18,7 +18,7 @@ type CharElement s char =
   , SubElement s ~ char
   )
 
-char :: forall c s m n u text char w.
+char :: forall w c s m n u text char.
   ( IsSequence text
   , ElementContext c s
   , CharElement s char

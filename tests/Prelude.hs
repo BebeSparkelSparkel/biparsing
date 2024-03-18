@@ -13,7 +13,6 @@ module Prelude
   , module Control.Monad.ChangeMonad
   , module Control.Monad.EitherString
   , module Control.Monad.Except
-  , module Control.Monad.RWS
   , module Control.Monad.State
   , module Control.Monad.StateError
   , module Control.Monad.Trans.Class
@@ -69,6 +68,7 @@ module Prelude
   , FM
   , TriSum(..)
   , (>>>)
+  , RWST
   ) where
 
 import Biparse.Biparser hiding (Biparser, Iso, Unit, Const, ConstU)
@@ -83,7 +83,7 @@ import Control.Monad ((>>=), return, (>>), fail, MonadPlus, MonadFail, Monad, vo
 import Control.Monad.ChangeMonad (ChangeMonad, ChangeFunction, changeMonad', ResultMonad(ResultingMonad))
 import Control.Monad.EitherString (EitherString(EValue), isString)
 import Control.Monad.Except (MonadError(throwError,catchError))
-import Control.Monad.RWS (RWST(RWST), runRWST)
+import Control.Monad.Trans.RWS.CPS (RWST, rwsT, runRWST)
 import Control.Monad.State (MonadState, get, put)
 import Control.Monad.StateError (StateErrorT, ErrorInstance(NewtypeInstance,ErrorStateInstance), ErrorState(ErrorState))
 import Control.Monad.Trans.Class (MonadTrans, lift)
@@ -144,7 +144,7 @@ fb :: forall is c s m m' n r w ws u v.
   , ChangeMonad is m m'
   , ResultMonad m is
   , Functor n
-  , BackwardC c
+  , BackwardC c n w
   )
   => String
   -> Biparser c s m n r w ws u v
@@ -198,8 +198,8 @@ instance Eq Builder where x == y = Data.ByteString.Builder.toLazyByteString x ==
 instance Applicative m => ConvertSequence c String Text       m where convertSequence = pure . fromString
 instance Applicative m => ConvertSequence c String ByteString m where convertSequence = pure . fromString
 
-instance BackwardC c where
+instance (Functor n, Monoid w) => BackwardC c n w where
   type BackwardT c = RWST
-  backwardT = RWST
+  backwardT = rwsT
   runBackwardT = runRWST
 
