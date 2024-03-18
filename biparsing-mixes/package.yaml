@@ -1,0 +1,25 @@
+name: biparsing-mixes
+version: 0.0.0.1
+
+default-extensions: []
+
+library:
+  source-dirs: src/
+  dependencies:
+    - name: base
+      mixin:
+        - hiding (Prelude)
+    - biparsing
+  ghc-options:
+    - -Werror
+    - -Weverything
+
+    - -Wno-implicit-prelude
+    - -Wno-missing-deriving-strategies
+    - -Wno-missing-kind-signatures
+    - -Wno-missing-local-signatures
+    - -Wno-missing-safe-haskell-mode
+    - -Wno-safe
+    - -Wno-unsafe
+
+    - -Wno-unused-packages

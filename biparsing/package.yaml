@@ -8,9 +8,9 @@ dependencies:
   - data-default
   - extra
   - lens
-  - mono-traversable
+  - mono-traversable >= 1.0.17.0
   - mtl >= 2.3
-  - transformers
+  - transformers >= 0.6.1.1
   - containers
   - semigroupoids
 
@@ -85,8 +85,8 @@ tests:
       - bytestring
       - generic-deriving
       - generic-random
-      - hspec
-      - hspec-discover
+      - hspec <= 2.9.7
+      - hspec-discover <= 2.9.7
       - quickcheck-instances
       - text
       - vector

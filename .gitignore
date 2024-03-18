@@ -1,5 +1,5 @@
 .stack-work/
-biparsing.cabal
+dist-*
 *~
 node_modules
 *.prof

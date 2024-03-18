@@ -1,0 +1,174 @@
+cabal-version: 2.0
+
+-- This file has been generated from package.yaml by hpack version 0.36.0.
+--
+-- see: https://github.com/sol/hpack
+
+name:           biparsing
+version:        0.0.0.1
+build-type:     Simple
+
+library
+  exposed-modules:
+      Biparse.AlternativeAttributes
+      Biparse.Biparser
+      Biparse.Biparser.Internal
+      Biparse.Biparser.PolyKinds
+      Biparse.Biparser.StateReaderWriter
+      Biparse.Constructor
+      Biparse.Context.Index
+      Biparse.FixFail
+      Biparse.General
+      Biparse.List
+      Biparse.Pair
+      Biparse.Text
+      Biparse.Text.Context.LineColumn
+      Biparse.Text.LineBreak
+      Biparse.Text.Numeric
+      Biparse.Unordered
+      Biparse.Utils
+      Control.Monad.ChangeMonad
+      Control.Monad.EitherString
+      Control.Monad.MonadProgenitor
+      Control.Monad.StateError
+      Control.Monad.TransformerBaseMonad
+      Control.Monad.UndefinedBackwards
+      Control.Monad.Unrecoverable
+      Control.Monad.Writer.Map
+      Control.Profunctor.FwdBwd
+      Data.EqElement
+  other-modules:
+      Prelude
+  hs-source-dirs:
+      src/
+  default-extensions:
+      BlockArguments
+      ConstraintKinds
+      DataKinds
+      DeriveFunctor
+      DeriveGeneric
+      DerivingVia
+      DuplicateRecordFields
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GeneralizedNewtypeDeriving
+      ImportQualifiedPost
+      LambdaCase
+      MultiParamTypeClasses
+      PatternSynonyms
+      QuantifiedConstraints
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      StandaloneDeriving
+      StandaloneKindSignatures
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      ViewPatterns
+  ghc-options: -Werror -Weverything -Wno-implicit-prelude -Wno-missing-deriving-strategies -Wno-missing-kind-signatures -Wno-missing-local-signatures -Wno-missing-safe-haskell-mode -Wno-safe -Wno-unsafe -Wno-unused-packages
+  build-depends:
+      base
+    , bytestring
+    , containers
+    , data-default
+    , data-diverse
+    , extra
+    , generic-data
+    , hvect
+    , lens
+    , mono-traversable >=1.0.17.0
+    , mtl >=2.3
+    , profunctors
+    , safe
+    , semigroupoids
+    , split
+    , stringsearch
+    , text
+    , transformers >=0.6.1.1
+    , vector
+  mixins:
+      base hiding (Prelude)
+  default-language: Haskell2010
+
+test-suite spec
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      Biparse.AlternativeAttributesSpec
+      Biparse.Biparser.StateReaderWriterSpec
+      Biparse.BiparserSpec
+      Biparse.ConstructorSpec
+      Biparse.Context.IndexSpec
+      Biparse.Easy.EitherSpec
+      Biparse.GeneralSpec
+      Biparse.ListSpec
+      Biparse.Text.Context.LineColumnSpec
+      Biparse.Text.LineBreakSpec
+      Biparse.Text.NumericSpec
+      Biparse.UnorderedSpec
+      Control.Monad.StateErrorSpec
+      Control.Monad.UnrecoverableSpec
+      Prelude
+      Paths_biparsing
+  autogen-modules:
+      Paths_biparsing
+  hs-source-dirs:
+      tests/
+  default-extensions:
+      BlockArguments
+      ConstraintKinds
+      DataKinds
+      DeriveFunctor
+      DeriveGeneric
+      DerivingVia
+      DuplicateRecordFields
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GeneralizedNewtypeDeriving
+      ImportQualifiedPost
+      LambdaCase
+      MultiParamTypeClasses
+      PatternSynonyms
+      QuantifiedConstraints
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      StandaloneDeriving
+      StandaloneKindSignatures
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      ViewPatterns
+      OverloadedStrings
+      OverloadedLists
+      NamedFieldPuns
+  ghc-options: -Werror -Weverything -fprint-potential-instances -Wno-implicit-prelude -Wno-incomplete-uni-patterns -Wno-missing-deriving-strategies -Wno-missing-export-lists -Wno-missing-import-lists -Wno-missing-kind-signatures -Wno-missing-local-signatures -Wno-missing-safe-haskell-mode -Wno-orphans -Wno-safe -Wno-unsafe -Wno-unused-packages
+  build-depends:
+      QuickCheck
+    , base
+    , biparsing
+    , bytestring
+    , containers
+    , data-default
+    , extra
+    , generic-deriving
+    , generic-random
+    , ghc-prim
+    , hspec <=2.9.7
+    , hspec-discover <=2.9.7
+    , lens
+    , mono-traversable >=1.0.17.0
+    , mtl >=2.3
+    , quickcheck-instances
+    , semigroupoids
+    , text
+    , transformers >=0.6.1.1
+    , vector
+  mixins:
+      base hiding (Prelude)
+  default-language: Haskell2010
