@@ -1,12 +1,18 @@
 name: biparsing-mixes
 version: 0.0.0.1
+synopsis: Easy to use monad and type mixes for biparsing.
+homepage: https://github.com/BebeSparkelSparkel/biparsing
+catagory: Parsing
+author: William Rusnack
+license: BSD-3-Clause
+license-file: ../LICENSE
 spec-version: 0.36.0
 
 dependencies:
   - name: base
     mixin:
       - hiding (Prelude)
-  - biparsing
+  - biparsing-core
   - bytestring
   - text
   - mono-traversable >= 1.0.17.0
