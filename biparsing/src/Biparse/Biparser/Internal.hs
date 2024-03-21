@@ -37,6 +37,7 @@ module Biparse.Biparser.Internal
   , ignoreBackward
   , GetSubState(..)
   , InitSuperState(..)
+  , SuperArg
   , UpdateStateWithSubState(..)
   , SubStateContext
   , SubElement
@@ -320,7 +321,10 @@ instance GetSubState (Identity s) where
 type InitSuperState :: Type -> Type -> Constraint
 class InitSuperState c ss where
   type SuperState c ss :: Type
-  fromSubState :: ss -> SuperState c ss
+  fromSubState :: SuperArg (SuperState c ss) -> ss -> SuperState c ss
+
+type SuperArg :: Type -> Type
+type family SuperArg s
 
 -- * Updating State
 
@@ -335,8 +339,6 @@ class InitSuperState c ss where
 class UpdateStateWithSubState context state where
   updateSubStateContext :: ss ~ SubState state => state -> ss -> ss -> state
 
-instance UpdateStateWithSubState c (Identity s) where updateSubStateContext _ _ = Identity
-
 type SubStateContext context state = (GetSubState state, UpdateStateWithSubState context state)
 
 type SubElement :: Type -> Type
@@ -350,8 +352,6 @@ type SubElement s = Element (SubState s)
 -- - Returns the updated state
 class UpdateStateWithElement context state where
   updateElementContext :: state -> SubElement state -> SubState state -> state
-
-instance UpdateStateWithElement c (Identity s) where updateElementContext _ _ = Identity
 
 type ElementContext context state = (GetSubState state, UpdateStateWithElement context state)
 

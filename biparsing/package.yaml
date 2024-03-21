@@ -1,5 +1,6 @@
 name: biparsing
 version: 0.0.0.1
+spec-version: 0.36.0
 
 dependencies:
   - name: base
@@ -44,6 +45,8 @@ default-extensions:
 
 library:
   source-dirs: src/
+  other-modules:
+    - Prelude
   dependencies:
     - data-diverse
     - generic-data
@@ -57,10 +60,6 @@ library:
     - bytestring
     - split
     - stringsearch
-
-  other-modules:
-    - Prelude
-    #- Paths_biparsing
   ghc-options:
     - -Werror
     - -Weverything
@@ -85,8 +84,8 @@ tests:
       - bytestring
       - generic-deriving
       - generic-random
-      - hspec <= 2.9.7
-      - hspec-discover <= 2.9.7
+      - hspec
+      - hspec-discover
       - quickcheck-instances
       - text
       - vector

@@ -24,20 +24,21 @@ module Biparse.Text.Context.LineColumn
   , ListToElement
   ) where
 
-import Biparse.Utils (char)
-import Biparse.Text.LineBreak (LineBreakType(Unix,Windows), LineSplitter, lineSplitter, UpdateSuperState)
 import Biparse.Biparser (SubState, GetSubState(getSubState), UpdateStateWithElement(updateElementContext), UpdateStateWithSubState(updateSubStateContext), ReplaceSubState(replaceSubState))
-import Biparse.Biparser.Internal (Biparser(Biparser))
-import Control.Monad.StateError (StateErrorT(StateErrorT), ErrorState(ErrorState), ErrorContext, ErrorInstance(ErrorStateInstance), WrapErrorWithState(StateForError,wrapErrorWithState',stateForError), wrapErrorWithState, errorState)
-import Control.Monad.EitherString (EitherString(EValue,EString))
-import GHC.Exts (IsList(Item))
-import GHC.Exts qualified as GE
-import Control.Monad.ChangeMonad (ChangeMonad, ChangeFunction, changeMonad', ResultMonad(ResultingMonad,resultMonad))
+import Biparse.Biparser.Internal (Biparser(Biparser), InitSuperState(SuperState, fromSubState), SuperArg)
+import Biparse.Text.LineBreak (LineBreakType(Unix,Windows), LineSplitter, lineSplitter, UpdateSuperState)
+import Biparse.Utils (char)
 import Control.Lens (makeLenses, (.~), (%~), _2, _Left, _Right, (^.))
+import Control.Monad.ChangeMonad (ChangeMonad, ChangeFunction, changeMonad', ResultMonad(ResultingMonad,resultMonad))
+import Control.Monad.EitherString (EitherString(EValue,EString))
+import Control.Monad.StateError (StateErrorT(StateErrorT), ErrorState(ErrorState), ErrorContext, ErrorInstance(ErrorStateInstance), WrapErrorWithState(StateForError,wrapErrorWithState',stateForError), wrapErrorWithState, errorState)
 import Control.Monad.UndefinedBackwards (UndefinedBackwards)
 import Data.EqElement (splitElem, splitSeq)
 import Data.MonoTraversable.Unprefixed (foldr)
 import Data.Sequences (uncons)
+import GHC.Exts (IsList(Item))
+import GHC.Exts qualified as GE
+import System.IO (FilePath)
 
 -- * Contexts
 type UnixLC = LineColumn 'Unix
@@ -63,6 +64,25 @@ $(makeLenses ''Position)
 instance GetSubState (Position dataId text) where
   type SubState (Position _ text) = text
   getSubState = _subState
+
+instance InitSuperState (LineColumn lb) text where
+  type SuperState (LineColumn lb) text = Position FilePath text
+  fromSubState = fromSubState'
+instance InitSuperState LinesOnly text where
+  type SuperState LinesOnly text = Position FilePath text
+  fromSubState = fromSubState'
+instance InitSuperState ColumnsOnly text where
+  type SuperState ColumnsOnly text = Position FilePath text
+  fromSubState = fromSubState'
+instance InitSuperState LineColumnUnknownBreak text where
+  type SuperState LineColumnUnknownBreak text = Position FilePath text
+  fromSubState = fromSubState'
+instance InitSuperState NoUpdate text where
+  type SuperState NoUpdate text = Position FilePath text
+  fromSubState = fromSubState'
+fromSubState' :: d -> text -> Position d text
+fromSubState' fp text = startLineColumn @() text & dataId .~ fp
+type instance SuperArg (Position d _) = d
 
 type CharCs text char =
   ( Eq char

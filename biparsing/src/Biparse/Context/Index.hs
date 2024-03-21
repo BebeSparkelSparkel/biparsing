@@ -10,7 +10,7 @@ module Biparse.Context.Index
   ) where
 
 import Control.Monad.StateError (ErrorContext, ErrorState(ErrorState), WrapErrorWithState(StateForError,wrapErrorWithState',stateForError))
-import Biparse.Biparser (SubState, GetSubState(getSubState), UpdateStateWithElement(updateElementContext), UpdateStateWithSubState(updateSubStateContext))
+import Biparse.Biparser (SubState, GetSubState(getSubState), UpdateStateWithElement(updateElementContext), UpdateStateWithSubState(updateSubStateContext), InitSuperState(SuperState,fromSubState), SuperArg)
 import Control.Monad.StateError (ErrorInstance(ErrorStateInstance))
 import GHC.Exts (IsList(Item))
 import GHC.Exts qualified as GE
@@ -33,6 +33,11 @@ deriving instance (Eq (Index ss), Eq ss) => Eq (IndexPosition ss)
 instance GetSubState (IndexPosition ss) where
   type SubState (IndexPosition ss) = ss
   getSubState = subState
+
+instance Num (Index ss) => InitSuperState IndexContext ss where
+  type SuperState IndexContext ss = IndexPosition ss
+  fromSubState _ = startIndex
+type instance SuperArg (IndexPosition _) = ()
 
 instance IsSequence ss => UpdateStateWithSubState IndexContext (IndexPosition ss) where
   updateSubStateContext (IndexPosition i _) consumed remaining = IndexPosition (i + lengthIndex consumed) remaining

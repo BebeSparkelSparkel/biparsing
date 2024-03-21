@@ -1,0 +1,82 @@
+cabal-version: 2.0
+
+-- This file has been generated from package.yaml by hpack version 0.36.0.
+--
+-- see: https://github.com/sol/hpack
+
+name:           biparsing-mixes
+version:        0.0.0.1
+build-type:     Simple
+
+library
+  exposed-modules:
+      Biparse.AssociatedWriter
+      Biparse.Mixes.Either
+      Biparse.Mixes.SubStates
+  other-modules:
+      Prelude
+  hs-source-dirs:
+      src/
+  default-extensions:
+      AllowAmbiguousTypes
+      BlockArguments
+      FlexibleContexts
+      ImportQualifiedPost
+      RankNTypes
+      ScopedTypeVariables
+      TypeApplications
+      FlexibleInstances
+      DataKinds
+      DerivingVia
+      MultiParamTypeClasses
+      StandaloneDeriving
+      StandaloneKindSignatures
+      TypeFamilies
+      UndecidableInstances
+  ghc-options: -Werror -Weverything -Wno-implicit-prelude -Wno-missing-deriving-strategies -Wno-missing-kind-signatures -Wno-missing-local-signatures -Wno-missing-safe-haskell-mode -Wno-safe -Wno-unsafe -Wno-unused-packages
+  build-depends:
+      base
+    , biparsing
+    , bytestring
+    , mono-traversable >=1.0.17.0
+    , text
+    , transformers >=0.6.1.1
+  mixins:
+      base hiding (Prelude)
+  default-language: Haskell2010
+
+test-suite spec
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      Biparse.Mixes.EitherSpec
+      Prelude
+  hs-source-dirs:
+      tests/
+  default-extensions:
+      AllowAmbiguousTypes
+      BlockArguments
+      FlexibleContexts
+      ImportQualifiedPost
+      RankNTypes
+      ScopedTypeVariables
+      TypeApplications
+      FlexibleInstances
+      OverloadedStrings
+      TupleSections
+  ghc-options: -Werror -Weverything -fprint-potential-instances -Wno-implicit-prelude -Wno-incomplete-uni-patterns -Wno-missing-deriving-strategies -Wno-missing-export-lists -Wno-missing-import-lists -Wno-missing-kind-signatures -Wno-missing-local-signatures -Wno-missing-safe-haskell-mode -Wno-orphans -Wno-safe -Wno-unsafe -Wno-unused-packages
+  build-depends:
+      base
+    , biparsing
+    , biparsing-mixes
+    , bytestring
+    , data-default
+    , hspec
+    , hspec-discover
+    , mono-traversable >=1.0.17.0
+    , template-haskell
+    , text
+    , transformers >=0.6.1.1
+  mixins:
+      base hiding (Prelude)
+  default-language: Haskell2010

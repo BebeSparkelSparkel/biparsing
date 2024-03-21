@@ -1,2 +1,4 @@
-packages: */*.cabal
+packages:
+  */*.cabal
+  ../hspec/*/*.cabal
 

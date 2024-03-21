@@ -1,15 +1,39 @@
 name: biparsing-mixes
 version: 0.0.0.1
+spec-version: 0.36.0
 
-default-extensions: []
+dependencies:
+  - name: base
+    mixin:
+      - hiding (Prelude)
+  - biparsing
+  - bytestring
+  - text
+  - mono-traversable >= 1.0.17.0
+  - transformers >= 0.6.1.1
+
+default-extensions:
+  - AllowAmbiguousTypes
+  - BlockArguments
+  - FlexibleContexts
+  - ImportQualifiedPost
+  - RankNTypes
+  - ScopedTypeVariables
+  - TypeApplications
+  - FlexibleInstances
 
 library:
   source-dirs: src/
-  dependencies:
-    - name: base
-      mixin:
-        - hiding (Prelude)
-    - biparsing
+  other-modules:
+    - Prelude
+  default-extensions:
+    - DataKinds
+    - DerivingVia
+    - MultiParamTypeClasses
+    - StandaloneDeriving
+    - StandaloneKindSignatures
+    - TypeFamilies
+    - UndecidableInstances
   ghc-options:
     - -Werror
     - -Weverything
@@ -23,3 +47,37 @@ library:
     - -Wno-unsafe
 
     - -Wno-unused-packages
+
+tests:
+  spec:
+    main: Spec.hs
+    source-dirs: tests/
+    dependencies:
+      - biparsing-mixes
+      - hspec
+      - hspec-discover
+      - data-default
+      - template-haskell
+    default-extensions:
+      - OverloadedStrings
+      - TupleSections
+
+    ghc-options:
+      - -Werror
+      - -Weverything
+      - -fprint-potential-instances
+
+      - -Wno-implicit-prelude
+      - -Wno-incomplete-uni-patterns
+      - -Wno-missing-deriving-strategies
+      - -Wno-missing-export-lists
+      - -Wno-missing-import-lists
+      - -Wno-missing-kind-signatures
+      - -Wno-missing-local-signatures
+      - -Wno-missing-safe-haskell-mode
+      - -Wno-orphans
+      - -Wno-safe
+      - -Wno-unsafe
+
+      - -Wno-unused-packages
+

@@ -102,7 +102,6 @@ test-suite spec
       Biparse.BiparserSpec
       Biparse.ConstructorSpec
       Biparse.Context.IndexSpec
-      Biparse.Easy.EitherSpec
       Biparse.GeneralSpec
       Biparse.ListSpec
       Biparse.Text.Context.LineColumnSpec
@@ -112,9 +111,6 @@ test-suite spec
       Control.Monad.StateErrorSpec
       Control.Monad.UnrecoverableSpec
       Prelude
-      Paths_biparsing
-  autogen-modules:
-      Paths_biparsing
   hs-source-dirs:
       tests/
   default-extensions:
@@ -159,8 +155,8 @@ test-suite spec
     , generic-deriving
     , generic-random
     , ghc-prim
-    , hspec <=2.9.7
-    , hspec-discover <=2.9.7
+    , hspec
+    , hspec-discover
     , lens
     , mono-traversable >=1.0.17.0
     , mtl >=2.3
