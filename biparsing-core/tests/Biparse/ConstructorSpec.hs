@@ -2,7 +2,7 @@
 module Biparse.ConstructorSpec where
 
 import Biparse.Constructor
-import Control.Lens (_1, _2, (^.))
+import Lens.Micro (_1, _2, (^.))
 import Control.Monad.ChangeMonad (Lift)
 
 spec :: Spec

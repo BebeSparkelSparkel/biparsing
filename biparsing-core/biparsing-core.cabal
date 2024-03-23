@@ -85,7 +85,10 @@ library
     , extra
     , generic-data
     , hvect
-    , lens
+    , microlens
+    , microlens-mtl
+    , microlens-pro
+    , microlens-th
     , mono-traversable >=1.0.17.0
     , mtl >=2.3
     , profunctors
@@ -166,7 +169,10 @@ test-suite spec
     , ghc-prim
     , hspec
     , hspec-discover
-    , lens
+    , microlens
+    , microlens-mtl
+    , microlens-pro
+    , microlens-th
     , mono-traversable >=1.0.17.0
     , mtl >=2.3
     , quickcheck-instances

@@ -11,7 +11,7 @@ module Control.Monad.EitherString
   ) where
 
 import Control.Applicative (Applicative, Alternative((<|>),empty))
-import Control.Lens (Prism, Prism', prism, prism')
+import Lens.Micro.Pro (Prism, Prism', prism, prism')
 import Control.Monad (Monad, MonadFail(fail), MonadPlus)
 import Control.Monad.Except (MonadError)
 import Data.Bool (Bool)

@@ -5,7 +5,7 @@ import Biparse.Biparser.StateReaderWriter (N)
 import Biparse.List (all)
 import Biparse.List (takeElementsWhile)
 import Biparse.Text.LineBreak (lines, LineBreakType(Unix))
-import Control.Lens (_3, (%~))
+import Lens.Micro (_3, (%~))
 import Control.Monad.EitherString (_EValue)
 import Control.Monad.RWS.CPS (mapRWST)
 import Data.Sequences qualified as MT

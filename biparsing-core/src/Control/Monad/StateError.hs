@@ -21,7 +21,7 @@ import Control.Monad.ChangeMonad (ChangeMonad, ChangeFunction, changeMonad', Res
 import Control.Monad.Unrecoverable (MonadUnrecoverable, throwUnrecoverable, UnrecoverableError)
 import Control.Monad.TransformerBaseMonad (TransformerBaseMonad, LiftBaseMonad, liftBaseMonad)
 import Control.Monad.MonadProgenitor (MonadProgenitor)
-import Control.Lens (makeLenses)
+import Lens.Micro.TH (makeLenses)
 import Control.Monad (MonadPlus)
 import Control.Applicative (Alternative, empty, (<|>))
 import Control.Monad.Reader.Class (MonadReader)

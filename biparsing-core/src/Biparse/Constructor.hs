@@ -24,7 +24,8 @@ module Biparse.Constructor
 import Control.Monad.ChangeMonad (ChangeMonad, ChangeFunction, changeMonad')
 import Biparse.Biparser (Biparser, pattern Biparser, SubState, SubElement, one, Iso, GetSubState, UpdateStateWithElement)
 import Biparse.Biparser.StateReaderWriter qualified as BSRW
-import Control.Lens (Traversal', preview, assign)
+import Lens.Micro (Traversal')
+import Lens.Micro.Mtl (preview, assign)
 import Control.Monad.TransformerBaseMonad (TransformerBaseMonad, LiftBaseMonad, liftBaseMonad)
 import Control.Monad.Reader (ReaderT(ReaderT), ask)
 import Control.Monad.StateError (runStateErrorT)

@@ -15,7 +15,10 @@ dependencies:
       - hiding (Prelude)
   - data-default
   - extra
-  - lens
+  - microlens
+  - microlens-mtl
+  - microlens-pro
+  - microlens-th
   - mono-traversable >= 1.0.17.0
   - mtl >= 2.3
   - transformers >= 0.6.1.1
