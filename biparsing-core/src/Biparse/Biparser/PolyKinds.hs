@@ -4,7 +4,7 @@ module Biparse.Biparser.PolyKinds
   ( zoom
   ) where
 
-import Biparse.Biparser.Internal (ReplaceSubState(replaceSubState), Iso, Biparser(Biparser))
+import Biparse.Biparser.Internal (ReplaceSubState(replaceSubState), Iso, Biparser, pattern Biparser)
 import Control.Monad.ChangeMonad (ChangeMonad, ChangeFunction, changeMonad')
 import Control.Monad.MonadProgenitor (MonadProgenitor)
 import Control.Monad.State (State, runState, evalState)

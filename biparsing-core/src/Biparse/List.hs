@@ -32,7 +32,7 @@ module Biparse.List
   , tailAlt
   ) where
 
-import Biparse.Biparser (Biparser(Biparser), forward, backward, Iso, SubElement, SubState, one, try, mono, ElementContext, FixFail, fix, peek, Unit, UpdateStateWithSubState, isNull, breakWhen', GetSubState, upon, uponM, UpdateStateWithElement, SubStateContext, forwardFail)
+import Biparse.Biparser (Biparser, pattern Biparser, forward, backward, Iso, SubElement, SubState, one, try, mono, ElementContext, FixFail, fix, peek, Unit, UpdateStateWithSubState, isNull, breakWhen', GetSubState, upon, uponM, UpdateStateWithElement, SubStateContext, forwardFail)
 import Biparse.General (take, takeNot, memptyWrite, BreakWhen, rest, stripPrefix)
 import Data.List.NonEmpty (NonEmpty, nonEmpty)
 import Control.Profunctor.FwdBwd (MapMs(mapMs))

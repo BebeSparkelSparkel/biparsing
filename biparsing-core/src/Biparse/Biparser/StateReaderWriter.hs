@@ -27,7 +27,7 @@ import Control.Monad.ChangeMonad (ChangeMonad, ChangeFunction, changeMonad', Res
 import Control.Monad.MonadProgenitor (MonadProgenitor)
 import Control.Monad.StateError (StateErrorT(StateErrorT), runStateErrorT, runSET, M, ErrorInstance)
 
-type Biparser c s m n r w ws u v = B.Biparser c s (M c s m) (N c n r w ws) u v 
+type Biparser c s m n r w ws = B.Biparser c s (M c s m) (N c n r w ws)
 type Iso c m n r w ws s v = Biparser c s m n r w ws v v
 type Unit c s m n r w ws = Biparser c s m n r w ws () ()
 type Const c s m n r w ws u = Biparser c s m n r w ws u ()

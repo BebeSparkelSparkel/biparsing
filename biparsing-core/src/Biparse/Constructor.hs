@@ -22,7 +22,7 @@ module Biparse.Constructor
   ) where
 
 import Control.Monad.ChangeMonad (ChangeMonad, ChangeFunction, changeMonad')
-import Biparse.Biparser (Biparser(Biparser), SubState, SubElement, one, Iso, GetSubState, UpdateStateWithElement)
+import Biparse.Biparser (Biparser, pattern Biparser, SubState, SubElement, one, Iso, GetSubState, UpdateStateWithElement)
 import Biparse.Biparser.StateReaderWriter qualified as BSRW
 import Control.Lens (Traversal', preview, assign)
 import Control.Monad.TransformerBaseMonad (TransformerBaseMonad, LiftBaseMonad, liftBaseMonad)

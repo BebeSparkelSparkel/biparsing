@@ -25,7 +25,7 @@ module Biparse.Text.Context.LineColumn
   ) where
 
 import Biparse.Biparser (SubState, GetSubState(getSubState), UpdateStateWithElement(updateElementContext), UpdateStateWithSubState(updateSubStateContext), ReplaceSubState(replaceSubState))
-import Biparse.Biparser.Internal (Biparser(Biparser), InitSuperState(SuperState, fromSubState), SuperArg)
+import Biparse.Biparser.Internal (pattern Biparser, InitSuperState(SuperState, fromSubState), SuperArg)
 import Biparse.Text.LineBreak (LineBreakType(Unix,Windows), LineSplitter, lineSplitter, UpdateSuperState)
 import Biparse.Utils (char)
 import Control.Lens (makeLenses, (.~), (%~), _2, _Left, _Right, (^.))

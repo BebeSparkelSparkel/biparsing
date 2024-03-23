@@ -2,11 +2,15 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE PatternSynonyms #-}
 module Biparse.Biparser.Internal
-  ( Biparser(Biparser, ..)
+  ( Biparser(..)
+  , pattern Biparser
   , forward
   , setForward
   , backward
   , setBackward
+  , GetContext
+  , ForwardMonad
+  , BackwardMonad
   , Iso
   , IsoClass(..)
   , Unit
@@ -89,6 +93,18 @@ setBackward :: forall n c s m n' u u' v. Biparser c s m n u v -> (u' -> n' v) ->
 setBackward (Biparser fw _) = Biparser fw
 
 type instance BwdMonad () (Biparser _ _ _ n) = n
+
+type GetContext :: Type -> Type
+type family GetContext bp where
+  GetContext (Biparser c _ _ _ _ _) = c
+type ForwardMonad :: Type -> Type -> Type
+type family ForwardMonad bp where
+  ForwardMonad (Biparser _ _ m _ _ _) = m
+  --ForwardMonad (Biparser _ _ m) = m
+type BackwardMonad :: Type -> Type -> Type
+type family BackwardMonad bp where
+  BackwardMonad (Biparser _ _ _ n _ _) = n
+  --BackwardMonad (Biparser _ _ _ n) = n
 
 -- * Mapping Backward
 -- Used to converte @u@ to the correct type for the biparser.

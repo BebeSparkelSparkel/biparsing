@@ -1,6 +1,7 @@
 {-# OPTIONS_GHC -Wno-missing-import-lists #-}
 module Biparse.Mixes.Either 
   ( module Biparse.Biparser
+  , pattern Biparser
   , module Biparse.General
   , module Biparse.List
   , module Biparse.Context.Index
@@ -10,6 +11,7 @@ module Biparse.Mixes.Either
   , module Biparse.Text.Context.LineColumn
   , module Biparse.Unordered
   , module Biparse.AssociatedWriter
+  , module Control.Monad.RWS.Class
 
   , BiparserEasy
   , IsoEasy
@@ -36,8 +38,10 @@ import Biparse.Text.Context.LineColumn
 import Biparse.Text.LineBreak
 import Biparse.Text.Numeric
 import Biparse.Unordered
+import Control.Monad.RWS.Class
 
 import Biparse.Biparser hiding (Biparser, Iso, Unit, Const, ConstU)
+import Biparse.Biparser qualified
 import Biparse.Biparser.StateReaderWriter qualified as SRW
 import Control.Monad.ChangeMonad
 import Control.Monad.EitherString
@@ -49,7 +53,7 @@ import Data.Functor.Identity (Identity)
 --
 -- | Try using these types and functions before using the more general ones in the next section.
 
-type BiparserEasy c ss u v = Biparser c ss () () u v
+type BiparserEasy c ss = Biparser c ss () ()
 type IsoEasy c ss v = Iso c () () ss v
 --type Unit c ss r w ws = Biparser css r w ws () ()
 --type UnitEasy c ss r w ws = Biparser css r w ws () ()
@@ -93,12 +97,15 @@ instance ResultMonad (FM' s) StringErrorIS where
 --
 -- | Try using these before using the more general types and functions defined in Biparse.Biparser.StateReaderWriter and Biparse.Biparser
 
-type Biparser c ss r ws u v = SRW.Biparser (Mixes c) (SuperState c ss) (FM c ss) EitherString r (AssociatedWriter ss) ws u v
+type Biparser c ss r ws = SRW.Biparser (Mixes c) (SuperState c ss) (FM c ss) EitherString r (AssociatedWriter ss) ws
 type Iso c r ws ss v = Biparser c ss r ws v v
 
 type FM c ss = Either (Error c ss)
 type FM' s = Either (ErrorState String s)
 type Error c ss = ErrorState String (SuperState c ss)
+
+pattern Biparser :: ForwardMonad (Biparser c ss r ws u v) v -> (u -> BackwardMonad (Biparser c ss r ws u v) v) -> Biparser c ss r ws u v
+pattern Biparser fw bw = Biparse.Biparser.Biparser fw bw
 
 evalForward :: forall c e ss r ws u v.
   ( InitSuperState c ss

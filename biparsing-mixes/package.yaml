@@ -17,6 +17,7 @@ dependencies:
   - text
   - mono-traversable >= 1.0.17.0
   - transformers >= 0.6.1.1
+  - mtl
 
 default-extensions:
   - AllowAmbiguousTypes
@@ -40,6 +41,7 @@ library:
     - StandaloneKindSignatures
     - TypeFamilies
     - UndecidableInstances
+    - PatternSynonyms
   ghc-options:
     - -Werror
     - -Weverything

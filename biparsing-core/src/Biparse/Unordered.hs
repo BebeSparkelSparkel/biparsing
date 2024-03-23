@@ -16,7 +16,7 @@ module Biparse.Unordered
   , UnorderedParser
   ) where
 
-import Biparse.Biparser (Iso, IsoClass(iso), SubState, upon, try, forward, backward, Biparser(Biparser))
+import Biparse.Biparser (Iso, IsoClass(iso), SubState, upon, try, forward, backward, pattern Biparser)
 import Biparse.General (optional)
 import Biparse.List (many, Many)
 import Data.HVect (HVect((:&:)), Append, (<++>))
