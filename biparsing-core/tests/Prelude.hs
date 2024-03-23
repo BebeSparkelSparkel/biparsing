@@ -203,3 +203,8 @@ instance (Functor n, Monoid w) => BackwardC c n w where
   backwardT = rwsT
   runBackwardT = runRWST
 
+instance UpdateStateWithElement () (Identity ss) where
+  updateElementContext _ _ = Identity
+instance UpdateStateWithSubState () (Identity ss) where
+  updateSubStateContext _ _ = Identity
+

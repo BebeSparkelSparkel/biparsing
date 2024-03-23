@@ -1,5 +1,6 @@
 #!/bin/sh
 
+target=$1
 continue=true
 
 packageFiles() {
@@ -22,7 +23,7 @@ cabalWatch() {
   echo cabalWatch
   while [ $continue = true ]
   do
-    cabalAndHaskellFiles | entr -cd cabal test -O0
+    cabalAndHaskellFiles | entr -cd cabal $target -O0
   done
 }
 

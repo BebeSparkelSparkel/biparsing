@@ -50,7 +50,7 @@ import Data.Functor.Identity (Identity)
 -- | Try using these types and functions before using the more general ones in the next section.
 
 type BiparserEasy c ss u v = Biparser c ss () () u v
-type IsoEasy c ss v = Iso c () ss () v
+type IsoEasy c ss v = Iso c () () ss v
 --type Unit c ss r w ws = Biparser css r w ws () ()
 --type UnitEasy c ss r w ws = Biparser css r w ws () ()
 --type Const c s m n r w ws u = 

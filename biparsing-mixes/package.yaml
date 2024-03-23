@@ -2,10 +2,10 @@ name: biparsing-mixes
 version: 0.0.0.1
 synopsis: Easy to use monad and type mixes for biparsing.
 homepage: https://github.com/BebeSparkelSparkel/biparsing
-catagory: Parsing
+category: Parsing
 author: William Rusnack
 license: BSD-3-Clause
-license-file: ../LICENSE
+license-file: LICENSE
 spec-version: 0.36.0
 
 dependencies:
@@ -56,6 +56,7 @@ library:
 
 tests:
   spec:
+    build-tools: hspec-discover
     main: Spec.hs
     source-dirs: tests/
     dependencies:

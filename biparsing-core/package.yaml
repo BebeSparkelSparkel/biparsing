@@ -1,5 +1,12 @@
 name: biparsing-core
 version: 0.0.0.1
+synopsis: Core modules for biparsing.
+homepage: https://github.com/BebeSparkelSparkel/biparsing
+category: Parsing
+author: William Rusnack
+license: BSD-3-Clause
+license-file: LICENSE
+
 spec-version: 0.36.0
 
 dependencies:
@@ -76,11 +83,12 @@ library:
 
 tests:
   spec:
+    build-tools: hspec-discover
     main: Spec.hs
     source-dirs: tests/
     dependencies:
       - QuickCheck
-      - biparsing
+      - biparsing-core
       - bytestring
       - generic-deriving
       - generic-random

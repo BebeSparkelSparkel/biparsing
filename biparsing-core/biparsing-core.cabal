@@ -1,11 +1,18 @@
-cabal-version: 2.0
+cabal-version: 2.2
 
 -- This file has been generated from package.yaml by hpack version 0.36.0.
 --
 -- see: https://github.com/sol/hpack
 
-name:           biparsing
+name:           biparsing-core
 version:        0.0.0.1
+synopsis:       Core modules for biparsing.
+category:       Parsing
+homepage:       https://github.com/BebeSparkelSparkel/biparsing
+author:         William Rusnack
+maintainer:     William Rusnack
+license:        BSD-3-Clause
+license-file:   LICENSE
 build-type:     Simple
 
 library
@@ -144,10 +151,12 @@ test-suite spec
       OverloadedLists
       NamedFieldPuns
   ghc-options: -Werror -Weverything -fprint-potential-instances -Wno-implicit-prelude -Wno-incomplete-uni-patterns -Wno-missing-deriving-strategies -Wno-missing-export-lists -Wno-missing-import-lists -Wno-missing-kind-signatures -Wno-missing-local-signatures -Wno-missing-safe-haskell-mode -Wno-orphans -Wno-safe -Wno-unsafe -Wno-unused-packages
+  build-tool-depends:
+      hspec-discover:hspec-discover
   build-depends:
       QuickCheck
     , base
-    , biparsing
+    , biparsing-core
     , bytestring
     , containers
     , data-default

@@ -35,3 +35,4 @@ spec = do
             it "Forward" $ fw naturalBaseTen def "123" `shouldBe` Right (123 :: Word8)
 
     $(doE $ noBindS . (\(c,ss) -> varE "typedTests" `appTypeE` c `appTypeE` ss) <$> combinations contexts subStates)
+

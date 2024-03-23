@@ -17,6 +17,7 @@ module Prelude
   , module Data.Ix
   , module Biparse.Mixes.SubStates
   , module Data.Word
+  , module GHC.Err
 
   , contexts
   , subStates
@@ -43,6 +44,7 @@ import Text.Printf (IsChar, fromChar, toChar)
 import Text.Show (Show)
 import Data.Ix (Ix)
 import Biparse.Mixes.SubStates
+import GHC.Err (undefined)
 
 instance IsString Name where fromString = mkName
 instance IsString TypeQ where fromString = conT . mkName
@@ -75,3 +77,4 @@ combinations :: [a] -> [b] -> [(a,b)]
 combinations xs ys = foldMap (\x -> (x,) <$> ys) xs
 
 instance Eq BB.Builder where x == y = BB.toLazyByteString x == BB.toLazyByteString y
+
