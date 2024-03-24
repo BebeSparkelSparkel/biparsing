@@ -27,6 +27,7 @@ module Biparse.Biparser.Internal
   , comapPred
   , comapPredM
   , comapConst
+  , comapFail
   , upon
   , uponMay
   , uponEither
@@ -34,6 +35,7 @@ module Biparse.Biparser.Internal
   , uponPred
   , uponPredM
   , uponConst
+  , uponFail
   , mapWrite
   , onlyBackwards
   , forwardFail
@@ -158,6 +160,13 @@ comapConst :: forall c s m n u u' v.
   -> Biparser c s m n u  v
 comapConst = FB.comap @() . const
 
+comapFail :: forall c s m n u v.
+  MonadFail n
+  => (u -> Maybe String)
+  -> Biparser c s m n u  v
+  -> Biparser c s m n u  v
+comapFail f = comapM \u -> maybe (pure u) fail $ f u
+
 infix 8 `upon`
 upon :: forall c s m n u u' v.
   Monad n
@@ -214,6 +223,14 @@ uponConst :: forall c s m n u u' v.
   -> u'
   -> Biparser c s m n u  v
 uponConst = flip comapConst
+
+infix 8 `uponFail`
+uponFail :: forall c s m n u v.
+  MonadFail n
+  => Biparser c s m n u  v
+  -> (u -> Maybe String)
+  -> Biparser c s m n u  v
+uponFail = flip comapFail
 
 -- * Map Backwards Write
 
