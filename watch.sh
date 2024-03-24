@@ -13,7 +13,7 @@ cabalAndHaskellFiles() {
 
 hpackWatch() {
   echo hpackWatch
-  while [ $continue = true ]
+  while [ $continue = true -a -n "$(packageFiles)" ]
   do
     packageFiles | entr -dap hpack /_
   done

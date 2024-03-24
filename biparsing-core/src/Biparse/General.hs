@@ -14,6 +14,7 @@ module Biparse.General
   , dropWhile
   , skipUntil
   , untilJust
+  , takeN
   , Pad
   , pad
   , padSet
@@ -230,6 +231,21 @@ untilJust :: forall c s m n u a ss.
   => Biparser c s m n u (Maybe a)
   -> Biparser c s m n u a
 untilJust x = maybe (untilJust x) pure =<< x
+
+-- * N elements
+
+-- | Take n elements. Does not limit what is written backwards.
+takeN ::
+  ( MonadState s m
+  , MonadWriter w n
+  , SubStateContext c s
+  , IsSequence ss
+  , ConvertSequence c ss w n
+  , ss ~ SubState s
+  )
+  => Index ss
+  -> Iso c m n s ss
+takeN = split . StateT . (return .) . MT.splitAt
 
 -- * Pad
 

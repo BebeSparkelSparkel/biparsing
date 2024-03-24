@@ -2,7 +2,7 @@
 module Biparse.List
   ( replicateBiparserT
   , takeElementsWhile
-  , takeN
+  , takeNElements
   , Many
   , many
   , manyId
@@ -89,7 +89,7 @@ takeElementsWhile f =
   <!> return mempty
 
 -- | Take N elements
-takeN :: forall c m n a ss se w.
+takeNElements :: forall c m n a ss se w.
   -- m
   ( MonadFail m
   , MonadState a m
@@ -109,8 +109,8 @@ takeN :: forall c m n a ss se w.
   )
   => Natural
   -> Iso c m n a [se]
-takeN n = if n > 0
-  then cons <$> one `uponM` headAlt <*> takeN (pred n) `uponM` tailAlt
+takeNElements n = if n > 0
+  then cons <$> one `uponM` headAlt <*> takeNElements (pred n) `uponM` tailAlt
   else pure mempty
 
 type Many c s m n =

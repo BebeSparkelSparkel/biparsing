@@ -29,8 +29,8 @@ spec = do
 
       it "prints none" $ b mempty >>= (`shouldBe` (mempty, mempty))
 
-  fb @() "takeN"
-    (takeN 2 :: Iso IndexContext (EISP [Int]) EitherString () [Int] () (IndexPosition [Int]) [Int])
+  fb @() "takeNElements"
+    (takeNElements 2 :: Iso IndexContext (EISP [Int]) EitherString () [Int] () (IndexPosition [Int]) [Int])
     ()
     ()
     (\f -> do
