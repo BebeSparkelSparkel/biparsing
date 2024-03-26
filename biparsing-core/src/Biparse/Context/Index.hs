@@ -45,8 +45,6 @@ instance IsSequence ss => UpdateStateWithSubState IndexContext (IndexPosition ss
 instance Num (Index ss) => UpdateStateWithElement IndexContext (IndexPosition ss) where
   updateElementContext (IndexPosition i _) _ ss = IndexPosition (i + 1) ss
 
-type instance ErrorContext IndexContext = 'ErrorStateInstance
-
 startIndex :: Num (Index ss) => ss -> IndexPosition ss
 startIndex = IndexPosition 0
 

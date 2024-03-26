@@ -27,13 +27,13 @@ import Control.Monad.ChangeMonad (ChangeMonad, ChangeFunction, changeMonad', Res
 import Control.Monad.MonadProgenitor (MonadProgenitor)
 import Control.Monad.StateError (StateErrorT(StateErrorT), runStateErrorT, runSET, M, ErrorInstance)
 
-type Biparser c s m n r w ws = B.Biparser c s (M c s m) (N c n r w ws)
+type Biparser c s m n r w ws = B.Biparser c s (M s m) (N c n r w ws)
 type Iso c m n r w ws s v = Biparser c s m n r w ws v v
 type Unit c s m n r w ws = Biparser c s m n r w ws () ()
 type Const c s m n r w ws u = Biparser c s m n r w ws u ()
 type ConstU c s m n r w ws u v = Biparser c s m n r w ws u v
 
-type IsoClass c m n r w ws a b = B.IsoClass c (M c a m) (N c n r w ws) a b
+type IsoClass c m n r w ws a b = B.IsoClass c (M a m) (N c n r w ws) a b
 
 type N c n r w ws = BackwardT c r w ws n
 

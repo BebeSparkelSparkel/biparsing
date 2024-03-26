@@ -183,11 +183,6 @@ data ListToElement
 instance Monoid text => ChangeMonad ListToElement (EEP dataId e [text]) (EEP dataId e text) where
   changeMonad' () = first $ second ($> mempty)
 type instance ChangeFunction ListToElement (EEP dataId e [text]) (EEP dataId e text) = ()
-  
-type instance ErrorContext (LineColumn _) = 'ErrorStateInstance
-type instance ErrorContext LinesOnly = 'ErrorStateInstance
-type instance ErrorContext ColumnsOnly = 'ErrorStateInstance
-type instance ErrorContext LineColumnUnknownBreak = 'ErrorStateInstance
 
 type EESP dataId text = EEP dataId String text
 type SE dataId text = StateErrorT 'ErrorStateInstance (Position dataId text) (EESP dataId text)

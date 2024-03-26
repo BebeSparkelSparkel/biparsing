@@ -21,13 +21,15 @@ import Control.Monad.TransformerBaseMonad (TransformerBaseMonad, LiftBaseMonad, 
 import Control.Monad.MonadProgenitor (MonadProgenitor)
 import Lens.Micro.TH (makeLenses)
 import Control.Monad.Reader.Class (MonadReader)
+import Control.Monad.EitherString (EitherString)
+import System.IO (IO)
 
 -- * Allow errors to be combined with state information.
 
 newtype StateErrorT (i :: ErrorInstance) s m a = StateErrorT' (StateT s m a)
   deriving (Functor, Applicative, Monad, MonadTrans)
 
-type M c s m = StateErrorT (ErrorContext c) s m
+type M s m = StateErrorT (ErrorContext m) s m
 
 {-# COMPLETE StateErrorT #-}
 pattern StateErrorT :: (s -> m (a, s)) -> StateErrorT i s m a
@@ -41,10 +43,12 @@ data ErrorInstance
   = NewtypeInstance -- | Use the StateT instance
   | ErrorStateInstance -- | Use MonadError (ErrorState e s) m
 
-type ErrorContext :: Type -> ErrorInstance
-type family ErrorContext c
-
-type instance ErrorContext () = 'NewtypeInstance
+type ErrorContext :: (Type -> Type) -> ErrorInstance
+type family ErrorContext m
+type instance ErrorContext (Either _) = 'ErrorStateInstance
+type instance ErrorContext EitherString = 'NewtypeInstance
+type instance ErrorContext IO = 'NewtypeInstance
+type instance ErrorContext Maybe = 'NewtypeInstance
 
 deriving instance Monad m => MonadState s (StateErrorT i s m)
 deriving instance MonadReader r m => MonadReader r (StateErrorT i s m)
