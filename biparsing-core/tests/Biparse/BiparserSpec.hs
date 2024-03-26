@@ -86,7 +86,7 @@ spec = do
       -- take two
       (( split do
           x <- get
-          y <- maybe empty (pure . \(f,s) -> f:s:[]) $
+          y <- maybe (fail "") (pure . \(f,s) -> f:s:[]) $
             liftA2 (,) (headMay x) (index x 1)
           put $ drop 2 x
           return y

@@ -20,11 +20,7 @@ import Control.Monad.Unrecoverable (MonadUnrecoverable, throwUnrecoverable, Unre
 import Control.Monad.TransformerBaseMonad (TransformerBaseMonad, LiftBaseMonad, liftBaseMonad)
 import Control.Monad.MonadProgenitor (MonadProgenitor)
 import Lens.Micro.TH (makeLenses)
-import Control.Monad (MonadPlus)
-import Control.Applicative (Alternative, empty, (<|>))
 import Control.Monad.Reader.Class (MonadReader)
-
-import Control.Exception (IOException)
 
 -- * Allow errors to be combined with state information.
 
@@ -59,15 +55,8 @@ instance Bifunctor ErrorState where
   first f (ErrorState e s) = ErrorState (f e) s
   second f (ErrorState e s) = ErrorState e (f s)
 
-deriving instance MonadPlus m => Alternative (StateErrorT 'NewtypeInstance s m)
-instance (Monoid e, MonadError (ErrorState e s) m, MonadPlus m) => Alternative (StateErrorT 'ErrorStateInstance s m) where
-  empty = throwError mempty
-  StateErrorT' x <|> StateErrorT' y = StateErrorT' $ x <|> y
 instance Alt m => Alt (StateErrorT i s m) where
   StateErrorT' x <!> StateErrorT' y = StateErrorT' $ x <!> y
-
-deriving instance MonadPlus m => MonadPlus (StateErrorT 'NewtypeInstance s m)
-deriving instance (Monoid e, MonadError (ErrorState e s) m, MonadPlus m) => MonadPlus (StateErrorT 'ErrorStateInstance s m)
 
 deriving instance MonadFail m => MonadFail (StateErrorT 'NewtypeInstance s m)
 instance MonadError (ErrorState String s) m => MonadFail (StateErrorT 'ErrorStateInstance s m) where
