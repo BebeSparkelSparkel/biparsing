@@ -13,8 +13,6 @@ module Control.Monad.StateError
   , ErrorInstance(..)
   , ErrorContext
   , runSET
-  , wrapErrorWithState
-  , WrapErrorWithState(..)
   ) where
 
 import Control.Monad.ChangeMonad (ChangeMonad, ChangeFunction, changeMonad', ResultMonad(ResultingMonad,resultMonad), Lift)
@@ -60,10 +58,6 @@ $(makeLenses ''ErrorState)
 instance Bifunctor ErrorState where
   first f (ErrorState e s) = ErrorState (f e) s
   second f (ErrorState e s) = ErrorState e (f s)
-instance WrapErrorWithState (ErrorState e s) s (ErrorState e s) where
-  type StateForError (ErrorState e s) s (ErrorState e s) = s
-  wrapErrorWithState' = ErrorState . _error
-  stateForError = id
 
 deriving instance MonadPlus m => Alternative (StateErrorT 'NewtypeInstance s m)
 instance (Monoid e, MonadError (ErrorState e s) m, MonadPlus m) => Alternative (StateErrorT 'ErrorStateInstance s m) where
@@ -114,36 +108,6 @@ instance
   ) => MonadUnrecoverable (StateErrorT i s m) where
   type UnrecoverableError (StateErrorT i s m) = SubError (UnrecoverableError m)
   throwUnrecoverable e = StateErrorT \s -> throwUnrecoverable $ ErrorState e s
-
--- * Wrapping an error with state information.
-
-wrapErrorWithState :: forall e s er. WrapErrorWithState e s er => e -> s -> er
-wrapErrorWithState e s = wrapErrorWithState' @e @s e $ stateForError @e @_ @er s
-
-type WrapErrorWithState :: Type -> Type -> Type -> Constraint
-class WrapErrorWithState e s er where
-  type StateForError e s er :: Type
-  wrapErrorWithState' :: e -> StateForError e s er -> er
-  stateForError :: s -> StateForError e s er
-
-instance WrapErrorWithState IOException s IOException where
-  type StateForError IOException s IOException = ()
-  wrapErrorWithState' = const
-  stateForError = const ()
-
-instance WrapErrorWithState Void s Void where
-  type StateForError Void s Void = ()
-  wrapErrorWithState' = absurd
-  stateForError = const ()
-
-instance WrapErrorWithState () s () where
-  type StateForError () s () = ()
-  wrapErrorWithState' = const
-  stateForError = const ()
-
-instance MonadError Void Identity where
-  throwError = absurd
-  catchError = const
 
 type instance MonadProgenitor Either s = Either (ErrorState String s)
 type instance MonadProgenitor '(StateErrorT,Either) s = StateErrorT 'ErrorStateInstance s (MonadProgenitor Either s)

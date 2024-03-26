@@ -97,6 +97,7 @@ spec = do
 
   fb @() "some"
     (some (takeUni 1) :: Iso () IO IO () [Int] () (Identity [Int]) (NonEmpty Int))
+    --(some (takeUni 1) :: Iso IndexContext IO IO () [Int] () (IndexPosition [Int]) (NonEmpty Int))
     ()
     ()
     (\f -> do

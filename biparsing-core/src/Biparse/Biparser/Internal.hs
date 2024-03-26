@@ -27,7 +27,6 @@ module Biparse.Biparser.Internal
   , comapPred
   , comapPredM
   , comapConst
-  , comapFail
   , upon
   , uponMay
   , uponEither
@@ -35,7 +34,6 @@ module Biparse.Biparser.Internal
   , uponPred
   , uponPredM
   , uponConst
-  , uponFail
   , mapWrite
   , onlyBackwards
   , forwardFail

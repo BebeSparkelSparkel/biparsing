@@ -32,7 +32,7 @@ import Lens.Micro ((.~), (%~), _2, _Left, _Right, (^.))
 import Lens.Micro.TH (makeLenses)
 import Control.Monad.ChangeMonad (ChangeMonad, ChangeFunction, changeMonad', ResultMonad(ResultingMonad,resultMonad))
 import Control.Monad.EitherString (EitherString(EValue,EString))
-import Control.Monad.StateError (StateErrorT(StateErrorT), ErrorState(ErrorState), ErrorContext, ErrorInstance(ErrorStateInstance), WrapErrorWithState(StateForError,wrapErrorWithState',stateForError), wrapErrorWithState, errorState)
+import Control.Monad.StateError (StateErrorT(StateErrorT), ErrorState(ErrorState), ErrorContext, ErrorInstance(ErrorStateInstance), errorState)
 import Control.Monad.UndefinedBackwards (UndefinedBackwards)
 import Data.EqElement (splitElem, splitSeq)
 import Data.MonoTraversable.Unprefixed (foldr)
@@ -159,15 +159,6 @@ instance IsList ss => IsList (Position () ss) where
 
 data ErrorPosition dataId = ErrorPosition dataId Int Int String deriving (Show, Eq)
 
-instance WrapErrorWithState String (Position dataId text) (ErrorPosition dataId) where
-  type StateForError String (Position dataId text) (ErrorPosition dataId) = Position dataId text
-  wrapErrorWithState' msg (Position d l c _) = ErrorPosition d l c msg
-  stateForError = id
-
---instance ResultMonad (Either (ErrorPosition dataId)) () where
---  type ResultingMonad (Either (ErrorPosition dataId)) () = Either (ErrorPosition dataId)
---  resultMonad = ()
-
 type EEP dataId e text = Either (ErrorState e (Position dataId text))
 
 instance ChangeMonad () (EEP dataId e text) (Either (ErrorPosition dataId)) where
@@ -176,7 +167,7 @@ type instance ChangeFunction () (EEP dataId e text) (Either (ErrorPosition dataI
 
 instance ResultMonad (Either (ErrorState String (Position dataId text))) () where
   type ResultingMonad (Either (ErrorState String (Position dataId text))) () = Either (ErrorPosition dataId)
-  resultMonad (ErrorState e s) = wrapErrorWithState e s
+  resultMonad (ErrorState e (Position d l c _)) = ErrorPosition d l c e
 
 -- | "This instance is not sound and is a hack for zoom. The monad conversion in zoom should be more complete or throw away the text entirely but 'catch' in 'MonadError e (StateErrorT s m)' makes this difficult.
 data ElementToList

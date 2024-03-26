@@ -25,8 +25,3 @@ instance ChangeMonad () (Either (ErrorState String Int)) (Either String) where
   changeMonad' = first
 type instance ChangeFunction () (Either (ErrorState String Int)) (Either String) = ErrorState String Int -> String
 
-instance WrapErrorWithState String Int String where
-  type StateForError String Int String = ()
-  wrapErrorWithState' = const
-  stateForError = const ()
-
