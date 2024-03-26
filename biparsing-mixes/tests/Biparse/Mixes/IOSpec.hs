@@ -1,16 +1,15 @@
 {-# LANGUAGE TemplateHaskell #-}
-module Biparse.Mixes.EitherSpec where
+module Biparse.Mixes.IOSpec where
 
-import Biparse.Mixes.Either
+import Biparse.Mixes.IO
 import Language.Haskell.TH (doE, noBindS, varE, appTypeE)
 
 spec :: Spec
 spec = do
   describe "Easy" do
     let typedTests :: forall c ss.
-          ( ChangeMonad StringErrorIS (FM c ss) (Either String)
-          , ConvertElement (Mixes c) (SubElement (SuperState c ss)) (AssociatedWriter ss) (RWST () (AssociatedWriter ss) () EitherString)
-          , ConvertSequence (Mixes c) (SubState (SuperState c ss)) (AssociatedWriter ss) (RWST () (AssociatedWriter ss) () EitherString)
+          ( ConvertElement (Mixes c) (SubElement (SuperState c ss)) (AssociatedWriter ss) (RWST () (AssociatedWriter ss) () IO)
+          , ConvertSequence (Mixes c) (SubState (SuperState c ss)) (AssociatedWriter ss) (RWST () (AssociatedWriter ss) () IO)
           , GetSubState (SuperState c ss)
           , IsSequence (SubState (SuperState c ss))
           , IsString ss
@@ -29,11 +28,11 @@ spec = do
           let fw = evalForwardEasy @c @ss
               bw = evalBackwardEasy @c @ss
           describe "one" do
-            it "Forward" $ fw one def "abc" `shouldBe` Right (fromChar 'a')
-            it "Backward" $ bw one (fromChar 'z') `shouldBe` Right "z"
+            it "Forward" $ fw one def "abc" >>= (`shouldBe` fromChar 'a')
+            it "Backward" $ bw one (fromChar 'z') >>= (`shouldBe` "z")
           describe "naturalBaseTen" do
-            it "Forward" $ fw naturalBaseTen def "123" `shouldBe` Right (123 :: Word8)
-            it "Backward" $ bw naturalBaseTen (123 :: Word8) `shouldBe` Right "123"
+            it "Forward" $ fw naturalBaseTen def "123" >>= (`shouldBe` (123 :: Word8))
+            it "Backward" $ bw naturalBaseTen (123 :: Word8) >>= (`shouldBe` "123")
 
     $(doE $ noBindS . (\(c,ss) -> varE "typedTests" `appTypeE` c `appTypeE` ss) <$> combinations contexts subStates)
 

@@ -18,30 +18,32 @@ dependencies:
   - mono-traversable >= 1.0.17.0
   - transformers >= 0.6.1.1
   - mtl
+  - semigroupoids
 
 default-extensions:
   - AllowAmbiguousTypes
   - BlockArguments
   - FlexibleContexts
+  - FlexibleInstances
   - ImportQualifiedPost
   - RankNTypes
   - ScopedTypeVariables
   - TypeApplications
-  - FlexibleInstances
 
 library:
   source-dirs: src/
   other-modules:
     - Prelude
+    - Biparse.Mixes.Exports
   default-extensions:
     - DataKinds
     - DerivingVia
     - MultiParamTypeClasses
+    - PatternSynonyms
     - StandaloneDeriving
     - StandaloneKindSignatures
     - TypeFamilies
     - UndecidableInstances
-    - PatternSynonyms
   ghc-options:
     - -Werror
     - -Weverything

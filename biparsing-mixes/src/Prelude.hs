@@ -9,6 +9,7 @@ module Prelude
   , module Data.String
   , module System.IO
   , module Biparse.Mixes.SubStates
+  , module Control.Monad.StateError
 
   , Mixes
   ) where
@@ -21,6 +22,7 @@ import Data.Sequences (Index)
 import Data.String (String)
 import System.IO (FilePath)
 import Biparse.Mixes.SubStates
+import Control.Monad.StateError (ErrorContext, ErrorInstance(NewtypeInstance,ErrorStateInstance))
 
 import Control.Applicative (Applicative, pure)
 import Data.Char (Char)
@@ -28,7 +30,6 @@ import Data.Functor (Functor)
 import Control.Monad.Trans.RWS.CPS (RWST, rwsT, runRWST)
 import Biparse.Biparser.StateReaderWriter (BackwardC(BackwardT,backwardT,runBackwardT))
 import Biparse.Biparser (UpdateStateWithElement, UpdateStateWithSubState, UpdateStateWithNConsumed, ConvertElement, convertElement, ConvertSequence, convertSequence)
-import Control.Monad.StateError (ErrorContext, ErrorInstance(ErrorStateInstance))
 import Data.Word (Word8)
 import Data.ByteString.Builder qualified as B
 import Data.Text.Lazy.Builder qualified as T
@@ -40,8 +41,6 @@ data Mixes c
 deriving via s instance UpdateStateWithElement (Mixes c) s
 deriving via s instance UpdateStateWithSubState (Mixes c) s
 deriving via s instance UpdateStateWithNConsumed (Mixes c) s
-
-type instance ErrorContext (Mixes _) = 'ErrorStateInstance
 
 instance (Functor n, Monoid w) => BackwardC (Mixes c) n w where
   type BackwardT (Mixes _) = RWST

@@ -19,28 +19,30 @@ library
   exposed-modules:
       Biparse.AssociatedWriter
       Biparse.Mixes.Either
+      Biparse.Mixes.IO
       Biparse.Mixes.SubStates
   other-modules:
       Prelude
+      Biparse.Mixes.Exports
   hs-source-dirs:
       src/
   default-extensions:
       AllowAmbiguousTypes
       BlockArguments
       FlexibleContexts
+      FlexibleInstances
       ImportQualifiedPost
       RankNTypes
       ScopedTypeVariables
       TypeApplications
-      FlexibleInstances
       DataKinds
       DerivingVia
       MultiParamTypeClasses
+      PatternSynonyms
       StandaloneDeriving
       StandaloneKindSignatures
       TypeFamilies
       UndecidableInstances
-      PatternSynonyms
   ghc-options: -Werror -Weverything -Wno-implicit-prelude -Wno-missing-deriving-strategies -Wno-missing-kind-signatures -Wno-missing-local-signatures -Wno-missing-safe-haskell-mode -Wno-safe -Wno-unsafe -Wno-unused-packages
   build-depends:
       base
@@ -48,6 +50,7 @@ library
     , bytestring
     , mono-traversable >=1.0.17.0
     , mtl
+    , semigroupoids
     , text
     , transformers >=0.6.1.1
   mixins:
@@ -59,6 +62,7 @@ test-suite spec
   main-is: Spec.hs
   other-modules:
       Biparse.Mixes.EitherSpec
+      Biparse.Mixes.IOSpec
       Prelude
   hs-source-dirs:
       tests/
@@ -66,11 +70,11 @@ test-suite spec
       AllowAmbiguousTypes
       BlockArguments
       FlexibleContexts
+      FlexibleInstances
       ImportQualifiedPost
       RankNTypes
       ScopedTypeVariables
       TypeApplications
-      FlexibleInstances
       OverloadedStrings
       TupleSections
   ghc-options: -Werror -Weverything -fprint-potential-instances -Wno-implicit-prelude -Wno-incomplete-uni-patterns -Wno-missing-deriving-strategies -Wno-missing-export-lists -Wno-missing-import-lists -Wno-missing-kind-signatures -Wno-missing-local-signatures -Wno-missing-safe-haskell-mode -Wno-orphans -Wno-safe -Wno-unsafe -Wno-unused-packages
@@ -86,6 +90,7 @@ test-suite spec
     , hspec-discover
     , mono-traversable >=1.0.17.0
     , mtl
+    , semigroupoids
     , template-haskell
     , text
     , transformers >=0.6.1.1

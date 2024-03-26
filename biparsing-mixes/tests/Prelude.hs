@@ -1,50 +1,52 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 module Prelude
-  ( module Test.Hspec
-  , module Data.String
-  , module Data.Function
-  , module Text.Printf
-  , module Text.Show
-  , module Data.Sequences
+  ( module Biparse.Mixes.SubStates
+  , module Control.Monad
   , module Control.Monad.ChangeMonad
-  , module Data.Eq
-  , module Data.Monoid
-  , module Control.Monad.Trans.RWS.CPS
   , module Control.Monad.EitherString
+  , module Control.Monad.Trans.RWS.CPS
   , module Data.Default
+  , module Data.Eq
   , module Data.Foldable
+  , module Data.Function
   , module Data.Functor
   , module Data.Ix
-  , module Biparse.Mixes.SubStates
+  , module Data.Monoid
+  , module Data.Sequences
+  , module Data.String
   , module Data.Word
   , module GHC.Err
+  , module Test.Hspec
+  , module Text.Printf
+  , module Text.Show
 
   , contexts
   , subStates
   , combinations
   ) where
 
+import Biparse.Mixes.SubStates
+import Control.Monad ((>>=))
 import Control.Monad.ChangeMonad (ChangeMonad)
 import Control.Monad.EitherString (EitherString)
 import Control.Monad.Trans.RWS.CPS (RWST)
-import Data.ByteString.Internal (c2w, w2c)
 import Data.ByteString.Builder qualified as BB
+import Data.ByteString.Internal (c2w, w2c)
 import Data.Default (Default, def)
 import Data.Eq (Eq, (==))
 import Data.Foldable (foldMap)
 import Data.Function
 import Data.Functor ((<$>))
+import Data.Ix (Ix)
 import Data.Monoid (Monoid)
 import Data.Sequences (IsSequence)
 import Data.String (String, IsString, fromString)
 import Data.Word (Word8)
+import GHC.Err (undefined)
 import Language.Haskell.TH (Name, mkName, TypeQ, conT)
 import Test.Hspec
 import Text.Printf (IsChar, fromChar, toChar)
 import Text.Show (Show)
-import Data.Ix (Ix)
-import Biparse.Mixes.SubStates
-import GHC.Err (undefined)
 
 instance IsString Name where fromString = mkName
 instance IsString TypeQ where fromString = conT . mkName
