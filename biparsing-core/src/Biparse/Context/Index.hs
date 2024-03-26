@@ -9,9 +9,8 @@ module Biparse.Context.Index
   , EISP
   ) where
 
-import Control.Monad.StateError (ErrorContext, ErrorState(ErrorState))
+import Control.Monad.StateError (ErrorState(ErrorState))
 import Biparse.Biparser (SubState, GetSubState(getSubState), UpdateStateWithElement(updateElementContext), UpdateStateWithSubState(updateSubStateContext), InitSuperState(SuperState,fromSubState), SuperArg)
-import Control.Monad.StateError (ErrorInstance(ErrorStateInstance))
 import GHC.Exts (IsList(Item))
 import GHC.Exts qualified as GE
 import Control.Monad.ChangeMonad (ChangeMonad, ChangeFunction, changeMonad', ResultMonad(ResultingMonad,resultMonad))

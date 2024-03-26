@@ -21,7 +21,6 @@ import Control.Monad.TransformerBaseMonad (TransformerBaseMonad, LiftBaseMonad, 
 import Control.Monad.MonadProgenitor (MonadProgenitor)
 import Lens.Micro.TH (makeLenses)
 import Control.Monad.Reader.Class (MonadReader)
-import Control.Monad.EitherString (EitherString)
 import System.IO (IO)
 
 -- * Allow errors to be combined with state information.
