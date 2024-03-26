@@ -25,8 +25,8 @@ spec = do
           , Default (SuperArg (SuperState c ss))
           ) => Spec
         typedTests = do
-          let fw = evalForwardEasy @c @ss
-              bw = evalBackwardEasy @c @ss
+          let fw = decodeEasy @c @ss
+              bw = encodeEasy @c @ss
           describe "one" do
             it "Forward" $ fw one def "abc" >>= (`shouldBe` fromChar 'a')
             it "Backward" $ bw one (fromChar 'z') >>= (`shouldBe` "z")

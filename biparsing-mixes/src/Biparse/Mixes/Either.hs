@@ -4,16 +4,16 @@ module Biparse.Mixes.Either
 
   , BiparserEasy
   , IsoEasy
-  , evalForwardEasy
-  , evalBackwardEasy
+  , decodeEasy
+  , encodeEasy
   , StringErrorIS
 
   , Biparser
   , pattern Biparser
   , Iso
   , FM
-  , evalForward
-  , evalBackward
+  , decode
+  , encode
 
   , Mixes
   , Either(Left,Right)
@@ -40,7 +40,7 @@ type IsoEasy c ss v = Iso c () () ss v
 --type Const c s m n r w ws u = 
 --type ConstU c s m n r w ws u v = 
 
-evalForwardEasy :: forall c ss u v.
+decodeEasy :: forall c ss u v.
   ( InitSuperState c ss
   , ChangeMonad StringErrorIS (FM c ss) (Either String)
   )
@@ -48,15 +48,15 @@ evalForwardEasy :: forall c ss u v.
   -> SuperArg (SuperState c ss)
   -> ss
   -> Either String v
-evalForwardEasy bp sa = SRW.evalForward @StringErrorIS bp . fromSubState @c sa
+decodeEasy bp sa = SRW.evalForward @StringErrorIS bp . fromSubState @c sa
 
-evalBackwardEasy :: forall c ss u v.
+encodeEasy :: forall c ss u v.
   ( Monoid (AssociatedWriter ss)
   )
   => BiparserEasy c ss u v
   -> u
   -> Either String (AssociatedWriter ss)
-evalBackwardEasy bp u = runEitherString $ SRW.evalBackward bp () () u
+encodeEasy bp u = runEitherString $ SRW.evalBackward bp () () u
 
 data StringErrorIS
 
@@ -87,7 +87,7 @@ type Error c ss = ErrorState String (SuperState c ss)
 pattern Biparser :: ForwardMonad (Biparser c ss r ws u v) v -> (u -> BackwardMonad (Biparser c ss r ws u v) v) -> Biparser c ss r ws u v
 pattern Biparser fw bw = Biparse.Biparser.Biparser fw bw
 
-evalForward :: forall c e ss r ws u v.
+decode :: forall c e ss r ws u v.
   ( InitSuperState c ss
   , ResultMonad (FM c ss) ()
   , ResultingMonad (FM c ss) () ~ Either e
@@ -97,9 +97,9 @@ evalForward :: forall c e ss r ws u v.
   -> SuperArg (SuperState c ss)
   -> ss
   -> Either e v
-evalForward bp sa = SRW.evalForward @() bp . fromSubState @c sa
+decode bp sa = SRW.evalForward @() bp . fromSubState @c sa
 
-evalBackward :: forall c ss r ws u v.
+encode :: forall c ss r ws u v.
   ( Monoid (AssociatedWriter ss)
   )
   => Biparser c ss r ws u v
@@ -107,5 +107,5 @@ evalBackward :: forall c ss r ws u v.
   -> ws
   -> u
   -> Either String (AssociatedWriter ss)
-evalBackward bp r ws u = runEitherString $ SRW.evalBackward bp r ws u
+encode bp r ws u = runEitherString $ SRW.evalBackward bp r ws u
 

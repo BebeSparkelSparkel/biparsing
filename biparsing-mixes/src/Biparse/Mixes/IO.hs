@@ -4,14 +4,14 @@ module Biparse.Mixes.IO
 
   , BiparserEasy
   , IsoEasy
-  , evalForwardEasy
-  , evalBackwardEasy
+  , decodeEasy
+  , encodeEasy
 
   , Biparser
   , pattern Biparser
   , Iso
-  , evalForward
-  , evalBackward
+  , decode
+  , encode
 
   , Mixes
   , IO
@@ -35,22 +35,22 @@ type IsoEasy c ss v = Iso c () () ss v
 --type ConstU c s m n r w ws u v = 
 
 
-evalForwardEasy :: forall c ss u v.
+decodeEasy :: forall c ss u v.
   ( InitSuperState c ss
   )
   => BiparserEasy c ss u v
   -> SuperArg (SuperState c ss)
   -> ss
   -> IO v
-evalForwardEasy bp sa = SRW.evalForward @() bp . fromSubState @c sa
+decodeEasy bp sa = SRW.evalForward @() bp . fromSubState @c sa
 
-evalBackwardEasy :: forall c ss u v.
+encodeEasy :: forall c ss u v.
   ( Monoid (AssociatedWriter ss)
   )
   => BiparserEasy c ss u v
   -> u
   -> IO (AssociatedWriter ss)
-evalBackwardEasy bp u = SRW.evalBackward bp () () u
+encodeEasy bp u = SRW.evalBackward bp () () u
 
 -- * More General Types and Functions
 --
@@ -62,16 +62,16 @@ type Iso c r ws ss v = Biparser c ss r ws v v
 pattern Biparser :: ForwardMonad (Biparser c ss r ws u v) v -> (u -> BackwardMonad (Biparser c ss r ws u v) v) -> Biparser c ss r ws u v
 pattern Biparser fw bw = Biparse.Biparser.Biparser fw bw
 
-evalForward :: forall c ss r ws u v.
+decode :: forall c ss r ws u v.
   ( InitSuperState c ss
   )
   => Biparser c ss r ws u v
   -> SuperArg (SuperState c ss)
   -> ss
   -> IO v
-evalForward bp sa = SRW.evalForward @() bp . fromSubState @c sa
+decode bp sa = SRW.evalForward @() bp . fromSubState @c sa
 
-evalBackward :: forall c ss r ws u v.
+encode :: forall c ss r ws u v.
   ( Monoid (AssociatedWriter ss)
   )
   => Biparser c ss r ws u v
@@ -79,5 +79,5 @@ evalBackward :: forall c ss r ws u v.
   -> ws
   -> u
   -> IO (AssociatedWriter ss)
-evalBackward bp r ws u = SRW.evalBackward bp r ws u
+encode bp r ws u = SRW.evalBackward bp r ws u
 
