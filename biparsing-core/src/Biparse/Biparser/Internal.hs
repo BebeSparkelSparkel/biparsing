@@ -35,6 +35,7 @@ module Biparse.Biparser.Internal
   , uponPredM
   , uponConst
   , mapWrite
+  , onlyForwards
   , onlyBackwards
   , forwardFail
   , ignoreForward
@@ -231,15 +232,14 @@ instance MapWriter n => MapWriter (Biparser c s m n u) where
   type ChangeWriteType (Biparser c s m n u) w = Biparser c s m (ChangeWriteType n w) u
   mapWriter f (Biparser fw bw) = Biparser fw (mapWriter f . bw)
 
--- * Only Backwards
+-- * Only One Direction
+
+onlyForwards :: Applicative n => m () -> Const c s m n u
+onlyForwards = flip Biparser $ const $ pure ()
 
 -- | Only run a backwards operation
-onlyBackwards ::
-  ( Applicative m
-  )
-  => (u -> n ())
-  -> Const c s m n u 
-onlyBackwards = Biparser (pure ())
+onlyBackwards :: Applicative m => (u -> n ()) -> Const c s m n u 
+onlyBackwards = Biparser $ pure ()
 
 -- * Constrained Subtypes
 -- More constrained subtypes of Biparser
