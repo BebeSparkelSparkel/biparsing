@@ -34,13 +34,10 @@ library:
   source-dirs: src/
   other-modules:
     - Prelude
-    - Biparse.Mixes.Exports
   default-extensions:
     - DataKinds
-    - DerivingVia
     - MultiParamTypeClasses
     - PatternSynonyms
-    - StandaloneDeriving
     - StandaloneKindSignatures
     - TypeFamilies
     - UndecidableInstances

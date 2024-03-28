@@ -19,11 +19,11 @@ library
   exposed-modules:
       Biparse.AssociatedWriter
       Biparse.Mixes.Either
+      Biparse.Mixes.Exports
       Biparse.Mixes.IO
       Biparse.Mixes.SubStates
   other-modules:
       Prelude
-      Biparse.Mixes.Exports
   hs-source-dirs:
       src/
   default-extensions:
@@ -36,10 +36,8 @@ library
       ScopedTypeVariables
       TypeApplications
       DataKinds
-      DerivingVia
       MultiParamTypeClasses
       PatternSynonyms
-      StandaloneDeriving
       StandaloneKindSignatures
       TypeFamilies
       UndecidableInstances
@@ -61,8 +59,7 @@ test-suite spec
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
-      Biparse.Mixes.EitherSpec
-      Biparse.Mixes.IOSpec
+      Biparse.MixesSpec
       Prelude
   hs-source-dirs:
       tests/

@@ -12,6 +12,7 @@ module Prelude
   , module Control.Monad.StateError
 
   , Mixes
+  , BiparserTemplate
   ) where
 
 import Data.Function ((.), ($), const)
@@ -24,12 +25,14 @@ import System.IO (FilePath)
 import Biparse.Mixes.SubStates
 import Control.Monad.StateError (ErrorContext, ErrorInstance(NewtypeInstance,ErrorStateInstance))
 
+import Biparse.AssociatedWriter (AssociatedWriter)
+import Biparse.Biparser.StateReaderWriter qualified as SRW
 import Control.Applicative (Applicative, pure)
 import Data.Char (Char)
 import Data.Functor (Functor)
 import Control.Monad.Trans.RWS.CPS (RWST, rwsT, runRWST)
 import Biparse.Biparser.StateReaderWriter (BackwardC(BackwardT,backwardT,runBackwardT))
-import Biparse.Biparser (UpdateStateWithElement, UpdateStateWithSubState, UpdateStateWithNConsumed, ConvertElement, convertElement, ConvertSequence, convertSequence)
+import Biparse.Biparser (UpdateStateWithElement, updateElementContext, UpdateStateWithSubState, updateSubStateContext, UpdateStateWithNConsumed, updateStateWithNConsumed, ConvertElement, convertElement, ConvertSequence, convertSequence, SuperState)
 import Data.Word (Word8)
 import Data.ByteString.Builder qualified as B
 import Data.Text.Lazy.Builder qualified as T
@@ -38,9 +41,9 @@ import Data.Text.Lazy.Builder qualified as T
 
 data Mixes c
 
-deriving via s instance UpdateStateWithElement (Mixes c) s
-deriving via s instance UpdateStateWithSubState (Mixes c) s
-deriving via s instance UpdateStateWithNConsumed (Mixes c) s
+instance UpdateStateWithElement c s => UpdateStateWithElement (Mixes c) s where updateElementContext = updateElementContext @c @s
+instance UpdateStateWithSubState c s => UpdateStateWithSubState (Mixes c) s where updateSubStateContext = updateSubStateContext @c @s
+instance UpdateStateWithNConsumed c s => UpdateStateWithNConsumed (Mixes c) s where updateStateWithNConsumed = updateStateWithNConsumed @c @s
 
 instance (Functor n, Monoid w) => BackwardC (Mixes c) n w where
   type BackwardT (Mixes _) = RWST
@@ -64,3 +67,8 @@ instance Applicative m => ConvertSequence (Mixes c) StrictText BuilderText m whe
   convertSequence = pure . T.fromText
 instance Applicative m => ConvertSequence (Mixes c) LazyText BuilderText m where
   convertSequence = pure . T.fromLazyText
+
+-- * Biparser Template
+
+type BiparserTemplate fm bm c ss r ws = SRW.Biparser (Mixes c) (SuperState c ss) fm bm r (AssociatedWriter ss) ws
+
