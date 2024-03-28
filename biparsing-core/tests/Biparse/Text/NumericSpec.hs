@@ -40,8 +40,8 @@ spec = do
     \b -> do
       integerBackward b
 
-  fb @() "scientific"
-    (scientific :: Iso ColumnsOnly (FM Text) IO () Text () (Position () Text) Double)
+  fb @() "eNotation"
+    (eNotation :: Iso ColumnsOnly (FM Text) IO () Text () (Position () Text) Double)
     ()
     ()
     (\f -> do

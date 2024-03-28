@@ -9,7 +9,7 @@ module Biparse.Text.Numeric
   , naturalBaseTen'
   , IntConstraints
   , intBaseTen
-  , scientific
+  , eNotation
   , RealConstrints
   , realBaseTen
   , hex
@@ -142,11 +142,11 @@ instance RealConstrints c s m n Float  text char w e => IsoClass c m n s Float  
 instance RealConstrints c s m n Double text char w e => IsoClass c m n s Double where iso = realBaseTen
 
 -- | Only wirtes digits and not powers of 10.
-scientific :: forall c s m n number text char w e.
+eNotation :: forall c s m n number text char w e.
   ( RealConstrints c s m n number text char w e
   , Fractional number
   ) => Iso c m n s number
-scientific = do
+eNotation = do
   digits <- realBaseTen
   power :: Maybe Integer <- comap (const Nothing) $ optional do
     take (fromChar 'E') <!> take (fromChar 'e')
