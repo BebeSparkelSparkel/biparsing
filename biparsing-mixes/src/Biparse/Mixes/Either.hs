@@ -77,7 +77,7 @@ instance ResultMonad (FM' s) StringErrorIS where
 --
 -- | Try using these before using the more general types and functions defined in Biparse.Biparser.StateReaderWriter and Biparse.Biparser
 
-type Biparser c ss r ws = SRW.Biparser (Mixes c) (SuperState c ss) (FM c ss) EitherString r (AssociatedWriter ss) ws
+type Biparser c ss r ws = BiparserTemplate (FM c ss) EitherString c ss r ws
 type Iso c r ws ss v = Biparser c ss r ws v v
 
 type FM c ss = Either (Error c ss)
