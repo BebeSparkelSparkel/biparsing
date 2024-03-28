@@ -7,10 +7,34 @@ import Language.Haskell.TH
 import Biparse.Mixes.IO qualified
 import Biparse.Mixes.Either qualified
 import Biparse.Mixes.Exports
-import Debug.Trace
 
 spec :: Spec
 spec = $(
+  let
+      monads :: [String]
+      monads =
+        [ "IO"
+        , "Either"
+        ]
+      contexts :: [String]
+      contexts =
+        [ "IndexContext"
+        , "UnixLC"
+        , "WindowsLC"
+        --, "LinesOnly"
+        , "ColumnsOnly"
+        , "LineColumnUnknownBreak"
+        --, "NoUpdate"
+        ]
+      subStates :: [String]
+      subStates =
+        [ "String"
+        , "StrictByteString"
+        , "LazyByteString"
+        , "StrictText"
+        , "LazyText"
+        ]
+  in
   doE (monads    <&> \m  -> noBindS $ varE 'describe `appE` stringE m  `appE`
   doE (contexts  <&> \c  -> noBindS $ varE 'describe `appE` stringE c  `appE`
   doE (subStates <&> \ss -> noBindS $ varE 'describe `appE` stringE ss `appE`
@@ -34,26 +58,14 @@ spec = $(
             let bp = naturalBaseTen
             it "Forward" $ fw bp def "123" `shouldReturn` (123 :: Word8)
             it "Backward" $ bw bp (123 :: Word8) `shouldReturn` "123"
-          fdescribe "multiple state updates" do
+          describe "multiple state updates" do
             let bp = do
-                  onlyForwards do
-                    s <- get
-                    lift do
-                      putStr "start: "
-                      print s
                   take (fromChar '(')
-                  onlyForwards do
-                    s <- get
-                    lift do
-                      putStr "(: "
-                      print s
                   x <- one
-                  traceM "one"
                   take (fromChar ')')
-                  traceM "complete"
                   return x
             it "Forward" $ fw bp def "(a)" `shouldReturn` (fromChar 'a')
-            xit "Backward" $ bw bp (fromChar 'a') `shouldReturn` "(a)"
+            it "Backward" $ bw bp (fromChar 'a') `shouldReturn` "(a)"
       |]
   )))
   )

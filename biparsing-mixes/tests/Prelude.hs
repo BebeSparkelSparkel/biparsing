@@ -22,9 +22,6 @@ module Prelude
   , module Data.Either
   , module System.IO
 
-  , monads
-  , contexts
-  , subStates
   , shouldReturn
   ) where
 
@@ -65,32 +62,6 @@ instance IsString ExpQ where fromString = litE . fromString
 instance IsChar Word8 where
   fromChar = c2w
   toChar = w2c
-
-monads :: [String]
-monads =
-  [ "IO"
-  -- , "Either"
-  ]
-
-contexts :: [String]
-contexts =
-  [ "IndexContext"
-  --, "UnixLC"
-  --, "WindowsLC"
-  --, "LinesOnly"
-  --, "ColumnsOnly"
-  --, "LineColumnUnknownBreak"
-  --, "NoUpdate"
-  ]
-
-subStates :: [String]
-subStates =
-  [ "String"
-  --, "StrictByteString"
-  --, "LazyByteString"
-  --, "StrictText"
-  --, "LazyText"
-  ]
 
 instance Eq BB.Builder where x == y = BB.toLazyByteString x == BB.toLazyByteString y
 
