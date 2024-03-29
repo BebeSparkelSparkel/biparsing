@@ -21,11 +21,66 @@ Most of the combinators you are in, or should be in (please help), `Biparse.Gene
 
 See directory [examples](./examples)
 
+A quick and simple example that both defines the parser and printer
+
+```haskell
+product :: IsoEasy IndexContext Text (Text, Int)
+product = do
+  take '('
+  s <- takeWhile (/= ',') `upon` fst
+  take ','
+  i <- intBaseTen `upon` snd
+  take ')'
+  return (s, i)
+
+print $ decodeEasy product () "(Some text,123)"
+print $ encodeEasy product ("Some text", 123)
+```
+
 ## Assistance Needed
 
-`Biparse.Text.Numeric` does not support many biparsers for numeric types and formats and could be greatly improved.
+- Terminology; I need some help with proper naming of types and functions. Please make suggestions.
 
-## Other Implementations and their Problems
+- `Biparse.Text.Numeric` does not support many biparsers for numeric types and formats and could be greatly improved.
+
+- Documentation
+
+- Add more examples in the examples directory and in this README
+
+- More complete exports in biparsing-mixes/src/Biparse/Mixes/Exports.hs that make it easy to use without import lots of modules since there are many name clashes with base Prelude
+
+## Required Features for Completeness
+
+- [X] Disjoint ordering of the data Constructors and the parsing order. Monadic parsers assign parsed values to variables that can then be used in any order to construct the final data instance. Many biparsers us Applicative Functors which require the parse order to match the data constructor arguments.
+- [X] Polymorphic Streams and Token types. This should not just be for parsing Text, String, or ByteString streams but any kind of tokenized streams.
+- [ ] Parser composition. If the parser consumes stream 'a' and produces stream 'b' it should be composable with another parser that consumes stream 'b'.
+    - Currently possible but not added to biparsing-mixes to make it easy. See `Biparse.Biparser.PolyKinds.focus`.
+- [ ] Ability to have guaranteed serialization. Parsing needs to be able to fail.
+- [ ] Design a grammer for biparsers.
+
+## Reference Links
+- [Composing bidirectional programs monadically](./papers/1902.06950.pdf) most utilized and improved upon
+- [List Relevant References](https://github.com/BebeSparkelSparkel/biparsing/issues/1)
+- [Invertible Syntax Descriptions: Unifying Parsing and Pretty Printing](./papers/rendel10invertible.pdf)
+- [Generalized Convolution and Efficient Language Recognition](http://conal.net/papers/convolution/) by Conal Elliott
+
+# Notable Quotes
+
+"IMO it's a mistake (although not an infrequent one) to try and use an optic as a parser or a printer or whatever. It's like trying to light a fire by striking your lighter against a rock. The whole point of polymorphic profunctor optics is that they can adjust arbitrary profunctors, including natural representations of parsers and printers"
+**masaeedu**
+
+"I suspect a "clean" way to do this sort of thing will eventually reveal within a profunctor encoding, but I haven't put much time into it yet :)" **Chris Penner**
+
+"Are there any bidirectional parser libraries ready to use?" **TheMatten**
+
+"None that are good.
+Well "good" is not the right word here
+Basically the best current approach to bidirectional parsing in Haskell does not have the ideal interface"
+**chessai**
+
+# Other Implementations and their Problems
+
+There are other implementions for biparsing but they did meet my requirements.
 
 ### Applicative Functor Composition
 
@@ -95,36 +150,6 @@ digits = do
 ### Optics Composition
 
 Optics composition can be used to create bidirectional programs by utilizing Iso (isomorphisms) and Prisms. These are ready to go and can be used to create composable bidirectional programs. Unfortunately at this point, optics do not support state very well so it's difficult to report errors with locations.
-
-## Required Features
-
-- Disjoint ordering of the data Constructors and the parsing order. Monadic parsers assign parsed values to variables that can then be used in any order to construct the final data instance. Many biparsers us Applicative Functors which require the parse order to match the data constructor arguments.
-- Polymorphic Streams and Token types. This should not just be for parsing Text, String, or ByteString streams but any kind of tokenized streams.
-- Parser composition. If the parser consumes stream 'a' and produces stream 'b' it should be composable with another parser that consumes stream 'b'.
-- Ability to have guaranteed serialization. Parsing needs to be able to fail.
-
-## Chat
-Active conversations on https://funprog.zulipchat.com/#narrow/stream/225296-Biparsing
-
-## Reference Links
-- [List Relevant References](https://github.com/BebeSparkelSparkel/biparsing/issues/1)
-- [Invertible Syntax Descriptions: Unifying Parsing and Pretty Printing](./papers/rendel10invertible.pdf)
-- [Composing bidirectional programs monadically](./papers/1902.06950.pdf)
-- [Generalized Convolution and Efficient Language Recognition](http://conal.net/papers/convolution/) by Conal Elliott
-
-# Notable Quotes
-
-"IMO it's a mistake (although not an infrequent one) to try and use an optic as a parser or a printer or whatever. It's like trying to light a fire by striking your lighter against a rock. The whole point of polymorphic profunctor optics is that they can adjust arbitrary profunctors, including natural representations of parsers and printers"
-**masaeedu**
-
-"I suspect a "clean" way to do this sort of thing will eventually reveal within a profunctor encoding, but I haven't put much time into it yet :)" **Chris Penner**
-
-"Are there any bidirectional parser libraries ready to use?" **TheMatten**
-
-"None that are good.
-Well "good" is not the right word here
-Basically the best current approach to bidirectional parsing in Haskell does not have the ideal interface"
-**chessai**
 
 # Other Existing Implementations
 

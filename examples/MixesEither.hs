@@ -40,7 +40,7 @@ productExample = do
   putStrLn "Product Example"
   print $ decodeEasy product () "(Some text,123)"
   print $ decodeEasy product () "(Some text,)" -- error example
-  print $ encodeEasy product ("Encoded Text", 456)
+  print $ encodeEasy product ("Some text", 123)
 
 -- * Sum
 
@@ -60,7 +60,7 @@ sumExample = do
   print $ decodeEasy sum "some/file/path" "123"
   print $ decodeEasy sum "some/file/path" "abc"
   print $ encodeEasy sum $ Right 123
-  print $ encodeEasy sum $ Left "left"
+  print $ encodeEasy sum $ Left "abc"
 
 -- * ADT
 
@@ -86,12 +86,12 @@ abcExample :: IO ()
 abcExample = do
   putStrLn "ABC Example"
   print $ decodeEasy abc "/some/file/path" "A"
-  print $ decodeEasy abc "/some/file/path" "Ba"
-  print $ decodeEasy abc "/some/file/path" "Cabc"
+  print $ decodeEasy abc "/some/file/path" "Bc"
+  print $ decodeEasy abc "/some/file/path" "Cdef"
   print $ decodeEasy abc "/some/file/path" "D" -- error example
   print $ encodeEasy abc A
-  print $ encodeEasy abc $ B 'b'
-  print $ encodeEasy abc $ C 'c' "def"
+  print $ encodeEasy abc $ B 'c'
+  print $ encodeEasy abc $ C 'd' "ef"
 
 -- * Line Parsing
 
