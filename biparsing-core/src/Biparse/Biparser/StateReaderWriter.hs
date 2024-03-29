@@ -25,7 +25,7 @@ import Biparse.Biparser (forward, backward, ReplaceSubState(replaceSubState), on
 import Biparse.Biparser qualified as B
 import Control.Monad.ChangeMonad (ChangeMonad, ChangeFunction, changeMonad', ResultMonad(ResultingMonad))
 import Control.Monad.MonadProgenitor (MonadProgenitor)
-import Control.Monad.StateError (StateErrorT(StateErrorT), runStateErrorT, runSET, M, ErrorInstance)
+import Control.Monad.StateError (StateErrorT(StateErrorT), runStateErrorT, runSET, M, ErrorContext)
 
 type Biparser c s m n r w ws = B.Biparser c s (M s m) (N c n r w ws)
 type Iso c m n r w ws s v = Biparser c s m n r w ws v v
@@ -104,7 +104,7 @@ zoomWrite (B.Biparser fw bw) (B.Biparser fw' bw') = B.Biparser
     pure (x,s'', w <> w')
 
 -- | Strict on the Iso which makes 'Biparser' slow to run if not all 'ss\'' is requred and for error to be thrown.
-zoomOne :: forall (i :: ErrorInstance) is c' mProgenitor w m' c s s' m n r ws u v.
+zoomOne :: forall is c' mProgenitor w m' c s s' m n r ws u v i.
   -- m
   ( Monad m
   , Alt m
@@ -124,6 +124,7 @@ zoomOne :: forall (i :: ErrorInstance) is c' mProgenitor w m' c s s' m n r ws u 
   -- assignments
   , m  ~ MonadProgenitor mProgenitor s
   , m' ~ MonadProgenitor mProgenitor s'
+  , i ~ ErrorContext m
   )
   => Biparser c' s' (MonadProgenitor mProgenitor s') n r (Element w) ws u v
   -> Biparser c  s  (MonadProgenitor mProgenitor s)  n r w           ws u v
