@@ -1,0 +1,29 @@
+name: examples
+version: 0.0.0.1
+synopsis: Biparsing Examples
+homepage: https://github.com/BebeSparkelSparkel/biparsing
+category: Parsing
+author: William Rusnack
+license: BSD-3-Clause
+license-file: LICENSE
+spec-version: 0.36.0
+
+executable:
+  main: MixesEither.hs
+  dependencies:
+    - base
+    - biparsing-mixes
+    - biparsing-core
+    - bytestring
+    - extra
+    - text
+    - microlens-pro
+    - microlens
+    - mono-traversable >= 1.0.17.0
+  ghc-options:
+    - -Weverything
+    - -Wno-missing-import-lists
+    - -Wno-monomorphism-restriction
+    - -Wno-missing-deriving-strategies
+    - -Wno-missing-kind-signatures
+    - -Wno-missing-local-signatures

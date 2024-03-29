@@ -80,9 +80,8 @@ instance ResultMonad (FM' s) StringErrorIS where
 type Biparser c ss r ws = BiparserTemplate (FM c ss) EitherString c ss r ws
 type Iso c r ws ss v = Biparser c ss r ws v v
 
-type FM c ss = Either (Error c ss)
+type FM c ss = Either (ErrorState String (SuperState c ss))
 type FM' s = Either (ErrorState String s)
-type Error c ss = ErrorState String (SuperState c ss)
 
 pattern Biparser :: ForwardMonad (Biparser c ss r ws u v) v -> (u -> BackwardMonad (Biparser c ss r ws u v) v) -> Biparser c ss r ws u v
 pattern Biparser fw bw = Biparse.Biparser.Biparser fw bw

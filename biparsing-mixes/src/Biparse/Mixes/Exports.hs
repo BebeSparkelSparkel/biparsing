@@ -23,6 +23,9 @@ module Biparse.Mixes.Exports
   , module Data.ByteString.Internal
   , module Data.Word
   , module Control.Monad.State
+  , module GHC.Enum
+  , module Biparse.Biparser.StateReaderWriter
+  , module System.IO
   ) where
 
 import Biparse.Biparser hiding (Biparser, Iso, Unit, Const, ConstU)
@@ -37,7 +40,7 @@ import Biparse.Text.Numeric
 import Biparse.Unordered
 import Control.Monad.RWS.Class
 import Data.Functor.Alt (Alt, (<!>))
-import Data.Function (($), (.))
+import Data.Function (($), (.), id, const)
 import Data.Functor ((<$), (<$>))
 import Data.Tuple (fst, snd)
 import Control.Monad (return, (>>))
@@ -48,4 +51,7 @@ import Data.Char (Char)
 import Data.ByteString.Internal (c2w, w2c)
 import Data.Word (Word8)
 import Control.Monad.State
+import GHC.Enum (succ, pred)
+import Biparse.Biparser.StateReaderWriter (zoom, zoomWrite, zoomOne)
+import System.IO (FilePath)
 

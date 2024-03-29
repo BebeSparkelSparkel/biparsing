@@ -1,0 +1,31 @@
+cabal-version: 2.2
+
+-- This file has been generated from package.yaml by hpack version 0.36.0.
+--
+-- see: https://github.com/sol/hpack
+
+name:           examples
+version:        0.0.0.1
+synopsis:       Biparsing Examples
+category:       Parsing
+homepage:       https://github.com/BebeSparkelSparkel/biparsing
+author:         William Rusnack
+maintainer:     William Rusnack
+license:        BSD-3-Clause
+license-file:   LICENSE
+build-type:     Simple
+
+executable examples
+  main-is: MixesEither.hs
+  ghc-options: -Weverything -Wno-missing-import-lists -Wno-monomorphism-restriction -Wno-missing-deriving-strategies -Wno-missing-kind-signatures -Wno-missing-local-signatures
+  build-depends:
+      base
+    , biparsing-core
+    , biparsing-mixes
+    , bytestring
+    , extra
+    , microlens
+    , microlens-pro
+    , mono-traversable >=1.0.17.0
+    , text
+  default-language: Haskell2010
