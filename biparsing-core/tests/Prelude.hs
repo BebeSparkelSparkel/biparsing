@@ -127,7 +127,7 @@ import GHC.Real (fromIntegral)
 import Numeric.Natural (Natural)
 import System.IO (IO, FilePath)
 import System.IO.Error (isUserError)
-import Test.Hspec
+import Test.Hspec hiding (focus)
 import Test.Hspec.QuickCheck
 import Test.QuickCheck
 import Test.QuickCheck.Instances.Text ()

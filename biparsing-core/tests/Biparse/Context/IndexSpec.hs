@@ -2,7 +2,7 @@ module Biparse.Context.IndexSpec where
 
 
 spec :: Spec
-spec = focus do
+spec = do
   it "one" do
     let bp :: Iso IndexContext (EISP String) EitherString () Text () (IndexPosition String) Char
         bp = one

@@ -1,7 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE PolyKinds #-}
 module Biparse.Biparser.PolyKinds
-  ( zoom
+  ( focus
   ) where
 
 import Biparse.Biparser.Internal (ReplaceSubState(replaceSubState), Iso, Biparser, pattern Biparser)
@@ -10,7 +10,8 @@ import Control.Monad.MonadProgenitor (MonadProgenitor)
 import Control.Monad.State (State, runState, evalState)
 import Control.Monad.Writer (Writer, execWriter)
 
-zoom :: forall is c' c'' mProgenitor n' m' c s s' m n u v ss ss'.
+-- | Similar to zoom but allows for lazy evaluation of the Iso.
+focus :: forall is c' c'' mProgenitor n' m' c s s' m n u v ss ss'.
   -- m
   ( MonadState s m
   -- m'
@@ -28,7 +29,7 @@ zoom :: forall is c' c'' mProgenitor n' m' c s s' m n u v ss ss'.
   => Iso c'' (State s) (Writer ss) s ss'
   -> Biparser c' s' (MonadProgenitor mProgenitor s') n' u v
   -> Biparser c  s  m  n  u v
-zoom (Biparser fw bw) (Biparser fw' bw') = Biparser
+focus (Biparser fw bw) (Biparser fw' bw') = Biparser
   do
     s <- get
     let (ss',s') = runState fw s

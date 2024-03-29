@@ -79,7 +79,7 @@ spec = do
   it "runBackward" do
     let bp :: Iso () IO EitherString Char ByteString () (Identity ByteString) ByteString
         bp = do
-          c <- ask' undefined
+          c <- askBw undefined
           cons (c2w c) <$> rest
         b = runBackward bp 'A' ()
     b "cd" `shouldBe` EValue ("Acd", "cd")

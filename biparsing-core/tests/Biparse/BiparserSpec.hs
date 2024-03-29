@@ -310,10 +310,10 @@ spec = do
         prop "correct count" \xs -> let
           in b xs >>= (`shouldBe` ((fromIntegral $ length xs, xs), xs))
 
-  describe "zoom" do
+  describe "focus" do
 
     fb @() "Biparser success"
-      (BB.zoom @UnixLC @UnixLC @UnixLC @'(StateErrorT,Either) @(N UnixLC EitherString () [String] ())
+      (BB.focus @UnixLC @UnixLC @UnixLC @'(StateErrorT,Either) @(N UnixLC EitherString () [String] ())
         (lines @'Unix)
         (all $ MT.reverse <$> one)
       :: Iso UnixLC (FM String) EitherString () String () (Position () String) [String])

@@ -61,8 +61,10 @@ module Biparse.Biparser.Internal
   , isNull
   , breakWhen'
   , count
-  , ask'
-  , asks'
+  , askBw
+  , asksBw
+  , getBw
+  , getsBw
   , resetState
   , ConvertElement(..)
   , ConvertSequence(..)
@@ -574,16 +576,23 @@ count (Biparser fw bw) = Biparser
     (x,w) <- listen $ bw u
     pure (fromIntegral $ length w, x)
 
--- | Return provided value forward and return reader value backward.
-ask' :: (Applicative m, MonadReader r n) => r -> Biparser c s m n u r
-ask' x = Biparser (pure x) (const ask)
+-- * Backwards Reader and State
+
+-- | Return provided value forward and return the reader value backward.
+askBw :: (Applicative m, MonadReader r n) => r -> Biparser c s m n u r
+askBw x = Biparser (pure x) (const ask)
 
 -- | Return provided value forward and return the modified reader value backward.
-asks' :: (Applicative m, MonadReader r n) => a -> (r -> a) -> Biparser c s m n u a
-asks' x f = Biparser (pure x) (const $ asks f)
+asksBw :: (Applicative m, MonadReader r n) => a -> (r -> a) -> Biparser c s m n u a
+asksBw x f = Biparser (pure x) (const $ asks f)
 
---ask'' :: (Monad n, Monoid (SubState s)) => M c s m r -> Biparser c s m n r u r
---ask'' = flip Biparser (const ask)
+-- | Return provided value forward and return the state value backward.
+getBw :: (Applicative m, MonadState ws n) => ws -> Biparser c s m n u ws
+getBw x = Biparser (pure x) (const $ get)
+
+-- | Return provided value forward and return the modified state value backward.
+getsBw :: (Applicative m, MonadState ws n) => a -> (ws -> a) -> Biparser c s m n u a
+getsBw x f = Biparser (pure x) (const $ gets f)
 
 -- | Set the state as before if the predicate passes.
 resetState :: forall c s m n u v.
