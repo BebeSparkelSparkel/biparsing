@@ -50,7 +50,6 @@ print $ encodeEasy product ("Some text", 123)
 
 ## Required Features for Completeness
 
-- [X] Disjoint ordering of the data Constructors and the parsing order. Monadic parsers assign parsed values to variables that can then be used in any order to construct the final data instance. Many biparsers us Applicative Functors which require the parse order to match the data constructor arguments.
 - [X] Polymorphic Streams and Token types. This should not just be for parsing Text, String, or ByteString streams but any kind of tokenized streams.
 - [ ] Parser composition. If the parser consumes stream 'a' and produces stream 'b' it should be composable with another parser that consumes stream 'b'.
     - Currently possible but not added to biparsing-mixes to make it easy. See `Biparse.Biparser.PolyKinds.focus`.
