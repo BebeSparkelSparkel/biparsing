@@ -59,6 +59,7 @@ module Biparse.Biparser.Internal
   , try
   , optionalBack
   , isNull
+  , eof
   , breakWhen'
   , count
   , askBw
@@ -72,7 +73,7 @@ module Biparse.Biparser.Internal
 
 import Biparse.FixFail (FixFail(fixFail))
 import Control.Applicative qualified
-import Control.Monad.Extra (findM)
+import Control.Monad.Extra (findM, whenM)
 import Control.Monad.Reader.Class (MonadReader(ask), asks)
 import Control.Monad.Unrecoverable (MonadUnrecoverable, UnrecoverableError, throwUnrecoverable)
 import Control.Monad.Writer.Class (listen)
@@ -506,6 +507,8 @@ optionalBack :: forall c s m n u u' v.
   -> Biparser c s m n u  v
 optionalBack f x (Biparser fw bw) = Biparser fw $ maybe (pure x) bw . f
 
+-- * End Dectection
+
 -- | Returns true if the substate is empty.
 -- DEV NOTE: May be able to be written in general without Biparser constructor
 isNull :: forall c s m n u ss.
@@ -517,9 +520,22 @@ isNull :: forall c s m n u ss.
   , ss ~ SubState s
   )
   => Biparser c s m n u Bool
-isNull = Biparser
-  (gets @s $ null . getSubState)
-  (pure . null)
+isNull = Biparser subStateNull (pure . null)
+
+-- fails if not at the end of the input
+eof ::
+  ( MonadState s m
+  , MonadFail m
+  , Applicative n
+  , GetSubState s
+  , MonoFoldable (SubState s)
+  ) => Const c s m n u
+eof = Biparser
+  (whenM subStateNull (fail "Expected to be at the end of input but there is still more"))
+  (const $ pure ())
+
+subStateNull :: (MonadState s m, GetSubState s, MonoFoldable (SubState s)) => m Bool
+subStateNull = gets $ null . getSubState
 
 -- | 'x' does not succeed
 breakWhen' :: forall c s m n ss w e.
