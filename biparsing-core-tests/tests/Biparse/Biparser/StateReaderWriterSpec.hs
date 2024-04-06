@@ -8,7 +8,7 @@ import Biparse.Text.Numeric (naturalBaseTen')
 spec :: Spec
 spec = do
   describe "zoom" do
-    fb @() "[Text] -> Text, one line"
+    fb "[Text] -> Text, one line"
       (zoom @ElementToList @LinesOnly @Either
         (one :: Iso LinesOnly (FM [Text]) IO () [Text] () (Position () [Text]) Text)
         (naturalBaseTen' @Word)
@@ -29,7 +29,7 @@ spec = do
         it "prints Word" $
           b 456 >>= (`shouldBe` (456, ["456"]))
 
-    fb @() "Text -> [Text], all lines"
+    fb "Text -> [Text], all lines"
       (zoom @ListToElement @LinesOnly @Either
         (lines @'Unix)
         ( all
@@ -65,8 +65,8 @@ spec = do
   describe "runForward" do
     let bp :: Unit UnixLC (Position () String) (FM String) IO () String ()
         bp = take 'a' *> take 'b'
-        f :: Position () String -> Either (ErrorPosition ()) ((), Position () String)
-        f = runForward @() bp
+        f :: Position () String -> EESP () String ((), Position () String)
+        f = runForward bp
 
     it "position incremented correctly" $
       f "abc" `shouldBe` Right ((), Position () 1 3 "c")
@@ -82,3 +82,7 @@ spec = do
         b = runBackward bp 'A' ()
     b "cd" `shouldBe` EValue ("Acd", "cd")
 
+instance Monoid text => ChangeMonad ListToElement (EEP dataId e [text]) (EEP dataId e text) () where
+  changeMonad' () = first $ second ($> mempty)
+instance ChangeMonad ElementToList (EEP dataId e text) (EEP dataId e [text]) () where
+  changeMonad' () = first $ second (<&> singleton)

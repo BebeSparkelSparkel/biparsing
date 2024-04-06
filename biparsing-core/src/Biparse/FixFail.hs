@@ -1,28 +1,22 @@
 {-# LANGUAGE NoImplicitPrelude #-}
+{-# LANGUAGE UndecidableInstances #-}
 module Biparse.FixFail {-# DEPRECATED "Should be put in a specifically pure backwards package" #-}
-  ( FixFail(..)
-  , FixFailM(..)
+  ( FixFailM(..)
+  , (!>>)
   ) where
 
-import Control.Applicative (Applicative(pure))
 import Control.Monad.State (StateT(StateT,runStateT))
 import Control.Monad.Writer (WriterT(WriterT,runWriterT))
-import Data.Either (Either, fromRight)
-import Data.Function (($))
-import Data.Functor.Identity (Identity(runIdentity))
-import Data.Maybe (Maybe, fromMaybe)
+import Data.Function (($), flip)
 import Data.Monoid (Monoid(mempty))
 
-class FixFail m where fixFail :: a -> m a -> a
+infixl 3 !>>
+(!>>) :: FixFailM m m' => m a -> a -> m' a
+(!>>) = flip fixFailM
+class FixFailM m m' | m' -> m where fixFailM :: a -> m a -> m' a
 
-class FixFailM m where fixFailM :: a -> m a -> m a
-
-instance FixFail Identity where fixFail _ = runIdentity
-instance FixFail Maybe where fixFail = fromMaybe
-instance FixFail (Either a) where fixFail = fromRight
-
-instance (FixFail m, Applicative m) => FixFailM (StateT s m) where
-  fixFailM x y = StateT $ \s -> pure $ (x,s) `fixFail` runStateT y s
-instance (Monoid w, FixFail m, Applicative m) => FixFailM (WriterT w m) where
-  fixFailM x y = WriterT $ pure $ (x,mempty) `fixFail` runWriterT y
+instance FixFailM m m' => FixFailM (StateT s m) (StateT s m') where
+  fixFailM x y = StateT \s -> (x,s) `fixFailM` runStateT y s
+instance (FixFailM m m', Monoid w) => FixFailM (WriterT w m) (WriterT w m') where
+  fixFailM x y = WriterT $ (x,mempty) `fixFailM` runWriterT y
 

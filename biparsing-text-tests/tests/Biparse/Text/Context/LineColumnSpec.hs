@@ -5,7 +5,7 @@ module Biparse.Text.Context.LineColumnSpec where
 spec :: Spec
 spec = do
   describe "UpdateStateWithElement" do
-    fb @() "simple"
+    fb "simple"
       (one :: IsoLocal String Char)
       ()
       ()
@@ -25,7 +25,7 @@ spec = do
             x <- b '\n'
             x `shouldBe` ('\n', "\n")
 
-  fb @() "UpdateStateWithSubState"
+  fb "UpdateStateWithSubState"
     (takeWhile (/= ':') :: IsoLocal Text Text)
     ()
     ()
@@ -51,10 +51,10 @@ spec = do
       prop "writes all" \t -> b t >>= (`shouldBe` (t, t))
 
   describe "add position to error" do
-    let bp :: Const UnixLC (Position () Text) (Either (ErrorState String (Position () Text))) IO () Text () ()
+    let bp :: Const UnixLC (Position () Text) (EESP () Text) IO () Text () ()
         bp = take 'a' *> take 'b'
-        f :: Position () Text -> Either (ErrorPosition ()) ((), Position () Text)
-        f = runForward @() bp
+        f :: Position () Text -> EESP () Text ((), Position () Text)
+        f = runForward bp
 
     it "empty" do
       f "" `shouldSatisfy` errorPosition 1 1

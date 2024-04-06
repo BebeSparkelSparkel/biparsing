@@ -42,7 +42,7 @@ decodeEasy :: forall c ss u v.
   -> SuperArg (SuperState c ss)
   -> ss
   -> IO v
-decodeEasy bp sa = SRW.evalForward @() bp . fromSubState @c sa
+decodeEasy bp sa = SRW.evalForward bp . fromSubState @c sa
 
 encodeEasy :: forall c ss u v.
   ( Monoid (AssociatedWriter ss)
@@ -69,7 +69,7 @@ decode :: forall c ss r ws u v.
   -> SuperArg (SuperState c ss)
   -> ss
   -> IO v
-decode bp sa = SRW.evalForward @() bp . fromSubState @c sa
+decode bp sa = SRW.evalForward bp . fromSubState @c sa
 
 encode :: forall c ss r ws u v.
   ( Monoid (AssociatedWriter ss)

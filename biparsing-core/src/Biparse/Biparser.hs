@@ -1,9 +1,11 @@
 {-# OPTIONS_GHC -Wno-missing-import-lists #-}
 module Biparse.Biparser
   ( module Biparse.Biparser.Internal
-  , module Biparse.Biparser.PolyKinds
+  , module Biparse.Polarize
+  , module Biparse.FixFail
   ) where
 
 import Biparse.Biparser.Internal
-import Biparse.Biparser.PolyKinds
+import Biparse.Polarize
+import Biparse.FixFail
 

@@ -11,6 +11,7 @@ module Control.Monad.EitherString
   ) where
 
 import Control.Applicative (Applicative, Alternative((<|>),empty))
+import Control.Monad.ChangeMonad (ChangeMonad, changeMonad')
 import Lens.Micro.Pro (Prism, Prism', prism, prism')
 import Control.Monad (Monad, MonadFail(fail), MonadPlus)
 import Control.Monad.Except (MonadError)
@@ -18,7 +19,7 @@ import Data.Bool (Bool)
 import Data.Coerce (coerce)
 import Data.Either (Either(Left,Right), fromLeft, fromRight, isLeft, either)
 import Data.Eq (Eq)
-import Data.Function ((.), ($))
+import Data.Function ((.), ($), id)
 import Data.Functor (Functor)
 import Data.Functor.Alt (Alt, (<!>))
 import Data.Maybe (Maybe(Just,Nothing))
@@ -46,6 +47,8 @@ instance Show a => Show (EitherString a) where
     EitherString (Left x) -> "EString " <> show x
 
 instance Alt EitherString where EitherString x <!> EitherString y = EitherString $ x <!> y
+
+instance ChangeMonad is EitherString EitherString () where changeMonad' _ = id
 
 pattern EString :: String -> EitherString a
 pattern EString x = EitherString (Left x)

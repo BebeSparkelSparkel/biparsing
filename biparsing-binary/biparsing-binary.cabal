@@ -18,14 +18,31 @@ build-type:     Simple
 library
   exposed-modules:
       Biparse.Binary
+      Biparse.Binary.Generics
   other-modules:
       Prelude
   hs-source-dirs:
       src/
-  ghc-options: -Werror -Weverything -Wno-implicit-prelude -Wno-missing-deriving-strategies -Wno-missing-kind-signatures -Wno-missing-local-signatures -Wno-missing-safe-haskell-mode -Wno-safe -Wno-unsafe
+  default-extensions:
+      PatternSynonyms
+      RankNTypes
+      LambdaCase
+      BlockArguments
+      TypeApplications
+      ScopedTypeVariables
+      TypeOperators
+      FlexibleContexts
+      FlexibleInstances
+      MultiParamTypeClasses
+      TypeFamilies
+      DeriveGeneric
+  ghc-options: -Werror -Weverything -Wno-implicit-prelude -Wno-missing-deriving-strategies -Wno-missing-kind-signatures -Wno-missing-local-signatures -Wno-missing-safe-haskell-mode -Wno-safe -Wno-unsafe -Wno-unused-packages
   build-depends:
       base
     , biparsing-core
+    , mono-traversable
+    , mtl
+    , semigroupoids
   mixins:
       base hiding (Prelude)
   default-language: Haskell2010
@@ -34,23 +51,34 @@ test-suite spec
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
-      Biparse.Binary.Generic
+      Biparse.Binary.GenericsSpec
       Biparse.BinarySpec
-      Prelude
   hs-source-dirs:
       tests/
   default-extensions:
+      PatternSynonyms
+      RankNTypes
+      LambdaCase
+      BlockArguments
+      TypeApplications
+      ScopedTypeVariables
+      TypeOperators
+      FlexibleContexts
+      FlexibleInstances
+      MultiParamTypeClasses
+      TypeFamilies
+      DeriveGeneric
       OverloadedStrings
-  ghc-options: -Werror -Weverything -fprint-potential-instances -Wno-implicit-prelude -Wno-incomplete-uni-patterns -Wno-missing-deriving-strategies -Wno-missing-export-lists -Wno-missing-import-lists -Wno-missing-kind-signatures -Wno-missing-local-signatures -Wno-missing-safe-haskell-mode -Wno-orphans -Wno-safe -Wno-unsafe
+  ghc-options: -Werror -Weverything -fprint-potential-instances -Wno-implicit-prelude -Wno-incomplete-uni-patterns -Wno-missing-deriving-strategies -Wno-missing-export-lists -Wno-missing-import-lists -Wno-missing-kind-signatures -Wno-missing-local-signatures -Wno-missing-safe-haskell-mode -Wno-orphans -Wno-safe -Wno-unsafe -Wno-unused-packages
   build-tool-depends:
       hspec-discover:hspec-discover
   build-depends:
       base
     , biparsing-binary
     , biparsing-core
+    , biparsing-test
     , bytestring
     , hspec
-    , hspec-discover
   mixins:
       base hiding (Prelude)
   default-language: Haskell2010

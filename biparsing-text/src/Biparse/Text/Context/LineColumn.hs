@@ -15,29 +15,18 @@ module Biparse.Text.Context.LineColumn
   , dataId
   , line
   , column
-  , subState
   , startLineColumn
-  , ErrorPosition(..)
-  , EEP
-  , EESP
   , ElementToList
   , ListToElement
   ) where
 
 import Biparse.Text.LineBreak (LineBreakType(Unix,Windows), LineSplitter, lineSplitter, UpdateSuperState)
 import Biparse.Utils (char, symbol)
-import Control.Monad.StateError (StateErrorT(StateErrorT), ErrorState(ErrorState), ErrorInstance(ErrorStateInstance), errorState)
-import Control.Monad.UndefinedBackwards (UndefinedBackwards)
 import Data.EqElement (splitElem, splitSeq)
 import GHC.Exts (IsList(Item))
 import GHC.Exts qualified as GE
 import System.IO (FilePath)
-import Control.Monad.ChangeMonad (ChangeMonad(changeMonad'), ChangeFunction, ResultMonad(ResultingMonad,resultMonad))
-import Control.Monad.EitherString (EitherString, pattern EString, pattern EValue)
-import Data.String (String)
 import Data.Int (Int)
-import Lens.Micro ((%~), (.~), (^.), _2, _Left, _Right)
-import Lens.Micro.TH (makeLenses)
 import Data.Either (Either(Left,Right))
 import Data.Maybe (Maybe(Just))
 import Control.Monad.State (execState)
@@ -160,42 +149,40 @@ instance IsList ss => IsList (Position () ss) where
 
 -- * Positional Errors
 
-data ErrorPosition dataId = ErrorPosition dataId Int Int String deriving (Show, Eq)
-
-type EEP dataId e text = Either (ErrorState e (Position dataId text))
-
-instance ChangeMonad () (EEP dataId e text) (Either (ErrorPosition dataId)) where
-  changeMonad' = first
-type instance ChangeFunction () (EEP dataId e text) (Either (ErrorPosition dataId)) = ErrorState e (Position dataId text) -> (ErrorPosition dataId)
-
-instance ResultMonad (Either (ErrorState String (Position dataId text))) () where
-  type ResultingMonad (Either (ErrorState String (Position dataId text))) () = Either (ErrorPosition dataId)
-  resultMonad (ErrorState e (Position d l c _)) = ErrorPosition d l c e
-
--- | "This instance is not sound and is a hack for zoom. The monad conversion in zoom should be more complete or throw away the text entirely but 'catch' in 'MonadError e (StateErrorT s m)' makes this difficult.
+--data ErrorPosition dataId = ErrorPosition dataId Int Int String deriving (Show, Eq)
+--
+--
+--instance ChangeMonad () (EEP dataId e text) (Either (ErrorPosition dataId)) where
+--  changeMonad' = first
+--type instance ChangeFunction () (EEP dataId e text) (Either (ErrorPosition dataId)) = ErrorState e (Position dataId text) -> (ErrorPosition dataId)
+--
+--instance ResultMonad (Either (ErrorState String (Position dataId text))) () where
+--  type ResultingMonad (Either (ErrorState String (Position dataId text))) () = Either (ErrorPosition dataId)
+--  resultMonad (ErrorState e (Position d l c _)) = ErrorPosition d l c e
+--
+---- | "This instance is not sound and is a hack for zoom. The monad conversion in zoom should be more complete or throw away the text entirely but 'catch' in 'MonadError e (StateErrorT s m)' makes this difficult.
 data ElementToList
-instance ChangeMonad ElementToList (EEP dataId e text) (EEP dataId e [text]) where
-  changeMonad' () = first $ second $ fmap singleton
-type instance ChangeFunction ElementToList (EEP dataId e text) (EEP dataId e [text]) = ()
-
-instance ChangeMonad (LineColumn lb) (StateErrorT 'ErrorStateInstance (Position d [text]) (EEP d e [text])) (StateErrorT 'ErrorStateInstance (Position d text) (EEP d e text)) where
-  changeMonad' (f,g) (StateErrorT h) = StateErrorT \s -> h (s & subState %~ f) & _Left . errorState . subState %~ g & _Right . _2 . subState %~ g
-type instance ChangeFunction (LineColumn _) (StateErrorT 'ErrorStateInstance (Position d [text]) (EEP d e [text])) (StateErrorT 'ErrorStateInstance (Position d text) (EEP d e text)) = (text -> [text], [text] -> text)
-
+--instance ChangeMonad ElementToList (EEP dataId e text) (EEP dataId e [text]) where
+--  changeMonad' () = first $ second $ fmap singleton
+--type instance ChangeFunction ElementToList (EEP dataId e text) (EEP dataId e [text]) = ()
+--
+--instance ChangeMonad (LineColumn lb) (StateErrorT 'ErrorStateInstance (Position d [text]) (EEP d e [text])) (StateErrorT 'ErrorStateInstance (Position d text) (EEP d e text)) where
+--  changeMonad' (f,g) (StateErrorT h) = StateErrorT \s -> h (s & subState %~ f) & _Left . errorState . subState %~ g & _Right . _2 . subState %~ g
+--type instance ChangeFunction (LineColumn _) (StateErrorT 'ErrorStateInstance (Position d [text]) (EEP d e [text])) (StateErrorT 'ErrorStateInstance (Position d text) (EEP d e text)) = (text -> [text], [text] -> text)
+--
 data ListToElement
-instance Monoid text => ChangeMonad ListToElement (EEP dataId e [text]) (EEP dataId e text) where
-  changeMonad' () = first $ second ($> mempty)
-type instance ChangeFunction ListToElement (EEP dataId e [text]) (EEP dataId e text) = ()
-
-type EESP dataId text = EEP dataId String text
-type SE dataId text = StateErrorT 'ErrorStateInstance (Position dataId text) (EESP dataId text)
-instance ChangeMonad () EitherString (SE dataId text) where
-  changeMonad' () = \case
-    EValue x -> pure x
-    EString msg -> fail msg
-type instance ChangeFunction () EitherString (SE _ _) = ()
-
-type instance ChangeFunction ListToElement (_ (UndefinedBackwards text)) (_ (UndefinedBackwards text)) = [text] -> text
+--instance Monoid text => ChangeMonad ListToElement (EEP dataId e [text]) (EEP dataId e text) where
+--  changeMonad' () = first $ second ($> mempty)
+--type instance ChangeFunction ListToElement (EEP dataId e [text]) (EEP dataId e text) = ()
+--
+--type SE dataId text = StateErrorT 'ErrorStateInstance (Position dataId text) (EESP dataId text)
+--instance ChangeMonad () EitherString (SE dataId text) where
+--  changeMonad' () = \case
+--    EValue x -> pure x
+--    EString msg -> fail msg
+--type instance ChangeFunction () EitherString (SE _ _) = ()
+--
+--type instance ChangeFunction ListToElement (_ (UndefinedBackwards text)) (_ (UndefinedBackwards text)) = [text] -> text
 
 --type instance ChangeFunction (LineColumn _) (RWST r [text] w m) (RWST r text w m) = [text] -> text
 

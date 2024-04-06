@@ -22,10 +22,14 @@ module Biparse.Mixes.Exports
   , module Data.Char
   , module Data.ByteString.Internal
   , module Data.Word
+  , module Data.Int
+  , module GHC.Float
   , module Control.Monad.State
   , module GHC.Enum
   , module Biparse.Biparser.StateReaderWriter
   , module System.IO
+  , module Text.Show
+  , module Control.Applicative
   ) where
 
 import Biparse.Biparser hiding (Biparser, Iso, Unit, Const, ConstU)
@@ -49,9 +53,13 @@ import Text.Printf (IsChar, fromChar, toChar)
 import Data.String (String)
 import Data.Char (Char)
 import Data.ByteString.Internal (c2w, w2c)
-import Data.Word (Word8)
+import Data.Word (Word8, Word16, Word32, Word64, Word)
+import GHC.Float (Float, Double)
+import Data.Int (Int8, Int16, Int32, Int64, Int)
 import Control.Monad.State
 import GHC.Enum (succ, pred)
 import Biparse.Biparser.StateReaderWriter (zoom, zoomWrite, zoomOne)
 import System.IO (FilePath)
+import Text.Show (Show, show, ShowS)
+import Control.Applicative (pure)
 

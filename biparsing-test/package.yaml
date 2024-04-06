@@ -34,3 +34,8 @@ library:
     - text
     - transformers
     - vector
+  ghc-options:
+    - -Werror
+    - -Weverything
+
+    - -Wno-unused-packages

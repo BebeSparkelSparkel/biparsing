@@ -69,7 +69,7 @@ library:
     - split
     - stringsearch
   ghc-options:
-    - -Werror
+    #- -Werror
     - -Weverything
 
     - -Wno-implicit-prelude

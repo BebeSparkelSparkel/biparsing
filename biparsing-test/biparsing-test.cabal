@@ -20,6 +20,7 @@ library
       Prelude
   hs-source-dirs:
       ./
+  ghc-options: -Werror -Weverything -Wno-unused-packages
   build-depends:
       QuickCheck
     , base

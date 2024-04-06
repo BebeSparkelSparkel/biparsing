@@ -47,6 +47,7 @@ library
     , biparsing-core
     , biparsing-text
     , bytestring
+    , microlens
     , mono-traversable >=1.0.17.0
     , mtl
     , semigroupoids

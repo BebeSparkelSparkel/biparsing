@@ -39,6 +39,9 @@ module Biparse.Biparser.Internal
   , ignoreForward
   , ignoreBackward
   , GetSubState(..)
+  , ReplaceSubState(..)
+  , SubStateLens
+  , subState
   , InitSuperState(..)
   , SuperArg
   , UpdateStateWithSubState(..)
@@ -47,7 +50,6 @@ module Biparse.Biparser.Internal
   , UpdateStateWithElement(..)
   , ElementContext
   , UpdateStateWithNConsumed(..)
-  , ReplaceSubState(..)
   , One
   , one
   , oneFw
@@ -70,6 +72,8 @@ module Biparse.Biparser.Internal
   ) where
 
 import Biparse.Utils (headTailAlt)
+import Lens.Micro (Lens, lens)
+import Biparse.FixFail (FixFailM(fixFailM))
 import Control.Applicative qualified
 import Control.Monad.Extra (findM, whenM)
 import Control.Monad.Unrecoverable (MonadUnrecoverable, UnrecoverableError, throwUnrecoverable)
@@ -306,10 +310,17 @@ ignoreBackward = flip setBackward pure
 -- SubState allows for context outside of the parser and printer.
 -- Line and column number for parsing error messages is an example of context that is important to maintain but annoying to directly deal with when writeing the parser.
 
--- | Getter for the substate.
+-- | Getter and Setter for the substate.
 class GetSubState state where
   type SubState state :: Type
   getSubState :: state -> SubState state
+
+class SubState s' ~ ss' => ReplaceSubState s ss' s' | s ss' -> s' where replaceSubState :: s -> ss' -> s'
+
+--class SubStateLens s s' ss ss' | s -> ss, s' -> ss', s ss' -> s' where
+type SubStateLens s s' ss ss' = (GetSubState s, SubState s ~ ss, ReplaceSubState s ss' s')
+subState :: SubStateLens s s' ss ss' => Lens s s' ss ss'
+subState = lens getSubState replaceSubState
 
 instance GetSubState (Identity s) where
   type SubState (Identity s) = s
@@ -360,8 +371,6 @@ type ElementContext context state = (GetSubState state, UpdateStateWithElement c
 -- - Returns the updated state
 class UpdateStateWithNConsumed context state where
   updateStateWithNConsumed :: state -> Index (SubState state) -> state
-
-class ReplaceSubState s ss s' | s ss -> s' where replaceSubState :: s -> ss -> s'
 
 instance (Functor m, Functor n) => Functor (Biparser c s m n u) where
   fmap f (Biparser fw' bw') = Biparser
@@ -644,4 +653,7 @@ instance (MonadFail m, MonadFail n) => MonadFail (Biparser c s m n u) where
 
 instance (Functor m, Functor n) => Profunctor (Biparser c s m n) where
   dimap f g (Biparser fw bw) = Biparser (g <$> fw) (fmap g . bw . f)
+
+instance (FixFailM m m', FixFailM n n') => FixFailM (Biparser c s m n u) (Biparser c s m' n' u) where
+  fixFailM x (Biparser fw bw) = Biparser (fixFailM x fw) (fixFailM x . bw)
 

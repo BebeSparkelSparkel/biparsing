@@ -53,3 +53,5 @@ tests:
       - -Wno-orphans
       - -Wno-safe
       - -Wno-unsafe
+
+      - -Wno-unused-packages

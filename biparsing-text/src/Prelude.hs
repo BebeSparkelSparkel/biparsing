@@ -31,6 +31,8 @@ module Prelude
   , module Data.Default
   , module Biparse.Utils
   , module Control.Monad.Trans.Writer.Selectable
+  , module Lens.Micro.TH
+  , module Lens.Micro
   ) where
 
 import Biparse.Biparser (Biparser, pattern Biparser, Iso, Const, IsoClass(iso), SubElement, GetSubState(SubState, getSubState), ReplaceSubState(replaceSubState), InitSuperState(SuperState,fromSubState), SuperArg, ElementContext, SubStateContext, one, comap, upon, uponM, UpdateStateWithElement(updateElementContext), UpdateStateWithSubState(updateSubStateContext), peek, try, ignoreBackward, split)
@@ -67,3 +69,6 @@ import Text.Printf (IsChar(toChar,fromChar))
 import Text.Show (Show(show))
 import Data.Default (Default(def))
 import Biparse.Utils ((>>>), headTailAlt)
+
+import Lens.Micro.TH (makeLenses)
+import Lens.Micro ((^.), (%~), (.~))

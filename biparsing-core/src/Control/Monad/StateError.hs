@@ -12,10 +12,10 @@ module Control.Monad.StateError
   , errorState
   , ErrorInstance(..)
   , ErrorContext
-  , runSET
+  --, runSET
   ) where
 
-import Control.Monad.ChangeMonad (ChangeMonad, ChangeFunction, changeMonad', ResultMonad(ResultingMonad,resultMonad), Lift)
+import Control.Monad.ChangeMonad (ChangeMonad, changeMonad', Lift)
 import Control.Monad.Unrecoverable (MonadUnrecoverable, throwUnrecoverable, UnrecoverableError)
 import Control.Monad.TransformerBaseMonad (TransformerBaseMonad, LiftBaseMonad, liftBaseMonad)
 import Control.Monad.MonadProgenitor (MonadProgenitor)
@@ -72,22 +72,24 @@ instance MonadError (ErrorState e s) m => MonadError e (StateErrorT 'ErrorStateI
   catchError x eh = StateErrorT \s -> catchError (r x s) \(ErrorState e s') -> r (eh e) s'
     where r = runStateErrorT
 
-runSET :: forall is c s m a.
-  ( ChangeMonad is m (ResultingMonad m is)
-  , ResultMonad m is
-  )
-  => StateErrorT c s m a
-  -> s
-  -> ResultingMonad m is (a, s)
-runSET = (changeMonad' @is (resultMonad @m @is) .) . runStateErrorT
+--runSET :: forall is c s m a.
+--  ( ChangeMonad is m (ResultingMonad m is)
+--  , ResultMonad m is
+--  )
+--  => StateErrorT c s m a
+--  -> s
+--  -> ResultingMonad m is (a, s)
+--runSET = (changeMonad' @is (resultMonad @m @is) .) . runStateErrorT
 
-instance ResultMonad (Either (ErrorState e (Identity s))) () where
-  type ResultingMonad (Either (ErrorState e (Identity s))) () = Either (ErrorState e (Identity s))
-  resultMonad = ()
+--instance ResultMonad (Either (ErrorState e (Identity s))) () where
+--  type ResultingMonad (Either (ErrorState e (Identity s))) () = Either (ErrorState e (Identity s))
+--  resultMonad = ()
 
-instance (ChangeMonad () m m', ChangeFunction () m m' ~ (), Monad m') => ChangeMonad Lift m (StateErrorT 'NewtypeInstance s m') where
+instance (ChangeMonad () m m' (), Monad m') => ChangeMonad Lift m (StateErrorT 'NewtypeInstance s m') () where
   changeMonad' () = lift . changeMonad' @() @m @m' ()
-type instance ChangeFunction Lift _ (StateErrorT 'NewtypeInstance _ _) = ()
+--type instance ChangeFunction Lift _ (StateErrorT 'NewtypeInstance _ _) = ()
+instance (Functor m', ChangeMonad is m m' (s' -> s, s -> s')) => ChangeMonad is (StateErrorT 'ErrorStateInstance s m) (StateErrorT 'ErrorStateInstance s' m') (s' -> s, s -> s') where
+  changeMonad' (f,g) (StateErrorT x) = StateErrorT \s -> fmap (fmap g) $ changeMonad' @is (f,g) $ x $ f s
 
 type instance TransformerBaseMonad (StateErrorT _ _ m) = m
 

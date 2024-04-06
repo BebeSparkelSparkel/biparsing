@@ -1,5 +1,5 @@
 {-# LANGUAGE UndecidableInstances #-}
-module Biparse.Generic.Binary
+module Biparse.Binary.Generics
   ( genericBinaryAdtIsoClass
   ) where
 

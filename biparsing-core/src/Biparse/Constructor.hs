@@ -23,7 +23,7 @@ module Biparse.Constructor
   , exposes
   ) where
 
-import Control.Monad.ChangeMonad (ChangeMonad, ChangeFunction, changeMonad')
+import Control.Monad.ChangeMonad (ChangeMonad, changeMonad')
 import Biparse.Biparser (Biparser, pattern Biparser, SubState, SubElement, one, Iso, GetSubState, UpdateStateWithElement)
 import Biparse.Biparser.StateReaderWriter qualified as BSRW
 import Lens.Micro (Traversal')
@@ -136,8 +136,8 @@ focusOne f c = focus @is f id one c
 type Focus is m m' n n' =
   -- m
   ( Monad m
-  , ChangeMonad is m' m
-  , () ~ ChangeFunction is m' m
+  , ChangeMonad is m' m ()
+  --, () ~ ChangeFunction is m' m
   -- n
   , Monad n
   , LiftBaseMonad n

@@ -87,9 +87,15 @@ module Prelude
   , module Control.Monad.Error.Class
   , module Data.Semigroup
   , module GHC.Bits
+  , module Control.Monad.Writer.Class
 
   , fb
+  , EEP
+  , EESP
   , errorPosition
+  , errorPosition'
+  , EIP
+  , EISP
   , errorIndex
   , limit
   , FM
@@ -111,15 +117,16 @@ import Biparse.List (all, takeElementsWhile)
 import Biparse.Text.Context.LineColumn
 import Biparse.Utils (headAlt, (<$$>))
 import Control.Applicative (Applicative(pure,(<*>)), (*>), (<*), liftA2, empty)
-import Control.Monad ((>>=), return, when, sequence)
-import Control.Monad.ChangeMonad (ChangeMonad(changeMonad'), Lift, ChangeFunction, ResultMonad(ResultingMonad))
+import Control.Monad (Monad((>>=),return), when, sequence)
+import Control.Monad.ChangeMonad (ChangeMonad(changeMonad'), Lift)
 import Control.Monad.EitherString (EitherString, pattern EString, pattern EValue, isString, _EValue)
 import Control.Monad.Error.Class (throwError, catchError)
 import Control.Monad.Fail (MonadFail(fail))
 import Control.Monad.State.Class (get, put)
-import Control.Monad.StateError (StateErrorT, ErrorState, ErrorInstance(ErrorStateInstance))
+import Control.Monad.StateError (StateErrorT, ErrorState(ErrorState), ErrorInstance(ErrorStateInstance))
 import Control.Monad.Trans.RWS.CPS (RWST, mapRWST, rwsT, runRWST)
-import Data.Bifunctor (first)
+import Control.Monad.Writer.Class (MonadWriter)
+import Data.Bifunctor (first, second)
 import Data.Bool (Bool(True,False), (&&), otherwise, bool)
 import Data.ByteString.Internal (c2w, w2c)
 import Data.Char (Char, isDigit)
@@ -129,7 +136,7 @@ import Data.Either (Either(Right), isRight, either)
 import Data.Eq (Eq((==)), (/=))
 import Data.Function
 import Data.Functor (Functor, (<$>), (<&>), ($>))
-import Data.Functor.Alt ((<!>))
+import Data.Functor.Alt (Alt((<!>)))
 import Data.Functor.Identity (Identity(Identity,runIdentity))
 import Data.Int (Int)
 import Data.List (zip)
@@ -137,15 +144,16 @@ import Data.List.NonEmpty (NonEmpty)
 import Data.Maybe (Maybe(Just,Nothing), maybe)
 import Data.MonoTraversable (Element)
 import Data.MonoTraversable.Unprefixed (length)
-import Data.Semigroup (Semigroup((<>)))
 import Data.Monoid (Monoid(mempty))
 import Data.Ord
+import Data.Semigroup (Semigroup((<>)))
 import Data.Sequence (Seq)
-import Data.Sequences (IsSequence, Index, cons, snoc)
+import Data.Sequences (IsSequence, Index, cons, snoc, singleton)
 import Data.String (String, IsString(fromString))
 import Data.Tuple (fst, snd)
 import Data.Vector (Vector)
 import Data.Word (Word)
+import GHC.Bits (Bits)
 import GHC.Enum (Enum(succ))
 import GHC.Err (undefined)
 import GHC.Float (Double)
@@ -164,7 +172,6 @@ import Test.QuickCheck
 import Test.QuickCheck.Instances.Text ()
 import Text.Printf (IsChar(fromChar,toChar))
 import Text.Show (Show(show))
-import GHC.Bits (Bits)
 
 -- Internal
 import Control.Monad.State (StateT)
@@ -182,32 +189,38 @@ import GHC.Exts qualified
 import System.Timeout (timeout)
 import Test.Hspec qualified
 
-fb :: forall is c s m m' n r w ws u v.
-  ( m' ~ ResultingMonad m is
-  , ChangeMonad is m m'
-  , ResultMonad m is
-  , Functor n
+fb :: forall c s m n r w ws u v.
+  ( Functor n
   , BackwardC c n w
   )
   => String
   -> Biparser c s m n r w ws u v
   -> r
   -> ws
-  -> ((s -> m' (v, s)) -> Spec)
+  -> ((s -> m (v, s)) -> Spec)
   -> ((u -> n (v, w)) -> Spec)
   -> Spec
 fb describeLabel bp r ws fws bws = describe describeLabel do
-  describe "forward" $ fws $ runForward @is bp
+  describe "forward" $ fws $ runForward bp
   describe "backward" $ bws \u -> runBackward bp r ws u
 
-errorPosition :: Int -> Int -> Either (ErrorPosition ()) b -> Bool
-errorPosition l c = \case
-  Left (ErrorPosition () l' c' _) -> l == l' && c == c'
+type EEP dataId e text = Either (ErrorState e (Position dataId text))
+type EESP dataId text = EEP dataId String text
+
+errorPosition :: Eq e => Int -> Int -> EEP () e text b -> Bool
+errorPosition = errorPosition' Nothing
+
+errorPosition' :: Eq e => Maybe e -> Int -> Int -> EEP () e text b -> Bool
+errorPosition' me l c = \case
+  Left (ErrorState e (Position _ l' c' _)) -> l == l' && c == c' && maybe True (== e) me
   _ -> False
 
-errorIndex :: (Eq i, i ~ Index ss) => i -> Either (ErrorIndex ss) b -> Bool
+type EIP e ss = Either (ErrorState e (IndexPosition ss))
+type EISP ss = EIP String ss
+
+errorIndex :: (Eq i, i ~ Index ss) => i -> Either (ErrorState e (IndexPosition ss)) b -> Bool
 errorIndex i = \case
-  Left (ErrorIndex i' _) -> i == i'
+  Left (ErrorState _ (IndexPosition i' _)) -> i == i'
   _ -> False
 
 limit :: IO a -> IO a
@@ -254,3 +267,4 @@ shouldReturn x y = limit $ shouldReturn' x y
 class ShouldReturn m where shouldReturn' :: (HasCallStack, Show a, Eq a) => m a -> a -> Expectation
 instance ShouldReturn IO where shouldReturn' x y = Test.Hspec.shouldReturn x y
 instance Show a => ShouldReturn (Either a) where shouldReturn' x y = either (fail . ("Expected Right but received " <>) . show . Left @_ @()) (`shouldBe` y) x
+

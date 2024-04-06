@@ -1,14 +1,16 @@
 #!/bin/sh
 
-target=$1
+searchDir=$(if  [ -e cabal.project ]; then echo . ; else echo .. ; fi)
+command=$1
+target=$2
 continue=true
 
 packageFiles() {
-  find .. -name 'package.yaml' 
+  find $searchDir -name 'package.yaml' 
 }
 
 cabalAndHaskellFiles() {
-  find .. -name '*.cabal' -or -name 'cabal.project*' -or -name '*.hs' 
+  find $searchDir -name '*.cabal' -or -name 'cabal.project*' -or -name '*.hs' 
 }
 
 hpackWatch() {
@@ -23,7 +25,7 @@ cabalWatch() {
   echo cabalWatch
   while [ $continue = true ]
   do
-    cabalAndHaskellFiles | entr -cd cabal $target -O0
+    cabalAndHaskellFiles | entr -cd cabal $command -O0 $target
   done
 }
 

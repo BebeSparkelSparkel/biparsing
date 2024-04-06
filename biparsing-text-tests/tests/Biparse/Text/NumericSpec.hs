@@ -4,7 +4,7 @@ import Biparse.Text.Numeric
 
 spec :: Spec
 spec = do
-  fb @() "naturalBaseTen"
+  fb "naturalBaseTen"
     (naturalBaseTen :: Iso UnixLC (FM Text) IO () Text () (Position () Text) Word)
     ()
     ()
@@ -17,7 +17,7 @@ spec = do
         b 1   >>= (`shouldBe` (1,   "1"))
         b 123 >>= (`shouldBe` (123, "123"))
 
-  fb @() "intBaseTen"
+  fb "intBaseTen"
     (intBaseTen :: Iso UnixLC (FM Text) IO () Text () (Position () Text) Int)
     ()
     ()
@@ -27,14 +27,14 @@ spec = do
         negativeIntegerForward f
 
       it "error shows failed to parse string" $
-        f "   abc" `shouldBe` Left (ErrorPosition () 1 1 "Could not parse \"   abc\" to a base 10 natural.")
+        f "   abc" `shouldSatisfy` errorPosition' (Just "Could not parse \"   abc\" to a base 10 natural.") 1 1
 
       failIntegerForward f
     )
     \b -> do
       integerBackward b
 
-  fb @() "eNotation"
+  fb "eNotation"
     (eNotation :: Iso ColumnsOnly (FM Text) IO () Text () (Position () Text) Double)
     ()
     ()
@@ -49,14 +49,14 @@ spec = do
     \b -> do
       realBackward b
 
-  fb @() "realBaseTen"
+  fb "realBaseTen"
     (realBaseTen :: Iso UnixLC (FM String) IO () String () (Position () String) Double)
     ()
     ()
     realForward
     realBackward
 
-  fb @() "hex"
+  fb "hex"
     (hex @'LowerCase 2 :: Iso UnixLC (FM String) IO () String () (Position () String) HexWord8)
     ()
     ()
@@ -89,7 +89,7 @@ negativeIntegerForward f = it "negative integer" do
   f "-123"  `shouldBe` Right (-123, Position () 1 5 mempty)
   f "-123x" `shouldBe` Right (-123, Position () 1 5 "x")
 
-failIntegerForward :: (Show b, IsString t) => (t -> Either (ErrorPosition ()) b) -> SpecWith ()
+failIntegerForward :: (Show b, IsString t, Show text) => (t -> EESP () text b) -> SpecWith ()
 failIntegerForward f = it "fail integer" do
   f ""      `shouldSatisfy` errorPosition 1 1
   f " 123"  `shouldSatisfy` errorPosition 1 1
@@ -103,7 +103,7 @@ integerBackward b = it "integer" do
   b (-1)   >>= (`shouldBe` (-1,   "-1"))
   b (-123) >>= (`shouldBe` (-123, "-123"))
 
-realForward :: (Show a, Show text, Eq a, Eq text, Monoid text, IsString t, IsString text, Fractional a) => (t -> Either (ErrorPosition ()) (a, Position () text)) -> Spec
+realForward :: (Show a, Show text, Eq a, Eq text, Monoid text, IsString t, IsString text, Fractional a) => (t -> EESP () text (a, Position () text)) -> Spec
 realForward f = do
   naturalsForward f
 
@@ -119,7 +119,7 @@ realForward f = do
     failIntegerForward f
 
     it "fail real" do
-      f "1."   `shouldBe` Left (ErrorPosition () 1 1 "Could not parse \"1.\" to a base 10 real.")
+      f "1." `shouldSatisfy` errorPosition' (Just "Could not parse \"1.\" to a base 10 real.") 1 1
 
 realBackward :: (Show a, Show b, Eq a, Eq b, IsString b, Fractional t, Fractional a) => (t -> IO (a, b)) -> Spec
 realBackward b = do

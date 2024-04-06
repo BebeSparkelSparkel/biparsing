@@ -5,7 +5,7 @@ import Biparse.Unordered
 
 spec :: Spec
 spec = do
-  fb @() "AllParserTypes"
+  fb "AllParserTypes"
     (unorderedDef :: Iso LinesOnly (FM Ts) EitherString () Ts () (Position () Ts) AllParserTypes)
     ()
     ()

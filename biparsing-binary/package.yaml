@@ -15,13 +15,28 @@ dependencies:
       - hiding (Prelude)
   - biparsing-core
 
-default-extensions: []
+default-extensions:
+  - PatternSynonyms
+  - RankNTypes
+  - LambdaCase
+  - BlockArguments
+  - TypeApplications
+  - ScopedTypeVariables
+  - TypeOperators
+  - FlexibleContexts
+  - FlexibleInstances
+  - MultiParamTypeClasses
+  - TypeFamilies
+  - DeriveGeneric
 
 library:
   source-dirs: src/
   other-modules:
     - Prelude
-  dependencies: []
+  dependencies:
+    - mtl
+    - mono-traversable
+    - semigroupoids
   ghc-options:
     - -Werror
     - -Weverything
@@ -34,6 +49,8 @@ library:
     - -Wno-safe
     - -Wno-unsafe
 
+    - -Wno-unused-packages
+
 tests:
   spec:
     build-tools:
@@ -42,8 +59,8 @@ tests:
     source-dirs: tests/
     dependencies:
       - biparsing-binary
+      - biparsing-test
       - hspec
-      - hspec-discover
       - bytestring
     default-extensions:
       - OverloadedStrings
@@ -64,3 +81,4 @@ tests:
       - -Wno-safe
       - -Wno-unsafe
 
+      - -Wno-unused-packages

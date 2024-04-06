@@ -1,16 +1,13 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 module Biparse.BiparserSpec where
 
-import Biparse.Biparser qualified as BB
-import Biparse.Biparser.StateReaderWriter (N)
 import Data.Sequences qualified as MT
-import Biparse.Text.LineBreak (lines, LineBreakType(Unix))
 
 spec :: Spec
 spec = do
   describe "one" do
     describe "Identity" do
-      fb @() "id"
+      fb "id"
         (one :: Iso () IO IO () String () (Identity String) Char)
         ()
         ()
@@ -25,7 +22,7 @@ spec = do
         \b -> do
           it "typical use" $ b 'a' >>= (`shouldBe` ('a',"a"))
 
-      fb @() "tuple"
+      fb "tuple"
         ((,) <$> one `upon` fst <*> one `upon` snd :: Iso () IO IO () String () (Identity String) (Char,Char))
         ()
         ()
@@ -37,7 +34,7 @@ spec = do
         \b -> do
           it "used twice" $ b ('a','b') >>= (`shouldBe` (('a','b'),"ab"))
 
-    fb @() "LineColumn"
+    fb "LineColumn"
       (one :: Iso UnixLC (FM Text) IO () Text () (Position () Text) Char)
       ()
       ()
@@ -52,7 +49,7 @@ spec = do
       \b -> do
         it "write char" $ b 'd' >>= (`shouldBe` ('d', "d"))
 
-    fb @() "LineColumn [Text]"
+    fb "LineColumn [Text]"
       (one :: Iso LinesOnly (FM [Text]) IO () [Text] () (Position () [Text]) Text)
       ()
       ()
@@ -64,7 +61,7 @@ spec = do
       \b -> do
         it "print string" $ b "abc" >>= (`shouldBe` ("abc", ["abc"]))
 
-    fb @() "Differing parser and printer type"
+    fb "Differing parser and printer type"
       (one :: Iso UnixLC (FM ByteString) EitherString () BuilderByteString () (Position () ByteString) Word8)
       ()
       ()
@@ -77,7 +74,7 @@ spec = do
           b (fromChar 'd') `shouldBe` EValue (fromChar 'd', "d")
 
   describe "split" do
-    fb @() "Identity"
+    fb "Identity"
       -- take two
       (( split do
           x <- get
@@ -98,7 +95,7 @@ spec = do
 
         it "prints all" $ b "abc" >>= (`shouldBe` ("abc","abc"))
 
-    fb @() "Differing parser and printer type"
+    fb "Differing parser and printer type"
       (( split do
         s <- get
         put ""
@@ -115,7 +112,7 @@ spec = do
           b "abc" `shouldBe` EValue ("abc" :: String, "abc" :: Text)
 
   describe "peek" do
-    fb @() "simple"
+    fb "simple"
       (peek one :: Iso () IO IO () String () (Identity String) Char)
       ()
       ()
@@ -128,7 +125,7 @@ spec = do
         it "prints char" $ b 'a' >>= (`shouldBe` ('a',"a"))
 
     describe "Alternative" do
-      fb @() "Identity"
+      fb "Identity"
         (peek (takeUni 'x') <!> takeUni 'a' :: Iso () IO IO () String () (Identity String) Char)
         ()
         ()
@@ -148,7 +145,7 @@ spec = do
 
           it "prints second" $ b 'a' >>= (`shouldBe` ('a',"a"))
 
-      fb @() "LineColumn"
+      fb "LineColumn"
         (peek (takeUni 'x') <!> takeUni 'a' :: Iso UnixLC (FM String) IO () String () (Position () String) Char)
         ()
         ()
@@ -167,14 +164,14 @@ spec = do
   describe "try" do
     let bp :: Biparser ColumnsOnly (Position () (Seq Char)) (FM (Seq Char)) IO () (Seq Char) () Char Char
         bp = try $ one <* take 'b'
-        f = runForward @() bp
+        f = runForward bp
         b = runBackward bp () ()
 
     describe "forward" do
       it "success" $ f "abc" `shouldBe` Right ('a', Position () 1 3 "c")
       
       it "does not consume state in failed attempt" do
-        runForward @() (bp <!> takeUni 'c') "cde" `shouldBe` Right ('c', Position () 1 2 "de")
+        runForward (bp <!> takeUni 'c') "cde" `shouldBe` Right ('c', Position () 1 2 "de")
 
       it "fails if no alternate" do
         f "" `shouldSatisfy` errorPosition 1 1
@@ -187,7 +184,7 @@ spec = do
           x `shouldBe` ('z',"zb")
       
   describe "isNull" do
-    fb @() "Identity"
+    fb "Identity"
       (isNull :: ConstU () (Identity String) Identity Identity () String () [()] Bool)
       ()
       ()
@@ -201,7 +198,7 @@ spec = do
 
         it "false" $ b [()] `shouldBe` Identity (False,mempty)
 
-    fb @() "LineColumn"
+    fb "LineColumn"
       (isNull :: ConstU UnixLC (Position () String) Identity Identity () String () [()] Bool)
       ()
       ()
@@ -216,7 +213,7 @@ spec = do
         it "false" $ b [()] `shouldBe` Identity (False,mempty)
 
   describe "breakWhen'" do
-    fb @() "LineColumn"
+    fb "LineColumn"
       (breakWhen' $ stripPrefix "ab" :: Iso UnixLC (FM String) IO () ByteString () (Position () String) String)
       ()
       ()
@@ -245,7 +242,7 @@ spec = do
 
         it "contains break" $ b "cdab" >>= (`shouldBe` ("cdab", "cdabab"))
 
-    fb @() "Identity"
+    fb "Identity"
       (breakWhen' $ stripPrefix "ab" :: Iso () IO IO () String () (Identity String) String)
       ()
       ()
@@ -275,7 +272,7 @@ spec = do
         it "contains break" $ b "cdab" >>= (`shouldBe` ("cdab", "cdabab"))
 
   describe "count" do
-    fb @() "ElementContext" 
+    fb "ElementContext" 
       (count $ takeElementsWhile (== 'a') :: Biparser UnixLC (Position () Text) (FM Text) IO () Text () [Char] (Natural,[Char]))
       ()
       ()
@@ -290,7 +287,7 @@ spec = do
         prop "correct count" \xs -> let
           in b xs >>= (`shouldBe` ((fromIntegral $ length xs, xs), fromString xs))
 
-    fb @() "SubStateContext" 
+    fb "SubStateContext" 
       (count $ takeWhile (== 'a') :: Biparser UnixLC (Position () Text) (FM Text) IO () Text () Text (Natural,Text))
       ()
       ()
@@ -305,29 +302,12 @@ spec = do
         prop "correct count" \xs -> let
           in b xs >>= (`shouldBe` ((fromIntegral $ length xs, xs), xs))
 
-  describe "focus" do
-
-    fb @() "Biparser success"
-      (BB.focus @UnixLC @UnixLC @UnixLC @'(StateErrorT,Either) @(N UnixLC EitherString () [String] ())
-        (lines @'Unix)
-        (all $ MT.reverse <$> one)
-      :: Iso UnixLC (FM String) EitherString () String () (Position () String) [String])
-      ()
-      ()
-      (\f -> do
-        it "success" $ f "abc\ndef\nghi" `shouldBe` Right (["cba","fed","ihg"], Position () 3 4 mempty)
-      )
-      \b -> do
-        it "success" $ b ["cba","fed","ihg"] `shouldBe` EValue (["abc","def","ghi"], "cba\nfed\nihg")
-
-    it "Biparser fail" pending
-
 
 instance IsChar String where
   fromChar = (: [])
   toChar = undefined
 
-instance ChangeMonad UnixLC (RWST () [String] () EitherString) (RWST () [Char] () EitherString) where
-  changeMonad' f = mapRWST $ _EValue . _3 %~ f
-type instance ChangeFunction UnixLC (RWST () [String] () EitherString) (RWST () [Char] () EitherString) = [String] -> String
+--instance ChangeMonad UnixLC (RWST () [String] () EitherString) (RWST () [Char] () EitherString) ([String] -> String) where
+--  changeMonad' f = mapRWST $ _EValue . _3 %~ f
+--type instance ChangeFunction UnixLC (RWST () [String] () EitherString) (RWST () [Char] () EitherString) = [String] -> String
 

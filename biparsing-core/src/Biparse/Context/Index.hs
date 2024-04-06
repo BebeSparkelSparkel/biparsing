@@ -3,18 +3,14 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Biparse.Context.Index
   ( IndexContext
-  , IndexPosition(..)
-  , ErrorIndex(..)
-  , EIP
-  , EISP
+  , IndexPosition(IndexPosition, index)
   ) where
 
 import Control.Monad.StateError (ErrorState(ErrorState))
 import Biparse.Biparser (SubState, GetSubState(getSubState), UpdateStateWithElement(updateElementContext), UpdateStateWithSubState(updateSubStateContext), InitSuperState(SuperState,fromSubState), SuperArg)
 import GHC.Exts (IsList(Item))
 import GHC.Exts qualified as GE
-import Control.Monad.ChangeMonad (ChangeMonad, ChangeFunction, changeMonad', ResultMonad(ResultingMonad,resultMonad))
-import Data.Either (Either)
+import Control.Monad.ChangeMonad (ChangeMonad, changeMonad')
 
 --import Control.Monad.Trans.Error qualified as E
 
@@ -58,24 +54,22 @@ instance (IsList ss, Num (Index ss)) => IsList (IndexPosition ss) where
 
 -- * Positional Errors
 
-data ErrorIndex ss = ErrorIndex (Index ss) String
-deriving instance Show (Index ss) => Show (ErrorIndex ss)
-deriving instance Eq (Index ss) => Eq (ErrorIndex ss)
-
-instance ResultMonad (Either (ErrorIndex ss)) () where
-  type ResultingMonad (Either (ErrorIndex ss)) () = Either (ErrorIndex ss)
-  resultMonad = ()
-
-instance ResultMonad (EISP ss) () where
-  type ResultingMonad (EISP ss) () = Either (ErrorIndex ss)
-  resultMonad (ErrorState e (IndexPosition {index}))  = ErrorIndex index e
-
-type EIP e ss = Either (ErrorState e (IndexPosition ss))
-type EISP ss = EIP String ss
-
-instance ChangeMonad () (EIP e ss) (Either (ErrorIndex ss)) where
-  changeMonad' = first
-type instance ChangeFunction () (EIP e ss) (Either (ErrorIndex ss)) = ErrorState e (IndexPosition ss) -> ErrorIndex ss
+--data ErrorIndex ss = ErrorIndex (Index ss) String
+--deriving instance Show (Index ss) => Show (ErrorIndex ss)
+--deriving instance Eq (Index ss) => Eq (ErrorIndex ss)
+--
+--instance ResultMonad (Either (ErrorIndex ss)) () where
+--  type ResultingMonad (Either (ErrorIndex ss)) () = Either (ErrorIndex ss)
+--  resultMonad = ()
+--
+--instance ResultMonad (EISP ss) () where
+--  type ResultingMonad (EISP ss) () = Either (ErrorIndex ss)
+--  resultMonad (ErrorState e (IndexPosition {index}))  = ErrorIndex index e
+--
+--
+--instance ChangeMonad () (EIP e ss) (Either (ErrorIndex ss)) where
+--  changeMonad' = first
+--type instance ChangeFunction () (EIP e ss) (Either (ErrorIndex ss)) = ErrorState e (IndexPosition ss) -> ErrorIndex ss
 
 -- * Convert Instance Contexts
 

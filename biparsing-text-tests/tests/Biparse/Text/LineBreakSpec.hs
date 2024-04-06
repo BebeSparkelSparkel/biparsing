@@ -22,7 +22,7 @@ spec = do
           => String
           -> Spec
         test = flip it let
-          f = evalForward @() @(LineColumn lb) @_ @(FM text) @_ @EitherString @() @text @() @_ @[text] $ lines @lb
+          f = evalForward @(LineColumn lb) @_ @(FM text) @EitherString @() @text @() @_ @[text] $ lines @lb
           text :: Position () text
           text = startLineColumn $ repeatConcat numLines $ line' $ lineBreakerString @lb
           in seq text $ limit $ f text `shouldSatisfy` isRight
@@ -37,7 +37,7 @@ spec = do
     test @'Unix @(Seq Char) "Unix (Seq Char)"
 
   describe "LineSplitter" do
-    fb @() "LineSplitter ('Left '\\n') 'True UnixLC (FM ByteString) EitherString (Position () ByteString)"
+    fb "LineSplitter ('Left '\\n') 'True UnixLC (FM ByteString) EitherString (Position () ByteString)"
       (lineSplitter @('Left '\n') @'True :: Iso UnixLC (FM ByteString) EitherString () ByteString () (Position () ByteString) [ByteString])
       ()
       ()
@@ -53,7 +53,7 @@ spec = do
         it "one break" $ b ["abc","def"] `shouldBe` EValue (["abc","def"], "abc\ndef")
         it "two breaks" $ b ["abc","def",""] `shouldBe` EValue (["abc","def",""], "abc\ndef\n")
 
-    fb @() "LineSplitter ('Right '\\r\\n') 'True UnixLC (FM ByteString) EitherString (Position () ByteString)"
+    fb "LineSplitter ('Right '\\r\\n') 'True UnixLC (FM ByteString) EitherString (Position () ByteString)"
       (lineSplitter @('Right "\r\n") @'True :: Iso UnixLC (FM ByteString) EitherString () ByteString () (Position () ByteString) [ByteString])
       ()
       ()
@@ -69,7 +69,7 @@ spec = do
         it "one break" $ b ["abc","def"] `shouldBe` EValue (["abc","def"], "abc\r\ndef")
         it "two breaks" $ b ["abc","def",""] `shouldBe` EValue (["abc","def",""], "abc\r\ndef\r\n")
 
-    fb @() "LineSplitter ('Left '\\n') 'False UnixLC (FM ByteString) EitherString (Position () ByteString)"
+    fb "LineSplitter ('Left '\\n') 'False UnixLC (FM ByteString) EitherString (Position () ByteString)"
       (lineSplitter @('Left '\n') @'False :: Iso UnixLC (FM ByteString) EitherString () ByteString () (Position () ByteString) [ByteString])
       ()
       ()
@@ -85,7 +85,7 @@ spec = do
         it "one break" $ b ["abc","def"] `shouldBe` EValue (["abc","def"], "abc\ndef")
         it "two breaks" $ b ["abc","def",""] `shouldBe` EValue (["abc","def",""], "abc\ndef\n")
 
-    fb @() "LineSplitter ('Right '\\r\\n') 'False UnixLC (FM ByteString) EitherString (Position () ByteString)"
+    fb "LineSplitter ('Right '\\r\\n') 'False UnixLC (FM ByteString) EitherString (Position () ByteString)"
       (lineSplitter @('Right "\r\n") @'False :: Iso UnixLC (FM ByteString) EitherString () ByteString () (Position () ByteString) [ByteString])
       ()
       ()

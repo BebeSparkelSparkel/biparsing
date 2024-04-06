@@ -23,7 +23,7 @@ import Data.Sequences (Index)
 import Data.String (String)
 import System.IO (FilePath)
 import Biparse.Mixes.SubStates
-import Control.Monad.StateError (ErrorContext, ErrorInstance(NewtypeInstance,ErrorStateInstance))
+import Control.Monad.StateError (ErrorContext, ErrorInstance(NewtypeInstance,ErrorStateInstance), ErrorState, errorState)
 
 import Biparse.AssociatedWriter (AssociatedWriter)
 import Biparse.Biparser.StateReaderWriter qualified as SRW
@@ -32,12 +32,16 @@ import Data.Char (Char)
 import Data.Functor (Functor)
 import Control.Monad.Trans.RWS.CPS (RWST, rwsT, runRWST)
 import Biparse.Biparser.StateReaderWriter (BackwardC(BackwardT,backwardT,runBackwardT))
-import Biparse.Biparser (UpdateStateWithElement, updateElementContext, UpdateStateWithSubState, updateSubStateContext, UpdateStateWithNConsumed, updateStateWithNConsumed, ConvertElement, convertElement, ConvertSequence, convertSequence, InitSuperState, SuperState, fromSubState)
+import Biparse.Biparser (UpdateStateWithElement, updateElementContext, UpdateStateWithSubState, updateSubStateContext, UpdateStateWithNConsumed, updateStateWithNConsumed, ConvertElement, convertElement, ConvertSequence, convertSequence, InitSuperState, SuperState, fromSubState, subState, SubStateLens)
 import Data.Word (Word8)
 import Data.ByteString.Builder qualified as B
 import Data.Text qualified as TS
 import Data.Text.Lazy qualified as TL
 import Data.Text.Lazy.Builder qualified as TB
+import Data.Either (Either)
+import Biparse.Text.Context.LineColumn (ElementToList)
+import Control.Monad.ChangeMonad (ChangeMonad, changeMonad')
+import Lens.Micro (_Left, (%~))
 
 -- * Mixes Context
 
@@ -81,4 +85,9 @@ instance InitSuperState c ss => InitSuperState (Mixes c) ss where
 -- * Biparser Template
 
 type BiparserTemplate fm bm c ss r ws = SRW.Biparser (Mixes c) (SuperState c ss) fm bm r (AssociatedWriter ss) ws
+
+-- * Change Monad
+
+instance SubStateLens s s' ss [ss] => ChangeMonad (Mixes ElementToList) (Either (ErrorState e s)) (Either (ErrorState e s')) () where
+  changeMonad' = const $ _Left . errorState . subState %~ (: [])
 

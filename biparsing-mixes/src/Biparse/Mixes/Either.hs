@@ -21,7 +21,7 @@ module Biparse.Mixes.Either
 
 import Biparse.Mixes.Exports
 
-import Biparse.Biparser qualified
+import Biparse.Biparser qualified as BB
 import Biparse.Biparser.StateReaderWriter qualified as SRW
 import Control.Monad.ChangeMonad
 import Control.Monad.EitherString
@@ -42,13 +42,13 @@ type IsoEasy c ss v = Iso c () () ss v
 
 decodeEasy :: forall c ss u v.
   ( InitSuperState c ss
-  , ChangeMonad StringErrorIS (FM c ss) (Either String)
+  , ChangeMonad StringErrorIS (Either (ErrorState String (SuperState c ss))) (Either String) ()
   )
   => BiparserEasy c ss u v
   -> SuperArg (SuperState c ss)
   -> ss
   -> Either String v
-decodeEasy bp sa = SRW.evalForward @StringErrorIS bp . fromSubState @c sa
+decodeEasy bp sa = changeMonad' @StringErrorIS () . SRW.evalForward bp . fromSubState @c sa
 
 encodeEasy :: forall c ss u v.
   ( Monoid (AssociatedWriter ss)
@@ -60,43 +60,37 @@ encodeEasy bp u = runEitherString $ SRW.evalBackward bp () () u
 
 data StringErrorIS
 
-type instance ChangeFunction StringErrorIS _ _ = ()
+--type instance ChangeFunction StringErrorIS _ _ = ()
 
-instance ChangeMonad StringErrorIS (FM' (Identity ss)) (Either String) where
+instance ChangeMonad StringErrorIS (FM' (Identity ss)) (Either String) () where
   changeMonad' = const $ first _error
-instance Show (Index ss) => ChangeMonad StringErrorIS (FM' (IndexPosition ss)) (Either String) where
+instance Show (Index ss) => ChangeMonad StringErrorIS (FM' (IndexPosition ss)) (Either String) () where
   changeMonad' = const $ first \(ErrorState msg (IndexPosition i _)) -> "At index " <> show i <> ": " <> msg
-instance ChangeMonad StringErrorIS (FM' (Position FilePath ss)) (Either String) where
+instance ChangeMonad StringErrorIS (FM' (Position FilePath ss)) (Either String) () where
   changeMonad' = const $ first \(ErrorState msg (Position fp l c _)) -> "In " <> fp <> " at line " <> show l <> " column " <> show c <> ": " <> msg
-
-instance ResultMonad (FM' s) StringErrorIS where
-  type ResultingMonad (FM' s) StringErrorIS = Either String
-  resultMonad = ()
 
 -- * More General Types and Functions
 --
 -- | Try using these before using the more general types and functions defined in Biparse.Biparser.StateReaderWriter and Biparse.Biparser
 
-type Biparser c ss r ws = BiparserTemplate (FM c ss) EitherString c ss r ws
+type Biparser c ss r ws = BiparserTemplate (FM c ss) BM c ss r ws
 type Iso c r ws ss v = Biparser c ss r ws v v
 
 type FM c ss = Either (ErrorState String (SuperState c ss))
 type FM' s = Either (ErrorState String s)
+type BM = EitherString
 
 pattern Biparser :: ForwardMonad (Biparser c ss r ws u v) v -> (u -> BackwardMonad (Biparser c ss r ws u v) v) -> Biparser c ss r ws u v
-pattern Biparser fw bw = Biparse.Biparser.Biparser fw bw
+pattern Biparser fw bw = BB.Biparser fw bw
 
-decode :: forall c e ss r ws u v.
+decode :: forall c ss r ws u v.
   ( InitSuperState c ss
-  , ResultMonad (FM c ss) ()
-  , ResultingMonad (FM c ss) () ~ Either e
-  , ChangeMonad () (FM c ss) (Either e)
   )
   => Biparser c ss r ws u v
   -> SuperArg (SuperState c ss)
   -> ss
-  -> Either e v
-decode bp sa = SRW.evalForward @() bp . fromSubState @c sa
+  -> Either (ErrorState String (SuperState c ss)) v
+decode bp sa = SRW.evalForward bp . fromSubState @c sa
 
 encode :: forall c ss r ws u v.
   ( Monoid (AssociatedWriter ss)

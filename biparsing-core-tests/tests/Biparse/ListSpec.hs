@@ -5,7 +5,7 @@ import Biparse.List
 
 spec :: Spec
 spec = do
-  fb @() "takeElementsWhile"
+  fb "takeElementsWhile"
     (w2c <$$> takeElementsWhile (isDigit . w2c) `upon` (c2w <$>) :: Iso () IO IO () ByteString () (Identity ByteString) String)
     ()
     ()
@@ -27,7 +27,7 @@ spec = do
 
       it "prints none" $ b mempty >>= (`shouldBe` (mempty, mempty))
 
-  fb @() "takeNElements"
+  fb "takeNElements"
     (takeNElements 2 :: Iso IndexContext (EISP [Int]) EitherString () [Int] () (IndexPosition [Int]) [Int])
     ()
     ()
@@ -50,7 +50,7 @@ spec = do
         b [1] `shouldSatisfy` isString
 
   describe "many" do
-    fb @() "with takeUni"
+    fb "with takeUni"
       (many $ takeUni 'a' :: Iso () IO IO () Text () (Identity Text) [Char])
       ()
       ()
@@ -66,7 +66,7 @@ spec = do
 
         it "prints none" $ b mempty >>= (`shouldBe` (mempty, mempty))
 
-    fb @() "with takeTri"
+    fb "with takeTri"
       (   many
       $   try (takeTri "TRUE" True 1)
       <!>      takeTri "FALSE" False 0
@@ -93,7 +93,7 @@ spec = do
           b mempty
             `shouldBe` Just (mempty, mempty)
 
-  fb @() "some"
+  fb "some"
     (some (takeUni 1) :: Iso () IO IO () [Int] () (Identity [Int]) (NonEmpty Int))
     --(some (takeUni 1) :: Iso IndexContext IO IO () [Int] () (IndexPosition [Int]) (NonEmpty Int))
     ()
@@ -111,7 +111,7 @@ spec = do
     \b -> do
       it "prints all" $ b [1,1,1] >>= (`shouldBe` ([1,1,1], [1,1,1]))
 
-  fb @() "all"
+  fb "all"
     (all $ takeUni 'a' <!> takeUni 'b' :: Iso UnixLC (FM Text) IO () Text () (Position () Text) [Char])
     ()
     ()
@@ -162,7 +162,7 @@ spec = do
     prop "forward should never return [\"\"]" $ forAll (Identity . packStrictText <$> listOf (elements "ab:")) \string -> do
       ef string >>= (`shouldNotBe` [mempty])
 
-  fb @() "splitOn"
+  fb "splitOn"
     (splitOn "ab" :: Iso () IO IO () Text () (Identity Text) [Text])
     ()
     ()
@@ -197,7 +197,7 @@ spec = do
         x <- b xs
         x `shouldBe` (xs,"abcdababefab")
 
-  fb @() "whileM"
+  fb "whileM"
     (whileM (peek (memptyWrite one >>= \x -> pure $ x /= 'x')) one :: Iso () IO IO () Text () (Identity Text) [Char])
     ()
     ()
@@ -283,7 +283,7 @@ spec = do
 
   --    it "takes all" $ b ["a","b"] `shouldBe` Identity (["a","b"],"ab")
 
-  fb @() "whileFwdAllBwd"
+  fb "whileFwdAllBwd"
     (whileFwdAllBwd (take 3 $> False <!> pure True) one :: Iso () EitherString EitherString () [Int] () (Identity [Int]) [Int])
     ()
     ()
@@ -296,7 +296,7 @@ spec = do
       it "empty u" $ b [] `shouldBe` EValue ([],[3])
       it "some u" $ b [0,1,2] `shouldBe` EValue ([0,1,2],[0,1,2,3])
 
-  fb @() "untilFwdSuccessBwdAll"
+  fb "untilFwdSuccessBwdAll"
     (one `untilFwdSuccessBwdAll` take 3 :: Iso () EitherString EitherString () [Int] () (Identity [Int]) [Int])
     ()
     ()
@@ -309,7 +309,7 @@ spec = do
       it "empty u" $ b [] `shouldBe` EValue ([],[3])
       it "some u" $ b [0,1,2] `shouldBe` EValue ([0,1,2],[0,1,2,3])
 
-  fb @() "untilInclusive"
+  fb "untilInclusive"
     (untilInclusive (== 'c') one :: Iso UnixLC (FM (Seq Char)) IO () (Seq Char) () (Position () (Seq Char)) String)
     ()
     ()
@@ -327,7 +327,7 @@ spec = do
       it "no match" $ b "ab" `shouldThrow` isUserError
       it "middle match" $ b "abcd" >>= (`shouldBe` ("abc","abc"))
 
-  fb @() "intersperse"
+  fb "intersperse"
     (intersperse (one >>= \x -> if x == 'x' then pure x else fail "not x")
       (one `upon` const ',' >>= \x -> if x == ',' then pure x else fail "not ,")
       :: Iso ColumnsOnly (FM String) EitherString () String () (Position () String) [Char])

@@ -27,6 +27,7 @@ test-suite spec
       Biparse.Context.IndexSpec
       Biparse.GeneralSpec
       Biparse.ListSpec
+      Biparse.PolarizeSpec
       Biparse.UnorderedSpec
       Control.Monad.StateErrorSpec
       Control.Monad.UnrecoverableSpec
@@ -48,7 +49,7 @@ test-suite spec
       ConstraintKinds
       FlexibleContexts
       DeriveGeneric
-  ghc-options: -Werror -Weverything -fprint-potential-instances -Wno-implicit-prelude -Wno-incomplete-uni-patterns -Wno-missing-deriving-strategies -Wno-missing-export-lists -Wno-missing-import-lists -Wno-missing-kind-signatures -Wno-missing-local-signatures -Wno-missing-safe-haskell-mode -Wno-orphans -Wno-safe -Wno-unsafe
+  ghc-options: -Werror -Weverything -fprint-potential-instances -Wno-implicit-prelude -Wno-incomplete-uni-patterns -Wno-missing-deriving-strategies -Wno-missing-export-lists -Wno-missing-import-lists -Wno-missing-kind-signatures -Wno-missing-local-signatures -Wno-missing-safe-haskell-mode -Wno-orphans -Wno-safe -Wno-unsafe -Wno-unused-packages
   build-tool-depends:
       hspec-discover:hspec-discover
   build-depends:

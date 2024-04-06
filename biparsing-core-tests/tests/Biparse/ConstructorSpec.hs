@@ -6,7 +6,7 @@ import Biparse.Constructor
 spec :: Spec
 spec = do
   describe "focusOne" do
-    fb @() "one"
+    fb "one"
       (focusOne @Lift @EitherString headAlt do
         expect _1 1
         x <- exposes (^. _2)

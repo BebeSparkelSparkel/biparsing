@@ -20,14 +20,13 @@ library
       Biparse.AlternativeAttributes
       Biparse.Biparser
       Biparse.Biparser.Internal
-      Biparse.Biparser.PolyKinds
       Biparse.Biparser.StateReaderWriter
       Biparse.Constructor
       Biparse.Context.Index
       Biparse.FixFail
       Biparse.General
-      Biparse.Generic.Binary
       Biparse.List
+      Biparse.Polarize
       Biparse.Unordered
       Biparse.Utils
       Control.Monad.ChangeMonad
@@ -73,7 +72,7 @@ library
       TypeApplications
       TypeFamilies
       TypeOperators
-  ghc-options: -Werror -Weverything -Wno-implicit-prelude -Wno-missing-deriving-strategies -Wno-missing-kind-signatures -Wno-missing-local-signatures -Wno-missing-safe-haskell-mode -Wno-safe -Wno-unsafe -Wno-unused-packages
+  ghc-options: -Weverything -Wno-implicit-prelude -Wno-missing-deriving-strategies -Wno-missing-kind-signatures -Wno-missing-local-signatures -Wno-missing-safe-haskell-mode -Wno-safe -Wno-unsafe -Wno-unused-packages
   build-depends:
       base
     , bytestring
