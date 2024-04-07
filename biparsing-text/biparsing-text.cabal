@@ -1,0 +1,99 @@
+cabal-version: 2.2
+
+-- This file has been generated from package.yaml by hpack version 0.36.0.
+--
+-- see: https://github.com/sol/hpack
+
+name:           biparsing-text
+version:        0.0.0.1
+synopsis:       Combinators for working with text data typically String, Text, or ByteString.
+category:       Parsing
+homepage:       https://github.com/BebeSparkelSparkel/biparsing
+author:         William Rusnack
+maintainer:     William Rusnack
+license:        BSD-3-Clause
+license-file:   LICENSE
+build-type:     Simple
+
+library
+  exposed-modules:
+      Biparse.Text
+      Biparse.Text.Context.LineColumn
+      Biparse.Text.LineBreak
+      Biparse.Text.Numeric
+  other-modules:
+      Prelude
+  hs-source-dirs:
+      src/
+  default-extensions:
+      ImportQualifiedPost
+      PatternSynonyms
+      RankNTypes
+      BlockArguments
+      LambdaCase
+      TypeApplications
+      ScopedTypeVariables
+      ConstraintKinds
+      TypeFamilies
+      ViewPatterns
+      StandaloneKindSignatures
+      FlexibleInstances
+      MultiParamTypeClasses
+      FlexibleContexts
+      DataKinds
+      DeriveFunctor
+  ghc-options: -Werror -Weverything -Wno-implicit-prelude -Wno-missing-deriving-strategies -Wno-missing-kind-signatures -Wno-missing-local-signatures -Wno-missing-safe-haskell-mode -Wno-safe -Wno-unsafe -Wno-unused-packages
+  build-depends:
+      base
+    , biparsing-core
+    , microlens
+    , microlens-th
+    , mono-traversable
+    , mtl
+    , safe
+    , semigroupoids
+  mixins:
+      base hiding (Prelude)
+  default-language: Haskell2010
+
+test-suite spec
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      Biparse.Text.Context.LineColumnSpec
+      Biparse.Text.LineBreakSpec
+      Biparse.Text.NumericSpec
+      Prelude
+  hs-source-dirs:
+      tests/
+  default-extensions:
+      ImportQualifiedPost
+      PatternSynonyms
+      RankNTypes
+      BlockArguments
+      LambdaCase
+      TypeApplications
+      ScopedTypeVariables
+      ConstraintKinds
+      TypeFamilies
+      ViewPatterns
+      StandaloneKindSignatures
+      FlexibleInstances
+      MultiParamTypeClasses
+      FlexibleContexts
+      DataKinds
+      DeriveFunctor
+      OverloadedStrings
+  ghc-options: -Werror -Weverything -fprint-potential-instances -Wno-implicit-prelude -Wno-incomplete-uni-patterns -Wno-missing-deriving-strategies -Wno-missing-export-lists -Wno-missing-import-lists -Wno-missing-kind-signatures -Wno-missing-local-signatures -Wno-missing-safe-haskell-mode -Wno-orphans -Wno-safe -Wno-unsafe -Wno-unused-packages
+  build-tool-depends:
+      hspec-discover:hspec-discover
+  build-depends:
+      base
+    , biparsing-core
+    , biparsing-text
+    , bytestring
+    , hspec
+    , hspec-discover
+  mixins:
+      base hiding (Prelude)
+  default-language: Haskell2010

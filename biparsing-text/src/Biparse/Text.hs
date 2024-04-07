@@ -6,9 +6,7 @@ module Biparse.Text
   , string
   ) where
 
-import Biparse.Biparser (Biparser, upon, one, SubElement, SubState, ElementContext, Const, SubStateContext)
 import Biparse.General (stripPrefix)
-import Data.Char (Char)
 
 type CharElement s char =
   ( IsChar char

@@ -26,12 +26,9 @@ library
       Biparse.Context.Index
       Biparse.FixFail
       Biparse.General
+      Biparse.Generic.Binary
       Biparse.List
       Biparse.Pair
-      Biparse.Text
-      Biparse.Text.Context.LineColumn
-      Biparse.Text.LineBreak
-      Biparse.Text.Numeric
       Biparse.Unordered
       Biparse.Utils
       Control.Monad.ChangeMonad
@@ -113,10 +110,8 @@ test-suite spec
       Biparse.ConstructorSpec
       Biparse.Context.IndexSpec
       Biparse.GeneralSpec
+      Biparse.Generic.BinarySpec
       Biparse.ListSpec
-      Biparse.Text.Context.LineColumnSpec
-      Biparse.Text.LineBreakSpec
-      Biparse.Text.NumericSpec
       Biparse.UnorderedSpec
       Control.Monad.StateErrorSpec
       Control.Monad.UnrecoverableSpec

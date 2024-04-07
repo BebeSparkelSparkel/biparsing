@@ -1,6 +1,6 @@
-name: biparsing-core
+name: biparsing-binary
 version: 0.0.0.1
-synopsis: Core modules for biparsing.
+synopsis: Combinators for working with binary data typically ByteString.
 homepage: https://github.com/BebeSparkelSparkel/biparsing
 category: Parsing
 author: William Rusnack
