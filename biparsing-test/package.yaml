@@ -1,0 +1,40 @@
+name: biparsing-test
+version: 0.0.0.1
+synopsis: Test Prelude for the biparsing suite.
+homepage: https://github.com/BebeSparkelSparkel/biparsing
+category: Parsing
+author: William Rusnack
+license: BSD-3-Clause
+license-file: LICENSE
+
+spec-version: 0.36.0
+
+library:
+  source-dirs: .
+  modules: Prelude
+  dependencies:
+    - name: base
+      mixin:
+        - hiding (Prelude)
+    - biparsing-core
+    - QuickCheck
+    - biparsing-core
+    - biparsing-text
+    - bytestring
+    - hspec
+    - quickcheck-instances
+    - text
+    - vector
+  ghc-options:
+    - -Werror
+    - -Weverything
+
+    - -Wno-implicit-prelude
+    - -Wno-missing-deriving-strategies
+    - -Wno-missing-kind-signatures
+    - -Wno-missing-local-signatures
+    - -Wno-missing-safe-haskell-mode
+    - -Wno-safe
+    - -Wno-unsafe
+
+    - -Wno-unused-packages
