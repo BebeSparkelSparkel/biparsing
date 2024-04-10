@@ -4,3 +4,4 @@ dist-*
 node_modules
 *.prof
 *.prof.html
+cabal.project.local

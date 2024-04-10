@@ -1,6 +1,6 @@
-name: biparsing-core
+name: biparsing-text
 version: 0.0.0.1
-synopsis: Core modules for biparsing.
+synopsis: Combinators for working with text data typically String, Text, or ByteString.
 homepage: https://github.com/BebeSparkelSparkel/biparsing
 category: Parsing
 author: William Rusnack
@@ -9,67 +9,38 @@ license-file: LICENSE
 
 spec-version: 0.36.0
 
-dependencies:
-  - name: base
-    mixin:
-      - hiding (Prelude)
-  - data-default
-  - extra
-  - microlens
-  - microlens-mtl
-  - microlens-pro
-  - microlens-th
-  - mono-traversable >= 1.0.17.0
-  - mtl >= 2.3
-  - transformers >= 0.6.1.1
-  - containers
-  - semigroupoids
-
-default-extensions:
-  - BlockArguments
-  - ConstraintKinds
-  - DataKinds
-  - DeriveFunctor
-  - DeriveGeneric
-  - DerivingVia
-  - DuplicateRecordFields
-  - FlexibleContexts
-  - FlexibleInstances
-  - FunctionalDependencies
-  - GeneralizedNewtypeDeriving
-  - ImportQualifiedPost
-  - LambdaCase
-  - MultiParamTypeClasses
-  - PatternSynonyms
-  - QuantifiedConstraints
-  - RankNTypes
-  - RecordWildCards
-  - ScopedTypeVariables
-  - StandaloneDeriving
-  - StandaloneKindSignatures
-  - TupleSections
-  - TypeApplications
-  - TypeFamilies
-  - TypeOperators
-  - ViewPatterns
-
 library:
   source-dirs: src/
   other-modules:
     - Prelude
   dependencies:
-    - data-diverse
-    - generic-data
-    - hvect
-    - profunctors
+    - name: base
+      mixin:
+        - hiding (Prelude)
+    - biparsing-core
+    - mtl
+    - mono-traversable
+    - semigroupoids
     - safe
-
-    # remove dependencies after Data.EqElement is removed
-    - text
-    - vector
-    - bytestring
-    - split
-    - stringsearch
+    - microlens
+    - microlens-th
+    - data-default
+  default-extensions:
+    - ImportQualifiedPost
+    - PatternSynonyms
+    - RankNTypes
+    - TypeApplications
+    - ScopedTypeVariables
+    - ConstraintKinds
+    - TypeFamilies
+    - FlexibleContexts
+    - BlockArguments
+    - LambdaCase
+    - StandaloneKindSignatures
+    - FlexibleInstances
+    - DataKinds
+    - MultiParamTypeClasses
+    - DeriveFunctor
   ghc-options:
     - -Werror
     - -Weverything
@@ -83,45 +54,3 @@ library:
     - -Wno-unsafe
 
     - -Wno-unused-packages
-
-tests:
-  spec:
-    build-tools:
-      - hspec-discover
-    main: Spec.hs
-    source-dirs: tests/
-    dependencies:
-      - QuickCheck
-      - biparsing-core
-      - bytestring
-      - generic-deriving
-      - generic-random
-      - hspec
-      - hspec-discover
-      - quickcheck-instances
-      - text
-      - vector
-      - ghc-prim
-    default-extensions:
-      - OverloadedStrings
-      - OverloadedLists
-      - NamedFieldPuns
-    ghc-options:
-      - -Werror
-      - -Weverything
-      - -fprint-potential-instances
-
-      - -Wno-implicit-prelude
-      - -Wno-incomplete-uni-patterns
-      - -Wno-missing-deriving-strategies
-      - -Wno-missing-export-lists
-      - -Wno-missing-import-lists
-      - -Wno-missing-kind-signatures
-      - -Wno-missing-local-signatures
-      - -Wno-missing-safe-haskell-mode
-      - -Wno-orphans
-      - -Wno-safe
-      - -Wno-unsafe
-
-      - -Wno-unused-packages
-

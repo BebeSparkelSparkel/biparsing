@@ -1,5 +1,6 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 module Biparse.Text.Numeric
   ( NaturalConstraints
@@ -19,13 +20,11 @@ module Biparse.Text.Numeric
   , lowerHexList
   ) where
 
-import Biparse.Biparser (Iso, IsoClass(iso), split, upon, SubState, SubStateContext, try, ignoreBackward, split, Biparser, ElementContext, comap, uponM, one, SubElement, GetSubState, UpdateStateWithElement, peek)
 import Biparse.General (take, optional, takeTri, rest)
 import Biparse.Text (CharElement)
 import Data.Bits (Bits, zeroBits, shift, shiftR, (.&.))
 import Data.Char (isDigit)
-import Data.Int (Int8, Int16, Int32, Int64)
-import Data.Map.Strict qualified as M
+import Data.Int (Int8, Int16, Int32, Int64, Int)
 import Data.Tuple (swap)
 import Data.Word (Word, Word8, Word16, Word32, Word64)
 import GHC.Float (Float, Double)
@@ -35,7 +34,11 @@ import Numeric (showHex)
 import Safe (readMay, indexMay)
 import Data.Sequences qualified
 import Data.Ix (Ix, index)
-
+import Data.List (lookup)
+import GHC.Num (Num((+)))
+import Text.Read (Read)
+import Numeric.Natural (Natural)
+import Data.Maybe (Maybe(Nothing))
 
 instance NaturalConstraints c s m n Word   text char w => IsoClass c m n s Word   where iso = naturalBaseTen
 instance NaturalConstraints c s m n Word8  text char w => IsoClass c m n s Word8  where iso = naturalBaseTen
@@ -56,6 +59,7 @@ type NaturalConstraints c s m n number text char w =
   , Show number
   , Show text
   , ConvertSequence c text w n
+  , ContextualStateTransformerPLEASEREMOVESUFFIX c text m
   , text ~ SubState s
   )
 
@@ -130,6 +134,7 @@ type RealConstrints c s m n number text char w e =
   , Read number
   -- context
   , ElementContext c s
+  , ContextualStateTransformerPLEASEREMOVESUFFIX c text m
   -- text
   , Show text
   , text ~ SubState s
@@ -177,9 +182,10 @@ digitsBaseTen :: forall c m n s u text char w.
   , MonadWriter w n
   , ConvertSequence c text w n
   , SubStateContext c s
+  , ContextualStateTransformerPLEASEREMOVESUFFIX c text m
   , text ~ SubState s
   ) => Biparser c s m n u text
-digitsBaseTen = split (state $ span $ isDigit . toChar) `upon` fromList . fmap fromChar . show
+digitsBaseTen = split (state @c $ span $ isDigit . toChar) `upon` fromList . fmap fromChar . show
 
 data Sign = Positive | Negative | Zero deriving (Show, Eq)
 deduceSign :: forall number.
@@ -260,7 +266,8 @@ hex = hex' . fromEnum
 lookupHex :: (IsChar char, Ord char, Show char, Num number, MonadFail m) => char -> m number
 lookupHex c
   = maybe (fail $ "Could not convert " <> show c <> " to hex value.") pure
-  $ lookupMap (digitsHexList <> capitalHexList <> lowerHexList) c
+  $ lookup c
+  $ digitsHexList <> capitalHexList <> lowerHexList
 
 data CharCase = UpperCase | LowerCase
 type HexCharMap :: CharCase -> Constraint
@@ -271,10 +278,8 @@ instance HexCharMap 'LowerCase where lookupChar = lookupChar' lowerHexList
 lookupChar' :: (MonadFail m, IsChar char, Integral number, Show number) => [(char,number)] -> number -> m char
 lookupChar' chs x
   = maybe (fail $ "Could not convert 0x" <> showHex x " to an hex digit.") pure
-  $ lookupMap (fmap swap $ digitsHexList <> chs) x
-
-lookupMap :: Ord a => [(a,b)] -> a -> Maybe b
-lookupMap = (M.!?) . M.fromList
+  $ lookup x
+  $ fmap swap $ digitsHexList <> chs
 
 type CN char number =
   ( IsChar char

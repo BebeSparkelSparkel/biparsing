@@ -15,13 +15,12 @@ module Biparse.Text.LineBreak
   , LineSplitter(..)
   ) where
 
-import Biparse.Biparser (Biparser, Iso, SubState, SubElement, SubStateContext, ElementContext, uponM)
-import Biparse.General (takeDi, takeDi', Take, Take')
 import Biparse.List (splitElem, splitOn)
-import Biparse.Utils (char)
-import Data.Char (Char)
+import Biparse.General (takeDi, takeDi', Take, Take')
+import Biparse.Utils (char, symbol)
 import Biparse.Text (CharElement)
 import GHC.TypeLits (ConsSymbol)
+import Data.Either (Either(Left,Right))
 
 data LineBreakType
   = Unix
@@ -104,7 +103,14 @@ instance
   , KnownChar char
   , IsSequence ss
   , CharElement a se
-  , ConvertElement c se w (WriterT w Maybe)
+  , ContextualStateTransformer' c a Maybe m'
+  , MonadError e m'
+  , MonadFail m'
+  , Alt m'
+  , ContextualWriterTransformer c w Maybe n'
+  , MonadFail n'
+  , Alt n'
+  , ConvertElement c se w n'
   , ConvertSequence c [ss] seq (Biparser c a m n seq)
   , ConvertSequence c seq [ss] n
   , ElementContext c a
@@ -120,8 +126,16 @@ instance
   , CharElement a se
   , IsString ss
   , Show ss
-  , ConvertSequence c ss w (WriterT w Maybe)
-  , ConvertElement c se w (WriterT w Maybe)
+  , ContextualStateTransformer' c a Maybe m'
+  , MonadError e m'
+  , MonadFail m'
+  , Alt m'
+  , MonadState ss (StateTransformer c ss m')
+  , ContextualWriterTransformer c w Maybe n'
+  , ConvertElement c se w n'
+  , ConvertSequence c ss w n'
+  , MonadFail n'
+  , Alt n'
   , ConvertSequence c [ss] seq (Biparser c a m n seq)
   , ConvertSequence c seq [ss] n
   , SubStateContext c a

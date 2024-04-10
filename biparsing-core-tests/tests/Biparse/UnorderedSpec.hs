@@ -2,9 +2,6 @@
 module Biparse.UnorderedSpec where
 
 import Biparse.Unordered
-import Data.Tuple.Extra (uncurry3)
-import Data.List (zip3)
-import Data.Default (Default(def))
 
 spec :: Spec
 spec = do
@@ -51,6 +48,14 @@ spec = do
 type T = TriSum Int String Bool
 type Ts = [T]
 
+data TriSum a b c = One a | Two b | Three c deriving (Show, Eq)
+instance (Arbitrary a, Arbitrary b, Arbitrary c) => Arbitrary (TriSum a b c) where
+  arbitrary = oneof [One <$> arbitrary, Two <$> arbitrary, Three <$> arbitrary]
+  shrink = \case
+    One x -> One <$> shrink x
+    Two x -> Two <$> shrink x
+    Three x -> Three <$> shrink x
+
 data AllParserTypes = AllParserTypes
   { singleSuccessParser :: Int
   , accumulatingParser :: Accumulating [String]
@@ -60,7 +65,9 @@ instance Default AllParserTypes where
   def = AllParserTypes undefined (Accumulating def) (Optional def)
 instance Arbitrary AllParserTypes where
   arbitrary = AllParserTypes <$> arbitrary <*> (Accumulating <$> arbitrary) <*> (Optional <$> arbitrary)
-  shrink (AllParserTypes i (Accumulating ss) (Optional b)) = uncurry3 AllParserTypes . coerce <$> zip3 (shrink i) (shrink ss) (shrink b)
+  shrink (AllParserTypes i (Accumulating ss) (Optional b))
+    =   (\(x,(y,z)) -> AllParserTypes x y z) . coerce
+    <$> (zip (shrink i) $ zip (shrink ss) (shrink b))
 
 type IsoConstraints c m n a ss =
   ( T ~ SubElement a

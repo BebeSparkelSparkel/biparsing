@@ -2,13 +2,11 @@
 module Biparse.ListSpec where
 
 import Biparse.List
-import Data.List.NonEmpty (NonEmpty)
-import Data.Text qualified as T
 
 spec :: Spec
 spec = do
   fb @() "takeElementsWhile"
-    (fmap w2c <$> takeElementsWhile (isDigit . w2c) `upon` fmap c2w :: Iso () IO IO () ByteString () (Identity ByteString) String)
+    (w2c <$$> takeElementsWhile (isDigit . w2c) `upon` (c2w <$>) :: Iso () IO IO () ByteString () (Identity ByteString) String)
     ()
     ()
     (\f -> do
@@ -161,7 +159,7 @@ spec = do
     t "empty first" ":ab" [mempty,"ab"]
 
     let ef = evalForward @() bp
-    prop "forward should never return [\"\"]" $ forAll (Identity . T.pack <$> listOf (elements "ab:")) \string -> do
+    prop "forward should never return [\"\"]" $ forAll (Identity . packStrictText <$> listOf (elements "ab:")) \string -> do
       ef string >>= (`shouldNotBe` [mempty])
 
   fb @() "splitOn"
@@ -349,5 +347,5 @@ spec = do
       it "single" $ b "x" `shouldBe` EValue ("x", "x")
       it "double" $ b "xx" `shouldBe` EValue ("xx", "x,x")
 
-instance {-# OVERLAPS #-} IsString [Maybe Char] where fromString = fmap pure
+instance {-# OVERLAPS #-} IsString [Maybe Char] where fromString = (pure <$>)
 

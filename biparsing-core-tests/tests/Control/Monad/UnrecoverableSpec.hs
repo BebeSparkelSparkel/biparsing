@@ -2,9 +2,6 @@ module Control.Monad.UnrecoverableSpec where
 
 import Control.Monad.StateError
 import Control.Monad.Unrecoverable
-import Data.Ord (Ordering(LT,EQ,GT), compare)
-import System.IO.Error (userError, ioeGetErrorString)
-import Control.Monad (when)
 
 spec :: Spec
 spec = do

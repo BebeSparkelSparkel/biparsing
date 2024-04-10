@@ -28,24 +28,26 @@ library
       Biparse.General
       Biparse.Generic.Binary
       Biparse.List
-      Biparse.Pair
       Biparse.Unordered
       Biparse.Utils
       Control.Monad.ChangeMonad
       Control.Monad.EitherString
       Control.Monad.MonadProgenitor
       Control.Monad.StateError
+      Control.Monad.Trans.State.Selectable
+      Control.Monad.Trans.Writer.Selectable
       Control.Monad.TransformerBaseMonad
       Control.Monad.UndefinedBackwards
       Control.Monad.Unrecoverable
-      Control.Monad.Writer.Map
       Control.Profunctor.FwdBwd
+      Data.Convert
       Data.EqElement
   other-modules:
       Prelude
   hs-source-dirs:
       src/
   default-extensions:
+      AllowAmbiguousTypes
       BlockArguments
       ConstraintKinds
       DataKinds
@@ -71,7 +73,6 @@ library
       TypeApplications
       TypeFamilies
       TypeOperators
-      ViewPatterns
   ghc-options: -Werror -Weverything -Wno-implicit-prelude -Wno-missing-deriving-strategies -Wno-missing-kind-signatures -Wno-missing-local-signatures -Wno-missing-safe-haskell-mode -Wno-safe -Wno-unsafe -Wno-unused-packages
   build-depends:
       base
@@ -89,92 +90,11 @@ library
     , mono-traversable >=1.0.17.0
     , mtl >=2.3
     , profunctors
-    , safe
     , semigroupoids
     , split
     , stringsearch
     , text
     , transformers >=0.6.1.1
-    , vector
-  mixins:
-      base hiding (Prelude)
-  default-language: Haskell2010
-
-test-suite spec
-  type: exitcode-stdio-1.0
-  main-is: Spec.hs
-  other-modules:
-      Biparse.AlternativeAttributesSpec
-      Biparse.Biparser.StateReaderWriterSpec
-      Biparse.BiparserSpec
-      Biparse.ConstructorSpec
-      Biparse.Context.IndexSpec
-      Biparse.GeneralSpec
-      Biparse.Generic.BinarySpec
-      Biparse.ListSpec
-      Biparse.UnorderedSpec
-      Control.Monad.StateErrorSpec
-      Control.Monad.UnrecoverableSpec
-      Prelude
-  hs-source-dirs:
-      tests/
-  default-extensions:
-      BlockArguments
-      ConstraintKinds
-      DataKinds
-      DeriveFunctor
-      DeriveGeneric
-      DerivingVia
-      DuplicateRecordFields
-      FlexibleContexts
-      FlexibleInstances
-      FunctionalDependencies
-      GeneralizedNewtypeDeriving
-      ImportQualifiedPost
-      LambdaCase
-      MultiParamTypeClasses
-      PatternSynonyms
-      QuantifiedConstraints
-      RankNTypes
-      RecordWildCards
-      ScopedTypeVariables
-      StandaloneDeriving
-      StandaloneKindSignatures
-      TupleSections
-      TypeApplications
-      TypeFamilies
-      TypeOperators
-      ViewPatterns
-      OverloadedStrings
-      OverloadedLists
-      NamedFieldPuns
-  ghc-options: -Werror -Weverything -fprint-potential-instances -Wno-implicit-prelude -Wno-incomplete-uni-patterns -Wno-missing-deriving-strategies -Wno-missing-export-lists -Wno-missing-import-lists -Wno-missing-kind-signatures -Wno-missing-local-signatures -Wno-missing-safe-haskell-mode -Wno-orphans -Wno-safe -Wno-unsafe -Wno-unused-packages
-  build-tool-depends:
-      hspec-discover:hspec-discover
-  build-depends:
-      QuickCheck
-    , base
-    , biparsing-core
-    , bytestring
-    , containers
-    , data-default
-    , extra
-    , generic-deriving
-    , generic-random
-    , ghc-prim
-    , hspec
-    , hspec-discover
-    , microlens
-    , microlens-mtl
-    , microlens-pro
-    , microlens-th
-    , mono-traversable >=1.0.17.0
-    , mtl >=2.3
-    , quickcheck-instances
-    , semigroupoids
-    , text
-    , transformers >=0.6.1.1
-    , vector
   mixins:
       base hiding (Prelude)
   default-language: Haskell2010

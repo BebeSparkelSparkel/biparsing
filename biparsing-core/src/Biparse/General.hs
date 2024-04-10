@@ -48,6 +48,7 @@ identity :: forall c s m n ss w.
   , Monoid ss
   , ConvertSequence c ss w n
   , SubStateContext c s
+  , ContextualStateTransformerPLEASEREMOVESUFFIX c ss m
   , ss ~ SubState s
   )
   => Iso c m n s ss
@@ -157,6 +158,8 @@ type Take' c s m n ss se w u e =
   -- u
   , Eq u
   , Show u
+  -- transformer
+  , SelectableStateT c
   -- assignments
   , ss ~ SubState s
   , se ~ SubElement s
@@ -188,6 +191,7 @@ type TakeWhile c s m n ss se w =
   , MonadState s m
   , MonadWriter w n
   , ConvertSequence c ss w n
+  , SelectableStateT c
   , ss ~ SubState s
   , se ~ SubElement s
   )
@@ -196,7 +200,7 @@ takeWhile :: forall c s m n ss se w.
   TakeWhile c s m n ss se w
   => (se -> Bool)
   -> Iso c m n s (SubState s)
-takeWhile = split . state . span
+takeWhile = split . state @c . span
 
 -- | Drop forward elements while predicate is true.
 dropWhile :: forall c s m n u ss se w.
@@ -204,12 +208,13 @@ dropWhile :: forall c s m n u ss se w.
   , IsSequence ss
   , MonadState s m
   , MonadWriter w n
+  , SelectableStateT c
   , ss ~ SubState s
   , se ~ SubElement s
   )
   => (se -> Bool)
   -> Const c s m n u
-dropWhile f = splitFw $ StateT $ return . MT.span f
+dropWhile f = splitFw $ stateT @c $ return . MT.span f
 
 -- | Run until returns True
 skipUntil :: forall c s m n u.
@@ -235,17 +240,18 @@ untilJust x = maybe (untilJust x) pure =<< x
 -- * N elements
 
 -- | Take n elements. Does not limit what is written backwards.
-takeN ::
+takeN :: forall c s m n ss w.
   ( MonadState s m
   , MonadWriter w n
   , SubStateContext c s
   , IsSequence ss
   , ConvertSequence c ss w n
+  , SelectableStateT c
   , ss ~ SubState s
   )
   => Index ss
   -> Iso c m n s ss
-takeN = split . StateT . (return .) . MT.splitAt
+takeN = split . stateT @c . (return .) . MT.splitAt
 
 -- * Pad
 
@@ -260,14 +266,14 @@ type Pad c s m n u v ss i se w j =
   , Eq se
   , Ord i
   , Num i
-  , ConvertIntegral Natural i
   , ConvertSequence c ss w n
   -- w
   , IsSequence w
   , Element w ~ se
   , Num j
   , Ord j
-  , ConvertIntegral Natural j
+  -- transformer
+  , SelectableStateT c
   -- Assignments
   , ss ~ SubState s
   , se ~ SubElement s
@@ -279,7 +285,7 @@ type Pad c s m n u v ss i se w j =
 -- Probably best to roll your own if using a writer type like 'String' that has as slow length function.
 pad :: forall c s m n u v ss i se w j.
   Pad c s m n u v ss i se w j
-  => Natural
+  => Index w
   -> se
   -> Biparser c s m n u v
   -> Biparser c s m n u v
@@ -289,7 +295,7 @@ padSet :: forall c s m n u v ss i se w j.
   ( Pad c s m n u v ss i se w j
   , Ord se
   )
-  => Natural
+  => Index w
   -> se
   -> Set se
   -> Biparser c s m n u v
@@ -299,11 +305,11 @@ padSet n c cs = padTemplate (`member` cs) n c
 padTemplate :: forall c s m n u v ss i se w j.
   Pad c s m n u v ss i se w j
   => (se -> Bool)
-  -> Natural
+  -> Index w
   -> se
   -> Biparser c s m n u v
   -> Biparser c s m n u v
-padTemplate dropPred (convertIntegral -> n) c x = do
+padTemplate dropPred n c x = do
   dropWhile dropPred
   mapWrite x \y ->
     let l = lengthIndex y
@@ -314,11 +320,11 @@ padTemplate dropPred (convertIntegral -> n) c x = do
 -- | Gives the pad count found for forward (number of c + number consumed by x). Just returns n backwards.
 padCount :: forall c s m n u v ss i se w j.
   Pad c s m n u v ss i se w j
-  => Natural
+  => Index w
   -> se
   -> Biparser c s m n u v
   -> Biparser c s m n u (Natural, v)
-padCount n c x = endoSecond (first $ const n) $ count $ pad n c x
+padCount n c x = endoSecond (first $ const $ fromIntegral n) $ count $ pad n c x
 
 -- * Break
 
@@ -382,6 +388,7 @@ rest :: forall c s m n ss w.
   -- substate
   , Monoid ss
   , ConvertSequence c ss w n
+  , ContextualStateTransformerPLEASEREMOVESUFFIX c ss m
   -- assignments
   , ss ~ SubState s
   )
@@ -431,21 +438,22 @@ optional x = Just <$> try x `uponM` maybe (fail "") pure <!> pure Nothing
 -- * Stripping
 
 stripPrefix :: forall c s m n ss w u.
-  ( ss ~ SubState s
-  , EqElement ss
+  ( EqElement ss
   , SubStateContext c s
   , Show ss
   , MonadState s m
   , MonadFail m
   , MonadWriter w n
   , ConvertSequence c ss w n
+  , SelectableStateT c
+  , ss ~ SubState s
   )
   => ss
   -> Const c s m n u
 stripPrefix pre = unit $ void s `upon` const pre
   where
   s :: Iso c m n s ss
-  s = split $ StateT
+  s = split $ stateT @c
     $ maybe
       (fail $ "Could not strip prefix: " <> show pre)
       (pure . (pre,))
@@ -474,6 +482,7 @@ countElementSome :: forall c s m n ss se w.
   , ConvertSequence c ss w n
   , MonadFail n
   , Eq se
+  , SelectableStateT c
   , se ~ SubElement s
   , ss ~ SubState s
   )

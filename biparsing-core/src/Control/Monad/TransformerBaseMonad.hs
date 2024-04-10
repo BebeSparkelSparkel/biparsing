@@ -1,10 +1,11 @@
-module Control.Monad.TransformerBaseMonad
+module Control.Monad.TransformerBaseMonad {-# DEPRECATED "Use ChangeMonad" #-}
   ( TransformerBaseMonad
   , LiftBaseMonad(..)
   ) where
 
 import Control.Monad.RWS qualified
 import Control.Monad.RWS.CPS qualified
+import Control.Monad.Writer (WriterT)
 
 type TransformerBaseMonad :: (Type -> Type) -> (Type -> Type)
 type family TransformerBaseMonad a

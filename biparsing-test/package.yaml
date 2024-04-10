@@ -10,31 +10,27 @@ license-file: LICENSE
 spec-version: 0.36.0
 
 library:
+  exposed-modules: Prelude
   source-dirs: .
-  modules: Prelude
   dependencies:
     - name: base
       mixin:
         - hiding (Prelude)
-    - biparsing-core
     - QuickCheck
+    - safe
+    - biparsing-core
     - biparsing-core
     - biparsing-text
+    - biparsing-text
     - bytestring
+    - containers
+    - data-default
     - hspec
+    - mono-traversable
+    - microlens
+    - mtl
     - quickcheck-instances
+    - semigroupoids
     - text
+    - transformers
     - vector
-  ghc-options:
-    - -Werror
-    - -Weverything
-
-    - -Wno-implicit-prelude
-    - -Wno-missing-deriving-strategies
-    - -Wno-missing-kind-signatures
-    - -Wno-missing-local-signatures
-    - -Wno-missing-safe-haskell-mode
-    - -Wno-safe
-    - -Wno-unsafe
-
-    - -Wno-unused-packages

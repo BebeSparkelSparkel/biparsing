@@ -1,0 +1,47 @@
+cabal-version: 2.2
+
+-- This file has been generated from package.yaml by hpack version 0.36.0.
+--
+-- see: https://github.com/sol/hpack
+
+name:           biparsing-text-tests
+version:        0.0.0.1
+synopsis:       Tests for biparsing-text
+description:    Cabal does not allow circular dependencies for tests in new builds and many of the tests for biparsing-core require biparsing-text which was extracted to its own package.
+category:       Parsing
+homepage:       https://github.com/BebeSparkelSparkel/biparsing
+author:         William Rusnack
+maintainer:     William Rusnack
+license:        BSD-3-Clause
+license-file:   LICENSE
+build-type:     Simple
+
+test-suite spec
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      Biparse.Text.Context.LineColumnSpec
+      Biparse.Text.LineBreakSpec
+      Biparse.Text.NumericSpec
+  hs-source-dirs:
+      tests/
+  default-extensions:
+      OverloadedStrings
+      BlockArguments
+      TypeApplications
+      RankNTypes
+      LambdaCase
+      ScopedTypeVariables
+      DataKinds
+      KindSignatures
+      FlexibleContexts
+      GeneralizedNewtypeDeriving
+  ghc-options: -Werror -Weverything -fprint-potential-instances -Wno-implicit-prelude -Wno-incomplete-uni-patterns -Wno-missing-deriving-strategies -Wno-missing-export-lists -Wno-missing-import-lists -Wno-missing-kind-signatures -Wno-missing-local-signatures -Wno-missing-safe-haskell-mode -Wno-orphans -Wno-safe -Wno-unsafe -Wno-unused-packages
+  build-tool-depends:
+      hspec-discover:hspec-discover
+  build-depends:
+      biparsing-test
+    , biparsing-text
+    , ghc-prim
+    , hspec
+  default-language: Haskell2010

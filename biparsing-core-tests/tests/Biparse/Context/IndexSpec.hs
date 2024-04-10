@@ -10,7 +10,7 @@ spec = do
     runBackward bp () () 'b' `shouldBe` EValue ('b', "b")
 
   it "take" do
-    let bp :: Iso IndexContext (EISP ByteString) EitherString () Builder () (IndexPosition ByteString) ()
+    let bp :: Iso IndexContext (EISP ByteString) EitherString () BuilderByteString () (IndexPosition ByteString) ()
         bp = take 48
     runForward @() bp "0123" `shouldBe` Right ((), IndexPosition 1 "123")
     runBackward bp () () () `shouldBe` EValue ((), "0")

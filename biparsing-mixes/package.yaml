@@ -8,32 +8,27 @@ license: BSD-3-Clause
 license-file: LICENSE
 spec-version: 0.36.0
 
-dependencies:
-  - name: base
-    mixin:
-      - hiding (Prelude)
-  - biparsing-core
-  - bytestring
-  - text
-  - mono-traversable >= 1.0.17.0
-  - transformers >= 0.6.1.1
-  - mtl
-  - semigroupoids
-
 default-extensions:
-  - AllowAmbiguousTypes
-  - BlockArguments
-  - FlexibleContexts
-  - FlexibleInstances
   - ImportQualifiedPost
-  - RankNTypes
-  - ScopedTypeVariables
+  - BlockArguments
   - TypeApplications
 
 library:
   source-dirs: src/
   other-modules:
     - Prelude
+  dependencies:
+    - name: base
+      mixin:
+        - hiding (Prelude)
+    - biparsing-core
+    - biparsing-text
+    - bytestring
+    - text
+    - mono-traversable >= 1.0.17.0
+    - transformers >= 0.6.1.1
+    - mtl
+    - semigroupoids
   default-extensions:
     - DataKinds
     - MultiParamTypeClasses
@@ -41,6 +36,11 @@ library:
     - StandaloneKindSignatures
     - TypeFamilies
     - UndecidableInstances
+    - AllowAmbiguousTypes
+    - FlexibleContexts
+    - FlexibleInstances
+    - RankNTypes
+    - ScopedTypeVariables
   ghc-options:
     - -Werror
     - -Weverything
@@ -62,14 +62,15 @@ tests:
     source-dirs: tests/
     dependencies:
       - biparsing-mixes
+      - name: biparsing-test
+        mixin:
+          - (Prelude as Test.Prelude)
       - hspec
-      - hspec-discover
       - data-default
       - template-haskell
     default-extensions:
       - OverloadedStrings
       - TupleSections
-
     ghc-options:
       - -Werror
       - -Weverything
@@ -88,4 +89,3 @@ tests:
       - -Wno-unsafe
 
       - -Wno-unused-packages
-

@@ -2,8 +2,6 @@
 module Biparse.ConstructorSpec where
 
 import Biparse.Constructor
-import Lens.Micro (_1, _2, (^.))
-import Control.Monad.ChangeMonad (Lift)
 
 spec :: Spec
 spec = do
@@ -12,7 +10,7 @@ spec = do
       (focusOne @Lift @EitherString headAlt do
         expect _1 1
         x <- exposes (^. _2)
-        return $ x + 1
+        return $ succ x
       :: Biparser () (Identity [(Int,Double)]) EitherString EitherString () [(Int,Double)] () [(Int,Double)] Double)
       ()
       ()

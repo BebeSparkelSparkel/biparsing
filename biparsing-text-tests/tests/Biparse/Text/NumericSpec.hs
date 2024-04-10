@@ -1,12 +1,6 @@
 module Biparse.Text.NumericSpec where
 
 import Biparse.Text.Numeric
-import Control.Monad (sequence)
-import GHC.Bits (Bits)
-import GHC.Enum (Enum)
-import GHC.Num (Num)
-import GHC.Real (Fractional, Integral, Real)
-import Numeric (showHex)
 
 spec :: Spec
 spec = do

@@ -52,6 +52,7 @@ string :: forall c s m n u text w.
   -- context
   , SubStateContext c s
   -- assignments
+  , ContextualStateTransformerPLEASEREMOVESUFFIX c text m
   , text ~ SubState s
   )
   => text

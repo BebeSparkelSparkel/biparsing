@@ -1,0 +1,43 @@
+cabal-version: 2.2
+
+-- This file has been generated from package.yaml by hpack version 0.36.0.
+--
+-- see: https://github.com/sol/hpack
+
+name:           biparsing-test
+version:        0.0.0.1
+synopsis:       Test Prelude for the biparsing suite.
+category:       Parsing
+homepage:       https://github.com/BebeSparkelSparkel/biparsing
+author:         William Rusnack
+maintainer:     William Rusnack
+license:        BSD-3-Clause
+license-file:   LICENSE
+build-type:     Simple
+
+library
+  exposed-modules:
+      Prelude
+  hs-source-dirs:
+      ./
+  build-depends:
+      QuickCheck
+    , base
+    , biparsing-core
+    , biparsing-text
+    , bytestring
+    , containers
+    , data-default
+    , hspec
+    , microlens
+    , mono-traversable
+    , mtl
+    , quickcheck-instances
+    , safe
+    , semigroupoids
+    , text
+    , transformers
+    , vector
+  mixins:
+      base hiding (Prelude)
+  default-language: Haskell2010

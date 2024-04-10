@@ -5,7 +5,6 @@ module Biparse.List
   , takeNElements
   , Many
   , many
-  , manyId
   , manyIso
   , some
   , someIso
@@ -17,11 +16,6 @@ module Biparse.List
   , whileM'
   , whileFwdAllBwd
   , untilFwdSuccessBwdAll
-  --, whileId
-  --, untilM
-  --, untilM'
-  --, untilId
-  --, untilNothing
   , untilInclusive
   , untilExclusive
   , untilExclusive'
@@ -32,7 +26,7 @@ module Biparse.List
   , tailAlt
   ) where
 
-import Biparse.Biparser (Biparser, pattern Biparser, forward, backward, Iso, SubElement, SubState, one, try, mono, ElementContext, FixFail, fix, peek, Unit, UpdateStateWithSubState, isNull, breakWhen', GetSubState, upon, uponM, UpdateStateWithElement, SubStateContext, forwardFail)
+import Biparse.Biparser (Biparser, pattern Biparser, forward, backward, Iso, SubElement, SubState, one, try, mono, ElementContext, peek, Unit, UpdateStateWithSubState, isNull, breakWhen', GetSubState, upon, uponM, UpdateStateWithElement, SubStateContext, forwardFail)
 import Biparse.General (take, takeNot, memptyWrite, BreakWhen, rest, stripPrefix)
 import Data.List.NonEmpty (NonEmpty, nonEmpty)
 import Control.Profunctor.FwdBwd (MapMs(mapMs))
@@ -133,19 +127,6 @@ many x =
     cons y <$> many x `uponM` tailAlt
   <!> pure mempty
 
-manyId :: forall c s m n u v.
-  ( FixFail m
-  , Monad m
-  , Alt m
-  , FixFail n
-  , Monoid (SubState s)
-  , MonadFail n
-  , Alt n
-  )
-  => Biparser c s m n u v
-  -> Biparser c s Identity Identity [u] [v]
-manyId = fix . many
-
 -- | Iso version of 'many'
 manyIso :: forall c s m n a.
   Many c s m n
@@ -194,7 +175,7 @@ all x = ifM isNull (pure mempty) do
   cons y <$> all x `uponM` tailAlt
 
 -- | Splits the substate on given element
-splitElem :: forall c s m n ss se w m' n'.
+splitElem :: forall c s m n ss se w m' n' e.
   -- m
   ( MonadState s m
   -- n
@@ -207,9 +188,20 @@ splitElem :: forall c s m n ss se w m' n'.
   , ConvertElement c se w n'
   -- context
   , ElementContext c s
+  -- m'
+  , SelectableStateT c
+  , MonadState s m'
+  , MonadError e m'
+  , MonadFail m'
+  , Alt m'
+  -- n'
+  , SelectableWriterTransformer (WriterTransformer c)
+  , MonadFail n'
+  , MonadWriter w n'
+  , Alt n'
   -- assignments
-  , m' ~ StateT s Maybe
-  , n' ~ WriterT w Maybe
+  , m' ~ StateTransformer c s Maybe
+  , n' ~ WriterTransformer c w Maybe
   , se ~ SubElement s
   , ss ~ SubState s
   )
@@ -227,38 +219,54 @@ splitElem x = liftStateMaybe $ correctEmpty splitter
     [] -> [mempty]
     y -> y
 
-splitOn :: forall c s m n ss w m' n'.
+splitOn :: forall c s m n ss w m' n' e.
+  -- m
   ( MonadState s m
+  -- n
   , MonadWriter w n
+  -- substate
   , Show ss
   , EqElement ss
+  -- writer
   , ConvertSequence c ss w n'
   , ConvertElement c (SubElement s) w n'
+  -- context
   , ElementContext c s
   , SubStateContext c s
+  -- m'
+  , ContextualStateTransformer' c s Maybe m'
+  , MonadState ss (StateTransformer c ss m')
+  , MonadError e m'
+  , MonadFail m'
+  , Alt m'
+  -- n'
+  , ContextualWriterTransformer c w Maybe n'
+  , Alt n'
+  , MonadFail n'
+  -- assignments
   , ss ~ SubState s
-  , m' ~ StateT s Maybe
-  , n' ~ WriterT w Maybe
   )
   => ss
   -> Iso c m n s [ss]
 splitOn = liftStateMaybe . splitWith @c @s @m' @n' . stripPrefix
 
-liftStateMaybe :: forall c s m n u v w.
+liftStateMaybe :: forall c s m n u v w m' n'.
   ( MonadState s m
   , MonadWriter w n
+  , ContextualStateTransformer' c s Maybe m'
+  , ContextualWriterTransformer c w Maybe n'
   )
-  => Biparser c s (StateT s Maybe) (WriterT w Maybe) u v
+  => Biparser c s m' (WriterTransformer c w Maybe) u v
   -> Biparser c s m n u v
 liftStateMaybe = mapMs
  (\x -> do
    s <- get
-   let (y,s') = fromJust $ runStateT x s
+   let (y,s') = fromJust $ runStateT @c x s
    put s'
    pure y
  )
  (\x -> do
-   let (y,w) = fromJust $ runWriterT x
+   let (y,w) = fromJust $ runWriterT @c x
    tell w
    pure y
  )
@@ -267,6 +275,7 @@ splitWith :: forall c s m n ss se w e.
   ( BreakWhen c s m n ss se w e
   , UpdateStateWithSubState c s
   , ConvertSequence c ss w n
+  , ContextualStateTransformerPLEASEREMOVESUFFIX c ss m
   )
   => Unit c s m n
   -> Iso c m n s [ss]
@@ -311,6 +320,10 @@ whileM' :: forall c s m n u v.
 whileM' predicate produce = ifM (predicate `uponM` headAlt <!> pure False)
   (produce `uponM` headAlt ^:^ whileM' predicate produce `uponM` tailAlt)
   (pure mempty)
+
+infixr 5 ^:^
+(^:^) :: Applicative f => f a -> f [a] -> f [a]
+(^:^) = liftA2 (:)
 
 -- | For forward: runs 'predicate` first. If 'predicate' returns true, runs 'produce'.
 -- For backward: 'produce' is run fore every 'u' in '[u]' and 'predicate' is run at the end.

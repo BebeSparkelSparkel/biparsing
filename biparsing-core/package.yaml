@@ -26,6 +26,7 @@ dependencies:
   - semigroupoids
 
 default-extensions:
+  - AllowAmbiguousTypes
   - BlockArguments
   - ConstraintKinds
   - DataKinds
@@ -51,7 +52,6 @@ default-extensions:
   - TypeApplications
   - TypeFamilies
   - TypeOperators
-  - ViewPatterns
 
 library:
   source-dirs: src/
@@ -62,11 +62,9 @@ library:
     - generic-data
     - hvect
     - profunctors
-    - safe
 
     # remove dependencies after Data.EqElement is removed
     - text
-    - vector
     - bytestring
     - split
     - stringsearch
@@ -83,45 +81,3 @@ library:
     - -Wno-unsafe
 
     - -Wno-unused-packages
-
-tests:
-  spec:
-    build-tools:
-      - hspec-discover
-    main: Spec.hs
-    source-dirs: tests/
-    dependencies:
-      - QuickCheck
-      - biparsing-core
-      - bytestring
-      - generic-deriving
-      - generic-random
-      - hspec
-      - hspec-discover
-      - quickcheck-instances
-      - text
-      - vector
-      - ghc-prim
-    default-extensions:
-      - OverloadedStrings
-      - OverloadedLists
-      - NamedFieldPuns
-    ghc-options:
-      - -Werror
-      - -Weverything
-      - -fprint-potential-instances
-
-      - -Wno-implicit-prelude
-      - -Wno-incomplete-uni-patterns
-      - -Wno-missing-deriving-strategies
-      - -Wno-missing-export-lists
-      - -Wno-missing-import-lists
-      - -Wno-missing-kind-signatures
-      - -Wno-missing-local-signatures
-      - -Wno-missing-safe-haskell-mode
-      - -Wno-orphans
-      - -Wno-safe
-      - -Wno-unsafe
-
-      - -Wno-unused-packages
-

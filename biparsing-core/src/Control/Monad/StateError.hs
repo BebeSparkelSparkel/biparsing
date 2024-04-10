@@ -20,8 +20,9 @@ import Control.Monad.Unrecoverable (MonadUnrecoverable, throwUnrecoverable, Unre
 import Control.Monad.TransformerBaseMonad (TransformerBaseMonad, LiftBaseMonad, liftBaseMonad)
 import Control.Monad.MonadProgenitor (MonadProgenitor)
 import Lens.Micro.TH (makeLenses)
-import Control.Monad.Reader.Class (MonadReader)
 import System.IO (IO)
+import Control.Monad.State (StateT(StateT))
+import Data.Either (Either)
 
 -- * Allow errors to be combined with state information.
 

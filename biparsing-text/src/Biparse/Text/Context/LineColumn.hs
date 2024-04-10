@@ -24,22 +24,25 @@ module Biparse.Text.Context.LineColumn
   , ListToElement
   ) where
 
-import Biparse.Biparser (SubState, GetSubState(getSubState), UpdateStateWithElement(updateElementContext), UpdateStateWithSubState(updateSubStateContext), ReplaceSubState(replaceSubState))
-import Biparse.Biparser.Internal (pattern Biparser, InitSuperState(SuperState, fromSubState), SuperArg)
 import Biparse.Text.LineBreak (LineBreakType(Unix,Windows), LineSplitter, lineSplitter, UpdateSuperState)
-import Biparse.Utils (char)
-import Lens.Micro ((.~), (%~), _2, _Left, _Right, (^.))
-import Lens.Micro.TH (makeLenses)
-import Control.Monad.ChangeMonad (ChangeMonad, ChangeFunction, changeMonad', ResultMonad(ResultingMonad,resultMonad))
-import Control.Monad.EitherString (EitherString(EValue,EString))
+import Biparse.Utils (char, symbol)
 import Control.Monad.StateError (StateErrorT(StateErrorT), ErrorState(ErrorState), ErrorInstance(ErrorStateInstance), errorState)
 import Control.Monad.UndefinedBackwards (UndefinedBackwards)
 import Data.EqElement (splitElem, splitSeq)
-import Data.MonoTraversable.Unprefixed (foldr)
-import Data.Sequences (uncons)
 import GHC.Exts (IsList(Item))
 import GHC.Exts qualified as GE
 import System.IO (FilePath)
+import Control.Monad.ChangeMonad (ChangeMonad(changeMonad'), ChangeFunction, ResultMonad(ResultingMonad,resultMonad))
+import Control.Monad.EitherString (EitherString, pattern EString, pattern EValue)
+import Data.String (String)
+import Data.Int (Int)
+import Lens.Micro ((%~), (.~), (^.), _2, _Left, _Right)
+import Lens.Micro.TH (makeLenses)
+import Data.Either (Either(Left,Right))
+import Data.Maybe (Maybe(Just))
+import Control.Monad.State (execState)
+import Data.MonoTraversable.Unprefixed (length)
+import GHC.Num ((+))
 
 -- * Contexts
 type UnixLC = LineColumn 'Unix
@@ -94,13 +97,13 @@ type CharCs text char =
 instance CharCs text char => UpdateStateWithElement (LineColumn 'Unix) (Position dataId text) where
   updateElementContext s c ss =
     if c == fromChar '\n'
-    then s & line %~ (+ 1) & column .~ 1 & subState .~ ss
-    else s & column %~ (+ 1) & subState .~ ss
+    then s & line %~ succ & column .~ 1 & subState .~ ss
+    else s & column %~ succ & subState .~ ss
 
 instance (CharCs text char, IsSequence text) => UpdateStateWithElement (LineColumn 'Windows) (Position dataId text) where
   updateElementContext s c ss = case headTailAlt ss of
-    Just (c',ss') | c == fromChar '\r' && c' == fromChar '\n' -> s & line %~ (+ 1) & column .~ 1 & subState .~ ss'
-    _ -> s & column %~ (+ 1) & subState .~ ss
+    Just (c',ss') | c == fromChar '\r' && c' == fromChar '\n' -> s & line %~ succ & column .~ 1 & subState .~ ss'
+    _ -> s & column %~ succ & subState .~ ss
 
 instance (CharCs text char, IsSequence text) => UpdateStateWithElement LineColumnUnknownBreak (Position dataId text) where
   updateElementContext s@(Position {_line = l, _column = c}) ss ss' = if l == l' && c == c' then w else u
@@ -109,10 +112,10 @@ instance (CharCs text char, IsSequence text) => UpdateStateWithElement LineColum
     w = updateElementContext @(LineColumn 'Windows) s ss ss'
 
 instance UpdateStateWithElement LinesOnly (Position dataId [text]) where
-  updateElementContext p _ ss = p & line %~ (+ 1) & column .~ 1 & subState .~ ss
+  updateElementContext p _ ss = p & line %~ succ & column .~ 1 & subState .~ ss
 
 instance UpdateStateWithElement ColumnsOnly (Position dataId text) where
-  updateElementContext p _ ss = p & column %~ (+ 1) & subState .~ ss
+  updateElementContext p _ ss = p & column %~ succ & subState .~ ss
 
 instance (CharCs text char, MonoFoldable text) => UpdateStateWithSubState (LineColumn lb) (Position dataId text) where
   updateSubStateContext = updateSubStateContext @LineColumnUnknownBreak
@@ -127,8 +130,8 @@ instance (CharCs text char, MonoFoldable text) => UpdateStateWithSubState LineCo
     where
     (ns, cs) = flip execState (0, 0) $ for_ ss
       $ bool
-        (modify $ second (+ 1))
-        (modify \(l,_) -> (l + 1, 1))
+        (modify $ second succ)
+        (modify \(l,_) -> (succ l, 1))
       . (== fromChar '\n')
 
 instance MonoFoldable text => UpdateStateWithSubState LinesOnly (Position dataId text) where

@@ -14,6 +14,7 @@ import Biparse.Biparser (SubState, GetSubState(getSubState), UpdateStateWithElem
 import GHC.Exts (IsList(Item))
 import GHC.Exts qualified as GE
 import Control.Monad.ChangeMonad (ChangeMonad, ChangeFunction, changeMonad', ResultMonad(ResultingMonad,resultMonad))
+import Data.Either (Either)
 
 --import Control.Monad.Trans.Error qualified as E
 
@@ -41,8 +42,8 @@ type instance SuperArg (IndexPosition _) = ()
 instance IsSequence ss => UpdateStateWithSubState IndexContext (IndexPosition ss) where
   updateSubStateContext (IndexPosition i _) consumed remaining = IndexPosition (i + lengthIndex consumed) remaining
 
-instance Num (Index ss) => UpdateStateWithElement IndexContext (IndexPosition ss) where
-  updateElementContext (IndexPosition i _) _ ss = IndexPosition (i + 1) ss
+instance Enum (Index ss) => UpdateStateWithElement IndexContext (IndexPosition ss) where
+  updateElementContext (IndexPosition i _) _ ss = IndexPosition (succ i) ss
 
 startIndex :: Num (Index ss) => ss -> IndexPosition ss
 startIndex = IndexPosition 0

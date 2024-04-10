@@ -10,8 +10,8 @@ spec = do
   describe "performance" do
     let
         numLines = 500
-        line :: (IsString a, Semigroup a) => a -> a
-        line = ("abcdefghijklmnopqrstuvwxyz" <>)
+        line' :: (IsString a, Semigroup a) => a -> a
+        line' = ("abcdefghijklmnopqrstuvwxyz" <>)
         test :: forall (lb :: LineBreakType) text .
           ( LineBreakerString lb
           , IsString text
@@ -24,7 +24,7 @@ spec = do
         test = flip it let
           f = evalForward @() @(LineColumn lb) @_ @(FM text) @_ @EitherString @() @text @() @_ @[text] $ lines @lb
           text :: Position () text
-          text = startLineColumn $ repeatConcat numLines $ line $ lineBreakerString @lb
+          text = startLineColumn $ repeatConcat numLines $ line' $ lineBreakerString @lb
           in seq text $ limit $ f text `shouldSatisfy` isRight
 
     test @'Windows @String "Windows String"

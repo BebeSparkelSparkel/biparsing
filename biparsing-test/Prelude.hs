@@ -1,143 +1,186 @@
-{-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE BlockArguments #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE ImportQualifiedPost #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NoImplicitPrelude #-}
+{-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# OPTIONS_GHC
+  -Werror
+  -Weverything
+
+  -Wno-implicit-prelude
+  -Wno-missing-deriving-strategies
+  -Wno-missing-kind-signatures
+  -Wno-missing-local-signatures
+  -Wno-missing-safe-haskell-mode
+  -Wno-safe
+  -Wno-unsafe
+
+  -Wno-orphans
+  -Wno-missing-import-lists
+#-}
 module Prelude
-  ( module Biparse.Biparser
-  , module Biparse.Biparser.StateReaderWriter
-  , module Biparse.Context.Index
-  , module Biparse.General
-  , module Biparse.Text
-  , module Biparse.Text.Context.LineColumn
-  , module Biparse.Utils
-  , module Control.Applicative
-  , module Control.Monad
-  , module Control.Monad.ChangeMonad
-  , module Control.Monad.EitherString
-  , module Control.Monad.Except
-  , module Control.Monad.State
-  , module Control.Monad.StateError
-  , module Control.Monad.Trans.Class
-  , module Control.Monad.Writer
-  , module Data.Bifunctor
-  , module Data.Bool
-  , module Data.ByteString
-  , module Data.ByteString.Builder
-  , module Data.ByteString.Internal
-  , module Data.Char
-  , module Data.Coerce
-  , module Data.Either
-  , module Data.Eq
-  , module Data.Function
-  , module Data.Functor
-  , module Data.Functor.Alt
-  , module Data.Functor.Identity
-  , module Data.Int
-  , module Data.Kind
-  , module Data.List
-  , module Data.Maybe
-  , module Data.MonoTraversable
-  , module Data.MonoTraversable.Unprefixed
-  , module Data.Monoid
-  , module Data.Ord
-  , module Data.Semigroup
-  , module Data.Sequence
-  , module Data.Sequences
+  ( module Data.Bool
   , module Data.String
-  , module Data.Text
-  , module Data.Tuple
-  , module Data.Vector
-  , module Data.Void
-  , module Data.Word
-  , module GHC.Err
-  , module GHC.Float
-  , module GHC.Generics
-  , module GHC.IO.Exception
-  , module GHC.Num
-  , module GHC.Real
-  , module Numeric.Natural
   , module System.IO
   , module System.IO.Error
+  , module Data.Functor.Identity
+  , module Data.Char
   , module Test.Hspec
   , module Test.Hspec.QuickCheck
   , module Test.QuickCheck
+  , module Biparse.Biparser.StateReaderWriter
+  , module Control.Applicative
+  , module Biparse.Biparser
+  , module Data.Function
+  , module Control.Monad
+  , module Data.Functor.Alt
+  , module Data.Monoid
+  , module Biparse.Text.Context.LineColumn
+  , module Data.Either
+  , module Control.Monad.EitherString
+  , module Data.Int
+  , module Data.Word
+  , module Biparse.General
+  , module GHC.Err
+  , module Data.Sequences
+  , module Data.ByteString.Internal
+  , module Data.Functor
+  , module Text.Printf
+  , module Lens.Micro
+  , module Control.Monad.Trans.RWS.CPS
+  , module Control.Monad.StateError
+  , module Numeric
+  , module Numeric.Natural
+  , module Data.Sequence
+  , module Control.Monad.ChangeMonad
+  , module Data.MonoTraversable
+  , module Data.Eq
+  , module GHC.Real
+  , module Data.MonoTraversable.Unprefixed
+  , module GHC.Enum
+  , module Control.Monad.State.Class
+  , module Control.Monad.Fail
+  , module Data.Maybe
+  , module Data.Tuple
+  , module Safe
+  , module GHC.Float
+  , module Biparse.Utils
+  , module Biparse.Context.Index
+  , module Data.Vector
+  , module Biparse.List
+  , module GHC.Num
+  , module Data.Ord
+  , module Data.List.NonEmpty
   , module Text.Show
+  , module Data.Default
+  , module GHC.Generics
+  , module Data.Coerce
+  , module Data.List
+  , module Data.Bifunctor
+  , module Control.Monad.Error.Class
+  , module Data.Semigroup
+  , module GHC.Bits
 
   , fb
   , errorPosition
   , errorIndex
   , limit
   , FM
-  , TriSum(..)
-  , (>>>)
-  , RWST
+  , Data.ByteString.ByteString
+  , Data.Text.Text
+  , StrictByteString
+  , StrictText
+  , BuilderByteString
+  , packStrictText
+  , shouldReturn
   ) where
 
-import Biparse.Biparser hiding (Biparser, Iso, Unit, Const, ConstU)
-import Biparse.Biparser.StateReaderWriter (Biparser, Iso, Unit, Const, ConstU, runForward, runBackward, evalForward, BackwardC, BackwardT, backwardT, runBackwardT)
-import Biparse.Context.Index (IndexContext, IndexPosition(IndexPosition), ErrorIndex(ErrorIndex), EISP)
+-- Exported
+import Biparse.Biparser (UpdateStateWithElement(updateElementContext), UpdateStateWithSubState(updateSubStateContext), One, one, askBw, comap, upon, count, breakWhen', isNull, setBackward, try, peek, split, SubElement, IsoClass(iso))
+import Biparse.Biparser.StateReaderWriter (Biparser, Iso, Unit, Const, ConstU, BackwardC(BackwardT,backwardT,runBackwardT), runForward, evalForward, runBackward)
+import Biparse.Context.Index
 import Biparse.General
-import Biparse.Text (CharElement)
-import Biparse.Text.Context.LineColumn (LineColumn, UnixLC, LinesOnly, ColumnsOnly, Position(Position), subState, ErrorPosition(ErrorPosition), startLineColumn, NoUpdate)
-import Biparse.Utils (headAlt, ConvertSequence, convertSequence)
-import Control.Applicative (Applicative, pure, (<*), (*>), (<*>), empty, liftA2)
-import Control.Monad ((>>=), return, (>>), fail, MonadPlus, MonadFail, Monad, void)
-import Control.Monad.ChangeMonad (ChangeMonad, ChangeFunction, changeMonad', ResultMonad(ResultingMonad))
-import Control.Monad.EitherString (EitherString(EValue), isString)
-import Control.Monad.Except (MonadError(throwError,catchError))
-import Control.Monad.Trans.RWS.CPS (RWST, rwsT, runRWST)
-import Control.Monad.State (MonadState, get, put)
-import Control.Monad.StateError (StateErrorT, ErrorInstance(ErrorStateInstance), ErrorState(ErrorState))
-import Control.Monad.Trans.Class (MonadTrans, lift)
-import Control.Monad.Writer (WriterT(runWriterT), MonadWriter)
+import Biparse.List (all, takeElementsWhile)
+import Biparse.Text.Context.LineColumn
+import Biparse.Utils (headAlt, (<$$>))
+import Control.Applicative (Applicative(pure,(<*>)), (*>), (<*), liftA2, empty)
+import Control.Monad ((>>=), return, when, sequence)
+import Control.Monad.ChangeMonad (ChangeMonad(changeMonad'), Lift, ChangeFunction, ResultMonad(ResultingMonad))
+import Control.Monad.EitherString (EitherString, pattern EString, pattern EValue, isString, _EValue)
+import Control.Monad.Error.Class (throwError, catchError)
+import Control.Monad.Fail (MonadFail(fail))
+import Control.Monad.State.Class (get, put)
+import Control.Monad.StateError (StateErrorT, ErrorState, ErrorInstance(ErrorStateInstance))
+import Control.Monad.Trans.RWS.CPS (RWST, mapRWST, rwsT, runRWST)
 import Data.Bifunctor (first)
-import Data.Bool (Bool(True,False), otherwise, (&&), bool)
-import Data.ByteString (ByteString)
-import Data.ByteString.Builder (Builder)
-import Data.ByteString.Internal (w2c, c2w)
+import Data.Bool (Bool(True,False), (&&), otherwise, bool)
+import Data.ByteString.Internal (c2w, w2c)
 import Data.Char (Char, isDigit)
 import Data.Coerce (coerce)
-import Data.Either (Either(Left,Right), fromRight, isLeft, isRight, either)
-import Data.Eq (Eq, (==), (/=))
-import Data.Function ((.), ($), const, id, flip, (&))
-import Data.Functor (Functor(fmap), (<$>), ($>), (<&>))
-import Data.Functor.Alt (Alt, (<!>))
-import Data.Functor.Identity (Identity(Identity, runIdentity))
+import Data.Default (Default(def))
+import Data.Either (Either(Right), isRight, either)
+import Data.Eq (Eq((==)), (/=))
+import Data.Function
+import Data.Functor (Functor, (<$>), (<&>), ($>))
+import Data.Functor.Alt ((<!>))
+import Data.Functor.Identity (Identity(Identity,runIdentity))
 import Data.Int (Int)
-import Data.Kind (Type)
-import Data.List ((++))
+import Data.List (zip)
+import Data.List.NonEmpty (NonEmpty)
 import Data.Maybe (Maybe(Just,Nothing), maybe)
-import Data.MonoTraversable (Element, headMay)
-import Data.MonoTraversable.Unprefixed (toList, length)
-import Data.Monoid (Monoid, mempty)
-import Data.Ord (Ord, (>), (>=))
-import Data.Semigroup (Semigroup, (<>))
+import Data.MonoTraversable (Element)
+import Data.MonoTraversable.Unprefixed (length)
+import Data.Semigroup (Semigroup((<>)))
+import Data.Monoid (Monoid(mempty))
+import Data.Ord
 import Data.Sequence (Seq)
-import Data.Sequences (drop, index, cons, snoc, replicate, IsSequence, Index)
+import Data.Sequences (IsSequence, Index, cons, snoc)
 import Data.String (String, IsString(fromString))
-import Data.Text (Text)
 import Data.Tuple (fst, snd)
 import Data.Vector (Vector)
-import Data.Void (Void)
-import Data.Word (Word, Word8)
+import Data.Word (Word)
+import GHC.Enum (Enum(succ))
 import GHC.Err (undefined)
 import GHC.Float (Double)
 import GHC.Generics (Generic)
-import GHC.IO.Exception (IOException)
-import GHC.Num ((+), (-))
-import GHC.Real (fromIntegral)
+import GHC.Num (Num, (+), (-))
+import GHC.Real (Fractional, Integral, fromIntegral, Real)
+import Lens.Micro ((^.), (%~), _1, _2, _3)
+import Numeric (showHex)
 import Numeric.Natural (Natural)
+import Safe (headMay)
 import System.IO (IO, FilePath)
-import System.IO.Error (isUserError)
-import Test.Hspec hiding (focus)
+import System.IO.Error (isUserError, ioeGetErrorString, userError)
+import Test.Hspec hiding (shouldReturn)
 import Test.Hspec.QuickCheck
 import Test.QuickCheck
 import Test.QuickCheck.Instances.Text ()
+import Text.Printf (IsChar(fromChar,toChar))
 import Text.Show (Show(show))
+import GHC.Bits (Bits)
 
+-- Internal
+import Control.Monad.State (StateT)
+import Control.Monad.Writer.CPS (WriterT)
+import Control.Monad.Trans.State.Selectable (StateTransformer)
+import Control.Monad.Trans.Writer.Selectable (WriterTransformer)
+import Data.ByteString qualified
+import Data.ByteString.Builder qualified
+import Data.Convert (ConvertSequence(convertSequence))
+import Data.Either (Either(Left))
+import Data.Text qualified
+import Data.Word (Word8)
 import GHC.Exts (IsList, fromList, Item)
 import GHC.Exts qualified
-import Text.Printf (IsChar, fromChar, toChar)
 import System.Timeout (timeout)
-import Data.ByteString.Builder qualified
+import Test.Hspec qualified
 
 fb :: forall is c s m m' n r w ws u v.
   ( m' ~ ResultingMonad m is
@@ -172,18 +215,6 @@ limit = (>>= maybe (fail "Timeout") pure) . timeout 100000
 
 type FM text = Either (ErrorState String (Position () text))
 
-data TriSum a b c = One a | Two b | Three c deriving (Show, Eq)
-instance (Arbitrary a, Arbitrary b, Arbitrary c) => Arbitrary (TriSum a b c) where
-  arbitrary = oneof [One <$> arbitrary, Two <$> arbitrary, Three <$> arbitrary]
-  shrink = \case
-    One x -> One <$> shrink x
-    Two x -> Two <$> shrink x
-    Three x -> Three <$> shrink x
-
-infixr 9 >>>
-(>>>) :: (a -> b) -> (b -> c) -> a -> c
-(>>>) = flip (.)
-
 instance IsChar Word8 where
   fromChar = c2w
   toChar = w2c
@@ -193,10 +224,17 @@ instance IsList a => IsList (Identity a) where
   fromList = Identity . fromList
   toList = GHC.Exts.toList . runIdentity
 
-instance Eq Builder where x == y = Data.ByteString.Builder.toLazyByteString x == Data.ByteString.Builder.toLazyByteString y
+type StrictText = Data.Text.Text
+type StrictByteString = Data.ByteString.ByteString
+type BuilderByteString = Data.ByteString.Builder.Builder
 
-instance Applicative m => ConvertSequence c String Text       m where convertSequence = pure . fromString
-instance Applicative m => ConvertSequence c String ByteString m where convertSequence = pure . fromString
+packStrictText :: String -> StrictText
+packStrictText = Data.Text.pack
+
+instance Eq BuilderByteString where x == y = Data.ByteString.Builder.toLazyByteString x == Data.ByteString.Builder.toLazyByteString y
+
+instance Applicative m => ConvertSequence c String StrictText m where convertSequence = pure . fromString
+instance Applicative m => ConvertSequence c String StrictByteString m where convertSequence = pure . fromString
 
 instance (Functor n, Monoid w) => BackwardC c n w where
   type BackwardT c = RWST
@@ -208,3 +246,11 @@ instance UpdateStateWithElement () (Identity ss) where
 instance UpdateStateWithSubState () (Identity ss) where
   updateSubStateContext _ _ = Identity
 
+type instance StateTransformer _ = StateT
+type instance WriterTransformer _ = WriterT
+
+shouldReturn :: (ShouldReturn m, HasCallStack, Show a, Eq a) => m a -> a -> Expectation
+shouldReturn x y = limit $ shouldReturn' x y
+class ShouldReturn m where shouldReturn' :: (HasCallStack, Show a, Eq a) => m a -> a -> Expectation
+instance ShouldReturn IO where shouldReturn' x y = Test.Hspec.shouldReturn x y
+instance Show a => ShouldReturn (Either a) where shouldReturn' x y = either (fail . ("Expected Right but received " <>) . show . Left @_ @()) (`shouldBe` y) x

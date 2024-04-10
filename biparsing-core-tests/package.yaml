@@ -1,6 +1,7 @@
-name: biparsing-binary
+name: biparsing-core-tests
 version: 0.0.0.1
-synopsis: Combinators for working with binary data typically ByteString.
+synopsis: Tests for biparsing-core
+description: Cabal does not allow circular dependencies for tests in new builds and many of the tests for biparsing-core require biparsing-text which was extracted to its own package.
 homepage: https://github.com/BebeSparkelSparkel/biparsing
 category: Parsing
 author: William Rusnack
@@ -9,44 +10,33 @@ license-file: LICENSE
 
 spec-version: 0.36.0
 
-dependencies:
-  - name: base
-    mixin:
-      - hiding (Prelude)
-  - biparsing-core
-
-default-extensions: []
-
-library:
-  source-dirs: src/
-  other-modules:
-    - Prelude
-  dependencies: []
-  ghc-options:
-    - -Werror
-    - -Weverything
-
-    - -Wno-implicit-prelude
-    - -Wno-missing-deriving-strategies
-    - -Wno-missing-kind-signatures
-    - -Wno-missing-local-signatures
-    - -Wno-missing-safe-haskell-mode
-    - -Wno-safe
-    - -Wno-unsafe
-
 tests:
   spec:
-    build-tools:
-      - hspec-discover
+    build-tools: hspec-discover
     main: Spec.hs
     source-dirs: tests/
     dependencies:
-      - biparsing-binary
+      - biparsing-core
+      - biparsing-text
+      - biparsing-test
+      - mono-traversable
       - hspec
-      - hspec-discover
-      - bytestring
     default-extensions:
       - OverloadedStrings
+      - OverloadedLists
+      - NamedFieldPuns
+      - ImportQualifiedPost
+      - BlockArguments
+      - TypeApplications
+      - DataKinds
+      - TypeFamilies
+      - FlexibleInstances
+      - MultiParamTypeClasses
+      - LambdaCase
+      - ScopedTypeVariables
+      - ConstraintKinds
+      - FlexibleContexts
+      - DeriveGeneric
     ghc-options:
       - -Werror
       - -Weverything
@@ -63,4 +53,3 @@ tests:
       - -Wno-orphans
       - -Wno-safe
       - -Wno-unsafe
-

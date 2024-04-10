@@ -1,15 +1,10 @@
+{-# LANGUAGE TypeSynonymInstances #-}
 module Biparse.BiparserSpec where
 
 import Biparse.Biparser qualified as BB
 import Biparse.Biparser.StateReaderWriter (N)
-import Biparse.List (all)
-import Biparse.List (takeElementsWhile)
-import Biparse.Text.LineBreak (lines, LineBreakType(Unix))
-import Lens.Micro (_3, (%~))
-import Control.Monad.EitherString (_EValue)
-import Control.Monad.RWS.CPS (mapRWST)
 import Data.Sequences qualified as MT
-import Text.Printf (IsChar(fromChar, toChar))
+import Biparse.Text.LineBreak (lines, LineBreakType(Unix))
 
 spec :: Spec
 spec = do
@@ -70,7 +65,7 @@ spec = do
         it "print string" $ b "abc" >>= (`shouldBe` ("abc", ["abc"]))
 
     fb @() "Differing parser and printer type"
-      (one :: Iso UnixLC (FM ByteString) EitherString () Builder () (Position () ByteString) Word8)
+      (one :: Iso UnixLC (FM ByteString) EitherString () BuilderByteString () (Position () ByteString) Word8)
       ()
       ()
       (\f -> do
@@ -87,8 +82,8 @@ spec = do
       (( split do
           x <- get
           y <- maybe (fail "") (pure . \(f,s) -> f:s:[]) $
-            liftA2 (,) (headMay x) (index x 1)
-          put $ drop 2 x
+            liftA2 (,) (headMay x) (MT.index x 1)
+          put $ MT.drop 2 x
           return y
       ) :: Iso () IO IO () String () (Identity String) String)
       ()
@@ -287,9 +282,9 @@ spec = do
       (\f -> do
         prop "correct count" \(NonNegative x, NonNegative y) -> let
           as :: (IsSequence a, Element a ~ Char, Index a ~ Int) => a
-          as = replicate x 'a'
-          bs = replicate y 'b'
-          in f (startLineColumn $ as <> bs) `shouldBe` Right ((fromIntegral x, as), Position () 1 (x + 1) bs)
+          as = MT.replicate x 'a'
+          bs = MT.replicate y 'b'
+          in f (startLineColumn $ as <> bs) `shouldBe` Right ((fromIntegral x, as), Position () 1 (succ x) bs)
       )
       \b -> do
         prop "correct count" \xs -> let
@@ -302,9 +297,9 @@ spec = do
       (\f -> do
         prop "correct count" \(NonNegative x, NonNegative y) -> let
           as :: (IsSequence a, Element a ~ Char, Index a ~ Int) => a
-          as = replicate x 'a'
-          bs = replicate y 'b'
-          in f (startLineColumn $ as <> bs) `shouldBe` Right ((fromIntegral x, as), Position () 1 (x + 1) bs)
+          as = MT.replicate x 'a'
+          bs = MT.replicate y 'b'
+          in f (startLineColumn $ as <> bs) `shouldBe` Right ((fromIntegral x, as), Position () 1 (succ x) bs)
       )
       \b -> do
         prop "correct count" \xs -> let

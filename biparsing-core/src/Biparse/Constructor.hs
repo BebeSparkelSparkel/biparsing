@@ -1,6 +1,8 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE ViewPatterns #-}
+{-# OPTIONS_GHC -Wno-deprecations #-}
 module Biparse.Constructor
   ( Constructor(Constructor, ..)
   --, Construct
@@ -27,20 +29,22 @@ import Biparse.Biparser.StateReaderWriter qualified as BSRW
 import Lens.Micro (Traversal')
 import Lens.Micro.Mtl (preview, assign)
 import Control.Monad.TransformerBaseMonad (TransformerBaseMonad, LiftBaseMonad, liftBaseMonad)
-import Control.Monad.Reader (ReaderT(ReaderT), ask)
+import Control.Monad.Reader (ReaderT(ReaderT))
 import Control.Monad.StateError (runStateErrorT)
 import Control.Profunctor.FwdBwd (BwdMonad, Comap, FwdBwd, pattern FwdBwd, Fwd, Bwd)
 import Control.Profunctor.FwdBwd qualified as FB
 
-newtype Constructor s m n u v = Constructor' {deconstruct :: FwdBwd (ReaderT s m) (StateT s n) u v}
+import Control.Monad.State qualified as S
+
+newtype Constructor s m n u v = Constructor' {deconstruct :: FwdBwd (ReaderT s m) (S.StateT s n) u v}
   deriving (Functor, Applicative, Monad, MonadFail)
 instance (Alt m, Alt n) => Alt (Constructor s m n u) where Constructor' x <!> Constructor' y = Constructor' $ x <!> y
-pattern Constructor :: ReaderT s m v -> (u -> StateT s n v) -> Constructor s m n u v
+pattern Constructor :: ReaderT s m v -> (u -> S.StateT s n v) -> Constructor s m n u v
 pattern Constructor fw bw = Constructor' (FwdBwd fw bw)
 {-# COMPLETE Constructor #-}
 pattern ConstructorUnT :: (s -> m v) -> (u -> s -> n (v,s)) -> Constructor s m n u v
-pattern ConstructorUnT fw bw <- Constructor (ReaderT fw) ((runStateT .) -> bw) where
-  ConstructorUnT fw bw = Constructor (ReaderT fw) (StateT . bw)
+pattern ConstructorUnT fw bw <- Constructor (ReaderT fw) ((S.runStateT .) -> bw) where
+  ConstructorUnT fw bw = Constructor (ReaderT fw) (S.StateT . bw)
 {-# COMPLETE ConstructorUnT #-}
 
 --type Construct m n s = Constructor s m n s s
@@ -52,12 +56,13 @@ runBackwardC :: Constructor s m n u v -> u -> s -> n (v,s)
 runBackwardC (ConstructorUnT _ bw) = bw
 
 data StateInstance
-type instance BwdMonad StateInstance (_ FB.:*: Bwd (StateT _ n)) = n
-instance Monad n => Comap StateInstance (Fwd m FB.:*: Bwd (StateT s n)) where
+type instance BwdMonad StateInstance (_ FB.:*: Bwd (S.StateT _ n)) = n
+instance Monad n => Comap StateInstance (Fwd m FB.:*: Bwd (S.StateT s n)) where
   comap f (FwdBwd x y) = FwdBwd x (y . f)
-  comapM f (FwdBwd x y) = FwdBwd x \u -> StateT \s -> f u >>= flip runStateT s . y
+  comapM f (FwdBwd x y) = FwdBwd x \u -> S.StateT \s -> f u >>= flip S.runStateT s . y
 type instance BwdMonad StateInstance (Constructor _ _ n) = n
-deriving via (Fwd (ReaderT s m) FB.:*: Bwd (StateT s n)) instance Monad n => Comap StateInstance (Constructor s m n)
+-- | DEV NOTE: Should use Selectable
+deriving via (Fwd (ReaderT s m) FB.:*: Bwd (S.StateT s n)) instance Monad n => Comap StateInstance (Constructor s m n)
 
 comap :: forall s m n u u' v.
   Monad n
@@ -164,8 +169,8 @@ focus f g (Biparser fw bw) (ConstructorUnT fw' bw') = Biparser
 lensBiparse :: forall c w s s' m n u v.
   ( MonadFail m
   , Monad n
-  , ConvertSequence c w s' (StateT s n)
   , BSRW.BackwardC c n w
+  , ConvertSequence c w s' (S.StateT s n)
   )
   => Traversal' s s'
   -> BSRW.Biparser c (Identity s') m n () w () u v

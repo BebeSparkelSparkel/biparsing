@@ -1,6 +1,7 @@
 module Biparse.GeneralSpec where
 
 import Biparse.Text.Numeric (naturalBaseTen)
+import Data.Sequences qualified as MT
 
 spec :: Spec
 spec = do
@@ -250,14 +251,14 @@ spec = do
 
   describe "padCount" do
     prop "forward" \(NonNegative (na :: Int), NonNegative (nb :: Int), NonNegative (nc :: Int), NonNegative (n :: Int)) -> let
-      as = replicate na 'a'
+      as = MT.replicate na 'a'
       as' = case n - nb of
-        x | x >= 0 -> replicate x 'a'
+        x | x >= 0 -> MT.replicate x 'a'
           | otherwise -> mempty
-      bs = replicate nb 'b'
-      cs = replicate nc 'c'
+      bs = MT.replicate nb 'b'
+      cs = MT.replicate nc 'c'
       bp :: Biparser () (Identity (Seq Char)) (FM (Seq Char)) (Either String) () (Seq Char) () (Seq Char) (Natural, Seq Char)
-      bp = padCount n' 'a' $ takeWhile (== 'b')
+      bp = padCount n 'a' $ takeWhile (== 'b')
       f = runForward @() bp
       b = runBackward bp () ()
       n' = fromIntegral n

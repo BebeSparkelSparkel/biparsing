@@ -70,14 +70,14 @@ instance MonadUnrecoverable m => MonadUnrecoverable (Bwd m u) where
 
 type BwdMonad :: Type -> (Type -> Type -> Type) -> Type -> Type
 type family BwdMonad instanceSelector m
-infix 8 `upon`, `uponM`
+--infix 8 `upon`, `uponM`
 class Comap is (p :: Type -> Type -> Type) where
   comap :: (u -> u') -> p u' v -> p u v
   comapM :: (u -> BwdMonad is p u') -> p u' v -> p u v
-  upon :: p u' v -> (u -> u') -> p u v
-  upon = flip $ comap @is
-  uponM :: p u' v -> (u -> BwdMonad is p u') -> p u v
-  uponM = flip $ comapM @is
+  --upon :: p u' v -> (u -> u') -> p u v
+  --upon = flip $ comap @is
+  --uponM :: p u' v -> (u -> BwdMonad is p u') -> p u v
+  --uponM = flip $ comapM @is
 
 type instance BwdMonad () (_ :*: Bwd n) = n
 instance Monad n => Comap () (Fwd m :*: Bwd n) where

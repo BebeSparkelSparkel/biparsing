@@ -7,6 +7,8 @@ module Control.Monad.Unrecoverable
 
 import Control.Monad (MonadPlus)
 import Control.Applicative (Alternative, empty, (<|>))
+import Data.Either (Either(Left,Right))
+import Control.Monad.State (StateT)
 
 -- * UnrecoverableT
 

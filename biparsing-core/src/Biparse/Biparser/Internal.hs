@@ -18,8 +18,6 @@ module Biparse.Biparser.Internal
   , mono
   , Const
   , ConstU
-  , fix
-  , FixFail(..)
   , comap
   , comapMay
   , comapEither
@@ -71,15 +69,15 @@ module Biparse.Biparser.Internal
   , ConvertSequence(..)
   ) where
 
-import Biparse.FixFail (FixFail(fixFail))
+import Biparse.Utils (headTailAlt)
 import Control.Applicative qualified
 import Control.Monad.Extra (findM, whenM)
-import Control.Monad.Reader.Class (MonadReader(ask), asks)
 import Control.Monad.Unrecoverable (MonadUnrecoverable, UnrecoverableError, throwUnrecoverable)
 import Control.Monad.Writer.Class (listen)
-import Control.Monad.Writer.Map (MapWriter, mapWriter, WriteType, ChangeWriteType)
 import Control.Profunctor.FwdBwd (BwdMonad, Comap, FwdBwd, pattern FwdBwd, MapMs(mapMs), DualMap)
 import Control.Profunctor.FwdBwd qualified as FB
+import Data.Either (Either)
+import Data.Functor.Identity (runIdentity)
 import Data.Profunctor (Profunctor(dimap))
 
 -- | Product type for simultainously constructing forward and backward running programs.
@@ -230,11 +228,6 @@ mapWrite :: forall c s m n u v w.
 mapWrite (Biparser fw bw) f = Biparser fw $
   pass . fmap (,f) . bw
 
-instance MapWriter n => MapWriter (Biparser c s m n u) where
-  type WriteType (Biparser _ _ _ n _) = WriteType n
-  type ChangeWriteType (Biparser c s m n u) w = Biparser c s m (ChangeWriteType n w) u
-  mapWriter f (Biparser fw bw) = Biparser fw (mapWriter f . bw)
-
 -- * Only One Direction
 
 onlyForwards :: Applicative n => m () -> Const c s m n u
@@ -285,19 +278,6 @@ type ConstU c s m n u v = Biparser c s m n u v
 
 instance MapMs (Biparser c s) where
   mapMs f g (Biparser fw bw) = Biparser (f fw) (g . bw)
-
-fix :: forall c s m m' n n' u v.
-  ( FixFail m
-  , FixFail n
-  , Monoid v
-  , Applicative m'
-  , Applicative n'
-  )
-  => Biparser c s m n u v
-  -> Biparser c s m' n' u v
-fix (Biparser fw bw) = Biparser
-  (pure $ mempty `fixFail` fw)
-  (\u -> pure $ mempty `fixFail` bw u)
 
 -- * Forward and Backward Divergence
 
@@ -435,19 +415,20 @@ oneFw = do
 
 -- | Takes and writes substate. Updates the context and substate.
 split :: forall c s m n ss w.
-  ( SubState s ~ ss
-  , SubStateContext c s
+  ( SubStateContext c s
   , MonadState s m
   , MonadWriter w n
   , ConvertSequence c ss w n
+  , SelectableStateT c
+  , ss ~ SubState s
   )
-  => StateT ss m ss
+  => StateTransformer c ss m ss
   -> Iso c m n s ss
 split splitSubState = Biparser fw bw
   where
   fw = do
     s <- get
-    (start, end) <- runStateT @ss splitSubState $ getSubState @s s
+    (start, end) <- runStateT @c @ss splitSubState $ getSubState @s s
     put $ updateSubStateContext @c s start end
     return start
   bw :: ss -> n ss
@@ -458,14 +439,15 @@ splitFw :: forall c s m n ss u.
   ( MonadState s m
   , Applicative n
   , SubStateContext c s
+  , SelectableStateT c
   , ss ~ SubState s
   )
-  => StateT ss m ss
+  => StateTransformer c ss m ss
   -> Const c s m n u
 splitFw splitSubState = Biparser
   do
     s <- get
-    (start, end) <- runStateT @ss splitSubState $ getSubState @s s
+    (start, end) <- runStateT @c @ss splitSubState $ getSubState @s s
     put $ updateSubStateContext @c s start end
  $ const $ pure ()
 
