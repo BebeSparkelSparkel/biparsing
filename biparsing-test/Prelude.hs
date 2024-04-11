@@ -102,6 +102,7 @@ module Prelude
   , Data.ByteString.ByteString
   , Data.Text.Text
   , StrictByteString
+  , LazyByteString
   , StrictText
   , BuilderByteString
   , packStrictText
@@ -109,7 +110,7 @@ module Prelude
   ) where
 
 -- Exported
-import Biparse.Biparser (UpdateStateWithElement(updateElementContext), UpdateStateWithSubState(updateSubStateContext), One, one, askBw, comap, upon, count, breakWhen', isNull, setBackward, try, peek, split, SubElement, IsoClass(iso))
+import Biparse.Biparser (UpdateStateWithElement(updateElementContext), UpdateStateWithSubState(updateSubStateContext), One, one, askBw, comap, upon, count, breakWhen', isNull, setBackward, try, peek, split, SubElement, IsoClass(iso), fromSubState)
 import Biparse.Biparser.StateReaderWriter (Biparser, Iso, Unit, Const, ConstU, BackwardC(BackwardT,backwardT,runBackwardT), runForward, evalForward, runBackward)
 import Biparse.Context.Index
 import Biparse.General
@@ -138,7 +139,7 @@ import Data.Function
 import Data.Functor (Functor, (<$>), (<&>), ($>))
 import Data.Functor.Alt (Alt((<!>)))
 import Data.Functor.Identity (Identity(Identity,runIdentity))
-import Data.Int (Int)
+import Data.Int
 import Data.List (zip)
 import Data.List.NonEmpty (NonEmpty)
 import Data.Maybe (Maybe(Just,Nothing), maybe)
@@ -148,18 +149,18 @@ import Data.Monoid (Monoid(mempty))
 import Data.Ord
 import Data.Semigroup (Semigroup((<>)))
 import Data.Sequence (Seq)
-import Data.Sequences (IsSequence, Index, cons, snoc, singleton)
+import Data.Sequences (IsSequence, Index, cons, snoc, singleton, drop)
 import Data.String (String, IsString(fromString))
-import Data.Tuple (fst, snd)
+import Data.Tuple (fst, snd, uncurry)
 import Data.Vector (Vector)
-import Data.Word (Word)
+import Data.Word
 import GHC.Bits (Bits)
-import GHC.Enum (Enum(succ))
+import GHC.Enum (Enum(succ), maxBound)
 import GHC.Err (undefined)
 import GHC.Float (Double)
-import GHC.Generics (Generic)
+import GHC.Generics (Generic(from,to))
 import GHC.Num (Num, (+), (-))
-import GHC.Real (Fractional, Integral, fromIntegral, Real)
+import GHC.Real (Fractional, Integral, fromIntegral, Real, div)
 import Lens.Micro ((^.), (%~), _1, _2, _3)
 import Numeric (showHex)
 import Numeric.Natural (Natural)
@@ -175,17 +176,17 @@ import Text.Show (Show(show))
 
 -- Internal
 import Control.Monad.State (StateT)
-import Control.Monad.Writer.CPS (WriterT)
 import Control.Monad.Trans.State.Selectable (StateTransformer)
 import Control.Monad.Trans.Writer.Selectable (WriterTransformer)
+import Control.Monad.Writer.CPS (WriterT)
 import Data.ByteString qualified
 import Data.ByteString.Builder qualified
+import Data.ByteString.Builder.Internal (byteStringInsert, byteStringThreshold, toLazyByteStringWith, safeStrategy, smallChunkSize)
+import Data.ByteString.Lazy qualified
 import Data.Convert (ConvertSequence(convertSequence))
 import Data.Either (Either(Left))
 import Data.Text qualified
-import Data.Word (Word8)
-import GHC.Exts (IsList, fromList, Item)
-import GHC.Exts qualified
+import GHC.Exts (IsList(..))
 import System.Timeout (timeout)
 import Test.Hspec qualified
 
@@ -239,6 +240,7 @@ instance IsList a => IsList (Identity a) where
 
 type StrictText = Data.Text.Text
 type StrictByteString = Data.ByteString.ByteString
+type LazyByteString = Data.ByteString.Lazy.ByteString
 type BuilderByteString = Data.ByteString.Builder.Builder
 
 packStrictText :: String -> StrictText
@@ -268,3 +270,9 @@ class ShouldReturn m where shouldReturn' :: (HasCallStack, Show a, Eq a) => m a 
 instance ShouldReturn IO where shouldReturn' x y = Test.Hspec.shouldReturn x y
 instance Show a => ShouldReturn (Either a) where shouldReturn' x y = either (fail . ("Expected Right but received " <>) . show . Left @_ @()) (`shouldBe` y) x
 
+
+instance IsList BuilderByteString where
+  type Item BuilderByteString = Word8
+  fromList = byteStringInsert . fromList
+  fromListN n = byteStringThreshold n . fromList
+  toList = toList . toLazyByteStringWith (safeStrategy smallChunkSize smallChunkSize) mempty

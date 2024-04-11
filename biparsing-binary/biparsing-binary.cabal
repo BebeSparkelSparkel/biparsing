@@ -36,6 +36,7 @@ library
       MultiParamTypeClasses
       TypeFamilies
       DeriveGeneric
+      GeneralizedNewtypeDeriving
   ghc-options: -Werror -Weverything -Wno-implicit-prelude -Wno-missing-deriving-strategies -Wno-missing-kind-signatures -Wno-missing-local-signatures -Wno-missing-safe-haskell-mode -Wno-safe -Wno-unsafe -Wno-unused-packages
   build-depends:
       base
@@ -43,6 +44,7 @@ library
     , mono-traversable
     , mtl
     , semigroupoids
+    , wide-word
   mixins:
       base hiding (Prelude)
   default-language: Haskell2010
@@ -68,17 +70,21 @@ test-suite spec
       MultiParamTypeClasses
       TypeFamilies
       DeriveGeneric
+      GeneralizedNewtypeDeriving
       OverloadedStrings
   ghc-options: -Werror -Weverything -fprint-potential-instances -Wno-implicit-prelude -Wno-incomplete-uni-patterns -Wno-missing-deriving-strategies -Wno-missing-export-lists -Wno-missing-import-lists -Wno-missing-kind-signatures -Wno-missing-local-signatures -Wno-missing-safe-haskell-mode -Wno-orphans -Wno-safe -Wno-unsafe -Wno-unused-packages
   build-tool-depends:
       hspec-discover:hspec-discover
   build-depends:
       base
+    , binary
     , biparsing-binary
     , biparsing-core
     , biparsing-test
     , bytestring
     , hspec
+    , quickcheck-instances
+    , wide-word
   mixins:
       base hiding (Prelude)
   default-language: Haskell2010

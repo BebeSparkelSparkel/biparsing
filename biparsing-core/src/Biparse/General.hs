@@ -103,7 +103,6 @@ takeDi :: forall c s m n u ss se w e.
   ( Take c s m n ss se w e
   , Eq u
   , Show u
-  , Alt n
   )
   => se
   -> u
@@ -115,7 +114,6 @@ takeTri :: forall c s m n u v ss se w e.
   ( Take c s m n ss se w e
   , Eq u
   , Show u
-  , Alt n
   )
   => se
   -> u

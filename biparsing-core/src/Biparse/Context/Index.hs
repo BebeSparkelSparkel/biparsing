@@ -4,13 +4,12 @@
 module Biparse.Context.Index
   ( IndexContext
   , IndexPosition(IndexPosition, index)
+  , startIndex
   ) where
 
-import Control.Monad.StateError (ErrorState(ErrorState))
 import Biparse.Biparser (SubState, GetSubState(getSubState), UpdateStateWithElement(updateElementContext), UpdateStateWithSubState(updateSubStateContext), InitSuperState(SuperState,fromSubState), SuperArg)
 import GHC.Exts (IsList(Item))
 import GHC.Exts qualified as GE
-import Control.Monad.ChangeMonad (ChangeMonad, changeMonad')
 
 --import Control.Monad.Trans.Error qualified as E
 

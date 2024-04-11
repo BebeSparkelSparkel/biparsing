@@ -3,9 +3,7 @@ module Biparse.Binary.Generics
   ( genericBinaryAdtIsoClass
   ) where
 
-import Biparse.Biparser (Iso, IsoClass(iso), SubState, SubElement, GetSubState, UpdateStateWithElement, pattern Biparser, upon)
-import Biparse.General (take)
-import GHC.Generics (Generic(Rep,to,from), D1, C1, S1, M1(M1,unM1), K1(K1,unK1), Rec0, (:*:)((:*:)), (:+:)(L1,R1), )
+import GHC.Generics (Generic(Rep,to,from), D1, C1, S1, U1(U1), M1(M1,unM1), K1(K1,unK1), Rec0, (:*:)((:*:)), (:+:)(L1,R1))
 import Control.Monad.State (State, evalState)
 
 -- | Define IsoClass for Summed (multiple constructors) ADTs.
@@ -44,7 +42,7 @@ instance
       L1 x -> L1 <$> bw x
       R1 x -> R1 <$> bw' x
 instance
-  ( ProductIsoClass c sels m n a
+  ( ProductIsoClass c (sel :*: sel') m n a
   , Enum se
   , Eq se
   , Show se
@@ -60,13 +58,58 @@ instance
   , IsSequence ss
   , ss ~ SubState a
   , se ~ SubElement a
-  ) => GenericBinaryAdtIsoClass c (C1 meta sels) m n a where
+  ) => GenericBinaryAdtIsoClass c (C1 meta (sel :*: sel')) m n a where
   genericBinaryAdtIsoClass' = do
     prefix <- get
     put $ succ prefix
     return do
       take $ toEnum prefix
-      M1 <$> productIsoClass @c @sels `upon` unM1
+      M1 <$> productIsoClass @c @(sel :*: sel') `upon` unM1
+instance
+  ( IsoClass c m n a b
+  , Enum se
+  , Eq se
+  , Show se
+  , MonadState a m
+  , MonadError e m
+  , MonadFail m
+  , Alt m
+  , MonadWriter w n
+  , MonadFail n
+  , ConvertElement c se w n
+  , GetSubState a
+  , UpdateStateWithElement c a
+  , IsSequence ss
+  , ss ~ SubState a
+  , se ~ SubElement a
+  ) => GenericBinaryAdtIsoClass c (C1 meta (S1 meta' (Rec0 b))) m n a where
+  genericBinaryAdtIsoClass' = do
+    prefix <- get
+    put $ succ prefix
+    return do
+      take $ toEnum prefix
+      M1 . M1 . K1 <$> iso `upon` unK1 . unM1 . unM1
+instance 
+  ( Enum se
+  , Eq se
+  , Show se
+  , MonadState a m
+  , MonadError e m
+  , MonadFail m
+  , Alt m
+  , MonadWriter w n
+  , MonadFail n
+  , ConvertElement c se w n
+  , GetSubState a
+  , UpdateStateWithElement c a
+  , IsSequence ss
+  , ss ~ SubState a
+  , se ~ SubElement a
+  ) => GenericBinaryAdtIsoClass c (C1 meta U1) m n a where
+  genericBinaryAdtIsoClass' = do
+    prefix <- get
+    put $ succ prefix
+    return $ takeDi (toEnum prefix) (M1 U1 :: C1 meta U1 p)
 
 -- | Parses the fields of a record on after the other.
 -- Careful if the IsoClass of a field does not consume a fixed amount because it could start parsing data of the next field.

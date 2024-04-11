@@ -13,6 +13,7 @@ module Biparse.Biparser.Internal
   , BackwardMonad
   , Iso
   , IsoClass(..)
+  , coerceIso
   , Unit
   , unit
   , mono
@@ -83,6 +84,8 @@ import Control.Profunctor.FwdBwd qualified as FB
 import Data.Either (Either)
 import Data.Functor.Identity (runIdentity)
 import Data.Profunctor (Profunctor(dimap))
+import Data.Coerce (Coercible)
+import Unsafe.Coerce (unsafeCoerce)
 
 -- | Product type for simultainously constructing forward and backward running programs.
 newtype Biparser context s m n u v = Biparser' {unBiparser :: FwdBwd m n u v}
@@ -244,10 +247,15 @@ onlyBackwards = Biparser $ pure ()
 -- * Constrained Subtypes
 -- More constrained subtypes of Biparser
 
+-- ** Iso
+
 -- | Iso when @u ~ v@
 type Iso c m n a b = Biparser c a m n b b
 
 class IsoClass c m n a b where iso :: Iso c m n a b
+
+coerceIso :: (Coercible b b', Coercible b' b) => Iso c m n a b -> Iso c m n a b'
+coerceIso = unsafeCoerce
 
 -- ** Unit
 -- Unit when @u@ and @v@ are @()@
