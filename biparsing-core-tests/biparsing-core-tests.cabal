@@ -35,21 +35,21 @@ test-suite spec
   hs-source-dirs:
       tests/
   default-extensions:
-      OverloadedStrings
-      OverloadedLists
-      NamedFieldPuns
-      ImportQualifiedPost
       BlockArguments
-      TypeApplications
-      DataKinds
-      TypeFamilies
-      FlexibleInstances
-      MultiParamTypeClasses
-      LambdaCase
-      ScopedTypeVariables
       ConstraintKinds
-      FlexibleContexts
+      DataKinds
       DeriveGeneric
+      FlexibleContexts
+      FlexibleInstances
+      ImportQualifiedPost
+      LambdaCase
+      MultiParamTypeClasses
+      NamedFieldPuns
+      OverloadedLists
+      OverloadedStrings
+      ScopedTypeVariables
+      TypeApplications
+      TypeFamilies
   ghc-options: -Werror -Weverything -fprint-potential-instances -Wno-implicit-prelude -Wno-incomplete-uni-patterns -Wno-missing-deriving-strategies -Wno-missing-export-lists -Wno-missing-import-lists -Wno-missing-kind-signatures -Wno-missing-local-signatures -Wno-missing-safe-haskell-mode -Wno-orphans -Wno-safe -Wno-unsafe -Wno-unused-packages
   build-tool-depends:
       hspec-discover:hspec-discover

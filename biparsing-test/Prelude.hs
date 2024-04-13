@@ -93,6 +93,7 @@ module Prelude
   , module Data.Text.Lazy
   , module Data.ByteString
   , module Data.ByteString.Lazy
+  , module Control.Monad.IO.Class
 
   , fb
   , EEP
@@ -153,7 +154,7 @@ import Data.Monoid (Monoid(mempty))
 import Data.Ord
 import Data.Semigroup (Semigroup((<>)))
 import Data.Sequence (Seq)
-import Data.Sequences (IsSequence, Index, cons, snoc, singleton, drop, reverse)
+import Data.Sequences (IsSequence, SemiSequence, Index, cons, snoc, singleton, drop, reverse)
 import Data.String (String, IsString(fromString))
 import Data.Text (Text, StrictText)
 import Data.Text.Lazy (LazyText)
@@ -253,6 +254,8 @@ instance Eq ByteStringBuilder where x == y = Data.ByteString.Builder.toLazyByteS
 
 instance Applicative m => ConvertSequence c String StrictText m where convertSequence = pure . fromString
 instance Applicative m => ConvertSequence c String StrictByteString m where convertSequence = pure . fromString
+instance Applicative m => ConvertSequence c String LazyText m where convertSequence = pure . fromString
+instance Applicative m => ConvertSequence c String LazyByteString m where convertSequence = pure . fromString
 
 instance (Functor n, Monoid w) => BackwardC c n w where
   type BackwardT c = RWST

@@ -20,29 +20,29 @@ tests:
         mixin:
           - hiding (Prelude)
       - biparsing-core
-      - biparsing-text
       - biparsing-test
-      - mono-traversable
-      - hspec
-      - mtl
+      - biparsing-text
       - bytestring
+      - hspec
       - hspec-expectations-lifted
+      - mono-traversable
+      - mtl
     default-extensions:
-      - OverloadedStrings
-      - OverloadedLists
-      - NamedFieldPuns
-      - ImportQualifiedPost
       - BlockArguments
-      - TypeApplications
-      - DataKinds
-      - TypeFamilies
-      - FlexibleInstances
-      - MultiParamTypeClasses
-      - LambdaCase
-      - ScopedTypeVariables
       - ConstraintKinds
-      - FlexibleContexts
+      - DataKinds
       - DeriveGeneric
+      - FlexibleContexts
+      - FlexibleInstances
+      - ImportQualifiedPost
+      - LambdaCase
+      - MultiParamTypeClasses
+      - NamedFieldPuns
+      - OverloadedLists
+      - OverloadedStrings
+      - ScopedTypeVariables
+      - TypeApplications
+      - TypeFamilies
     ghc-options:
       - -Werror
       - -Weverything

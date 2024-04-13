@@ -6,15 +6,21 @@ module Control.Monad.FileM
 
 --import Data.ByteString (StrictByteString)
 import BasePrelude (seq)
-import System.IO (IO, Handle, FilePath, IOMode(ReadWriteMode), hClose, openFile, openBinaryFile, hTell, hSeek, SeekMode(AbsoluteSeek), hIsOpen, hSetFileSize)
-import System.IO qualified as S
-import Data.ByteString.Lazy (LazyByteString)
-import Data.ByteString.Lazy qualified as BL
+import Control.Monad.Extra (whenM)
 import Control.Monad.Reader
 import Control.Monad.Writer.Class
-import GHC.Num (fromInteger)
+import Data.ByteString (StrictByteString)
+import Data.ByteString qualified as BS
+import Data.ByteString.Lazy (LazyByteString)
+import Data.ByteString.Lazy qualified as BL
+import Data.Text (StrictText)
+import Data.Text.IO qualified as TS
+import Data.Text.Lazy (LazyText)
+import Data.Text.Lazy.IO qualified as TL
 import GHC.IO (finally)
-import Control.Monad.Extra (whenM)
+import GHC.Num (fromInteger)
+import System.IO (IO, Handle, FilePath, IOMode(ReadWriteMode), hClose, openFile, openBinaryFile, hTell, hSeek, SeekMode(AbsoluteSeek), hIsOpen, hSetFileSize)
+import System.IO qualified as S
 
 type FileM :: Type -> Type -> Type
 newtype FileM w a = FileM (ReaderT Handle IO a)
@@ -30,8 +36,52 @@ runFileMWithPath fp x = liftIO do
 
 class TextOrBinary w where openFileTOB :: FilePath -> IOMode -> IO Handle
 instance TextOrBinary String where openFileTOB = openFile
---instance TextOrBinary StrictByteString where openFileTOB = openBinaryFile
+instance TextOrBinary StrictByteString where openFileTOB = openBinaryFile
 instance TextOrBinary LazyByteString where openFileTOB = openBinaryFile
+
+instance MonadWriter StrictByteString (FileM StrictByteString) where
+  writer (x, w) = FileM $ ReaderT \h -> do
+    BS.hPutStr h w
+    return x
+  listen m = FileM $ ReaderT \h -> do
+    i <- hTell h
+    x <- runFileM h m
+    i' <- hTell h
+    hSeek h AbsoluteSeek i
+    w <- BS.hGet h $ fromInteger $ i' - i
+    return (x, w)
+  pass m = FileM $ ReaderT \h -> do
+    i <- hTell h
+    (x, f) <- runFileM @StrictByteString h m
+    i' <- hTell h
+    hSeek h AbsoluteSeek i
+    w <- BS.hGet h $ fromInteger $ i' - i
+    hSetFileSize h i
+    hSeek h AbsoluteSeek i
+    BS.hPutStr h $ f w
+    return x
+
+instance MonadWriter LazyByteString (FileM LazyByteString) where
+  writer (x, w) = FileM $ ReaderT \h -> do
+    BL.hPutStr h w
+    return x
+  listen m = FileM $ ReaderT \h -> do
+    i <- hTell h
+    x <- runFileM h m
+    i' <- hTell h
+    hSeek h AbsoluteSeek i
+    w <- BL.hGet h $ fromInteger $ i' - i
+    return (x, w)
+  pass m = FileM $ ReaderT \h -> do
+    i <- hTell h
+    (x, f) <- runFileM @LazyByteString h m
+    i' <- hTell h
+    hSeek h AbsoluteSeek i
+    w <- BL.hGet h $ fromInteger $ i' - i
+    hSetFileSize h i
+    hSeek h AbsoluteSeek i
+    BL.hPutStr h $ f w
+    return x
 
 instance MonadWriter String (FileM String) where
   writer (x, w) = FileM $ ReaderT \h -> do
@@ -58,26 +108,14 @@ instance MonadWriter String (FileM String) where
   --    hPutStr h $ f w
   --  return x
 
-instance MonadWriter LazyByteString (FileM LazyByteString) where
+instance MonadWriter StrictText (FileM StrictText) where
   writer (x, w) = FileM $ ReaderT \h -> do
-    BL.hPut h w
+    TS.hPutStr h w
     return x
-  listen m = FileM $ ReaderT \h -> do
-    i <- hTell h
-    x <- runFileM h m
-    i' <- hTell h
-    hSeek h AbsoluteSeek i
-    w <- BL.hGet h $ fromInteger $ i' - i
-    return (x, w)
-  pass m = FileM $ ReaderT \h -> do
-    i <- hTell h
-    (x, f) <- runFileM @LazyByteString h m
-    i' <- hTell h
-    hSeek h AbsoluteSeek i
-    w <- BL.hGet h $ fromInteger $ i' - i
-    hSetFileSize h i
-    hSeek h AbsoluteSeek i
-    BL.hPutStr h $ f w
+
+instance MonadWriter LazyText (FileM LazyText) where
+  writer (x, w) = FileM $ ReaderT \h -> do
+    TL.hPutStr h w
     return x
 
 -- lifted file functions

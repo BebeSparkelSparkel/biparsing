@@ -34,7 +34,7 @@ library:
     - transformers >= 0.6.1.1
 
     # remove dependencies after Data.EqElement is removed
-    - text
+    - text >= 2.1.1
     - bytestring
     - split
     - stringsearch
