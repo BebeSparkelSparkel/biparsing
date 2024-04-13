@@ -5,7 +5,7 @@ module Prelude
   , module Biparse.Mixes.SubStates
   ) where
 
-import Test.Prelude hiding (StrictText, StrictByteString, BuilderByteString)
+import Test.Prelude hiding (ByteStringBuilder, TextBuilder)
 import Biparse.Mixes.SubStates
 
 import Language.Haskell.TH (Name, TypeQ, Lit, ExpQ, mkName, conT, Lit(StringL), litE)

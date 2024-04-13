@@ -51,7 +51,7 @@ library
     , mono-traversable >=1.0.17.0
     , mtl
     , semigroupoids
-    , text
+    , text >=2.1.1
     , transformers >=0.6.1.1
   mixins:
       base hiding (Prelude)

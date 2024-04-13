@@ -58,9 +58,9 @@ instance (Functor n, Monoid w) => BackwardC (Mixes c) n w where
 
 instance Applicative m => ConvertElement (Mixes c) a [a] m where
   convertElement = pure . (: [])
-instance Applicative m => ConvertElement (Mixes c) Word8 BuilderByteString m where
+instance Applicative m => ConvertElement (Mixes c) Word8 ByteStringBuilder m where
   convertElement = pure . B.word8
-instance Applicative m => ConvertElement (Mixes c) Char BuilderText m where
+instance Applicative m => ConvertElement (Mixes c) Char TextBuilder m where
   convertElement = pure . TB.singleton
 instance Applicative m => ConvertElement (Mixes c) Char TS.Text m where
   convertElement = pure . TS.singleton
@@ -69,13 +69,13 @@ instance Applicative m => ConvertElement (Mixes c) Char TL.Text m where
 
 instance Applicative m => ConvertSequence (Mixes c) a a m where
   convertSequence = pure
-instance Applicative m => ConvertSequence (Mixes c) StrictByteString BuilderByteString m where
+instance Applicative m => ConvertSequence (Mixes c) StrictByteString ByteStringBuilder m where
   convertSequence = pure . B.byteString
-instance Applicative m => ConvertSequence (Mixes c) LazyByteString BuilderByteString m where
+instance Applicative m => ConvertSequence (Mixes c) LazyByteString ByteStringBuilder m where
   convertSequence = pure . B.lazyByteString
-instance Applicative m => ConvertSequence (Mixes c) StrictText BuilderText m where
+instance Applicative m => ConvertSequence (Mixes c) StrictText TextBuilder m where
   convertSequence = pure . TB.fromText
-instance Applicative m => ConvertSequence (Mixes c) LazyText BuilderText m where
+instance Applicative m => ConvertSequence (Mixes c) LazyText TextBuilder m where
   convertSequence = pure . TB.fromLazyText
 
 instance InitSuperState c ss => InitSuperState (Mixes c) ss where
