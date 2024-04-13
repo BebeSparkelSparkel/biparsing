@@ -16,11 +16,17 @@ tests:
     main: Spec.hs
     source-dirs: tests/
     dependencies:
+      - name: base
+        mixin:
+          - hiding (Prelude)
       - biparsing-core
       - biparsing-text
       - biparsing-test
       - mono-traversable
       - hspec
+      - mtl
+      - bytestring
+      - hspec-expectations-lifted
     default-extensions:
       - OverloadedStrings
       - OverloadedLists

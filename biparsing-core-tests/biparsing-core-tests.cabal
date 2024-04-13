@@ -29,6 +29,7 @@ test-suite spec
       Biparse.ListSpec
       Biparse.PolarizeSpec
       Biparse.UnorderedSpec
+      Control.Monad.FileMSpec
       Control.Monad.StateErrorSpec
       Control.Monad.UnrecoverableSpec
   hs-source-dirs:
@@ -53,9 +54,15 @@ test-suite spec
   build-tool-depends:
       hspec-discover:hspec-discover
   build-depends:
-      biparsing-core
+      base
+    , biparsing-core
     , biparsing-test
     , biparsing-text
+    , bytestring
     , hspec
+    , hspec-expectations-lifted
     , mono-traversable
+    , mtl
+  mixins:
+      base hiding (Prelude)
   default-language: Haskell2010

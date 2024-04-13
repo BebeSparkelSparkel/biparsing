@@ -9,65 +9,62 @@ license-file: LICENSE
 
 spec-version: 0.36.0
 
-dependencies:
-  - name: base
-    mixin:
-      - hiding (Prelude)
-  - data-default
-  - extra
-  - microlens
-  - microlens-mtl
-  - microlens-pro
-  - microlens-th
-  - mono-traversable >= 1.0.17.0
-  - mtl >= 2.3
-  - transformers >= 0.6.1.1
-  - containers
-  - semigroupoids
-
-default-extensions:
-  - AllowAmbiguousTypes
-  - BlockArguments
-  - ConstraintKinds
-  - DataKinds
-  - DeriveFunctor
-  - DeriveGeneric
-  - DerivingVia
-  - DuplicateRecordFields
-  - FlexibleContexts
-  - FlexibleInstances
-  - FunctionalDependencies
-  - GeneralizedNewtypeDeriving
-  - ImportQualifiedPost
-  - LambdaCase
-  - MultiParamTypeClasses
-  - PatternSynonyms
-  - QuantifiedConstraints
-  - RankNTypes
-  - RecordWildCards
-  - ScopedTypeVariables
-  - StandaloneDeriving
-  - StandaloneKindSignatures
-  - TupleSections
-  - TypeApplications
-  - TypeFamilies
-  - TypeOperators
-
 library:
   source-dirs: src/
   other-modules:
     - Prelude
   dependencies:
+    - name: base
+      mixin:
+        - (Prelude as BasePrelude, Data.Function, Data.Monoid, Control.Applicative, Control.Monad, Data.Functor, Data.Proxy, GHC.TypeLits, Text.Printf, Data.Maybe, Data.String, Data.Bool, Data.Coerce, Data.Either, Data.Eq, Data.Ord, Text.Show, Data.Functor.Identity, Data.Kind, Data.List, Data.Bifunctor, Data.Int, Data.Traversable, Data.Tuple, GHC.Enum, GHC.Num, GHC.Real, Numeric.Natural, GHC.Generics, GHC.Err, System.IO, Unsafe.Coerce, Data.List.NonEmpty, Data.IORef, GHC.IO, System.IO.Unsafe, GHC.Exts)
+    - containers
+    - data-default
     - data-diverse
+    - extra
     - generic-data
     - hvect
+    - microlens
+    - microlens-mtl
+    - microlens-pro
+    - microlens-th
+    - mono-traversable >= 1.0.17.0
+    - mtl >= 2.3
     - profunctors
+    - semigroupoids
+    - transformers >= 0.6.1.1
 
     # remove dependencies after Data.EqElement is removed
     - text
     - bytestring
     - split
     - stringsearch
+  default-extensions:
+    - AllowAmbiguousTypes
+    - BlockArguments
+    - ConstraintKinds
+    - DataKinds
+    - DeriveFunctor
+    - DeriveGeneric
+    - DerivingVia
+    - DuplicateRecordFields
+    - FlexibleContexts
+    - FlexibleInstances
+    - FunctionalDependencies
+    - GeneralizedNewtypeDeriving
+    - ImportQualifiedPost
+    - LambdaCase
+    - MultiParamTypeClasses
+    - PatternSynonyms
+    - QuantifiedConstraints
+    - RankNTypes
+    - RecordWildCards
+    - ScopedTypeVariables
+    - StandaloneDeriving
+    - StandaloneKindSignatures
+    - TupleSections
+    - TypeApplications
+    - TypeFamilies
+    - TypeOperators
   ghc-options:
     #- -Werror
     - -Weverything

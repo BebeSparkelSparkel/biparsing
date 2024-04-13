@@ -73,6 +73,21 @@ spec = do
         it "Builder" do
           b (fromChar 'd') `shouldBe` EValue (fromChar 'd', "d")
 
+    describe "Handle" $ do
+      --fb "as state"
+      --  (one :: Iso UnixLC IO HandleWriter () HandleText () HandleText Char)
+      --  ()
+      --  ()
+      --  (\f -> do
+      --    nullHandle <- openFile "/dev/null" ReadMode
+      --    it "empty" f nullHandle `shouldThrow` isUserError
+      --  )
+      --  \b -> do
+      --    it "write character" do
+      --      (tmpPath, tmpHandle) <- openTempFile "/tmp" ""
+
+      it "LineColumn" pending
+
   describe "split" do
     fb "Identity"
       -- take two

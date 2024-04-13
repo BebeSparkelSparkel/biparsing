@@ -88,6 +88,7 @@ module Prelude
   , module Data.Semigroup
   , module GHC.Bits
   , module Control.Monad.Writer.Class
+  , module Control.Monad.IO.Class
 
   , fb
   , EEP
@@ -123,6 +124,7 @@ import Control.Monad.ChangeMonad (ChangeMonad(changeMonad'), Lift)
 import Control.Monad.EitherString (EitherString, pattern EString, pattern EValue, isString, _EValue)
 import Control.Monad.Error.Class (throwError, catchError)
 import Control.Monad.Fail (MonadFail(fail))
+import Control.Monad.IO.Class (liftIO)
 import Control.Monad.State.Class (get, put)
 import Control.Monad.StateError (StateErrorT, ErrorState(ErrorState), ErrorInstance(ErrorStateInstance))
 import Control.Monad.Trans.RWS.CPS (RWST, mapRWST, rwsT, runRWST)
@@ -149,7 +151,7 @@ import Data.Monoid (Monoid(mempty))
 import Data.Ord
 import Data.Semigroup (Semigroup((<>)))
 import Data.Sequence (Seq)
-import Data.Sequences (IsSequence, Index, cons, snoc, singleton, drop)
+import Data.Sequences (IsSequence, Index, cons, snoc, singleton, drop, reverse)
 import Data.String (String, IsString(fromString))
 import Data.Tuple (fst, snd, uncurry)
 import Data.Vector (Vector)
