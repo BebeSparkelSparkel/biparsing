@@ -62,7 +62,7 @@ spec = do
         it "print string" $ b "abc" >>= (`shouldBe` ("abc", ["abc"]))
 
     fb "Differing parser and printer type"
-      (one :: Iso UnixLC (FM ByteString) EitherString () BuilderByteString () (Position () ByteString) Word8)
+      (one :: Iso UnixLC (FM ByteString) EitherString () ByteStringBuilder () (Position () ByteString) Word8)
       ()
       ()
       (\f -> do

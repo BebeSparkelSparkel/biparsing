@@ -88,6 +88,10 @@ module Prelude
   , module Data.Semigroup
   , module GHC.Bits
   , module Control.Monad.Writer.Class
+  , module Data.Text
+  , module Data.Text.Lazy
+  , module Data.ByteString
+  , module Data.ByteString.Lazy
 
   , fb
   , EEP
@@ -99,12 +103,8 @@ module Prelude
   , errorIndex
   , limit
   , FM
-  , Data.ByteString.ByteString
-  , Data.Text.Text
-  , StrictByteString
-  , LazyByteString
-  , StrictText
-  , BuilderByteString
+  , ByteStringBuilder
+  , TextBuilder
   , packStrictText
   , shouldReturn
   ) where
@@ -129,7 +129,9 @@ import Control.Monad.Trans.RWS.CPS (RWST, mapRWST, rwsT, runRWST)
 import Control.Monad.Writer.Class (MonadWriter)
 import Data.Bifunctor (first, second)
 import Data.Bool (Bool(True,False), (&&), otherwise, bool)
+import Data.ByteString (StrictByteString)
 import Data.ByteString.Internal (c2w, w2c)
+import Data.ByteString.Lazy (ByteString, LazyByteString)
 import Data.Char (Char, isDigit)
 import Data.Coerce (coerce)
 import Data.Default (Default(def))
@@ -151,6 +153,8 @@ import Data.Semigroup (Semigroup((<>)))
 import Data.Sequence (Seq)
 import Data.Sequences (IsSequence, Index, cons, snoc, singleton, drop)
 import Data.String (String, IsString(fromString))
+import Data.Text (Text, StrictText)
+import Data.Text.Lazy (LazyText)
 import Data.Tuple (fst, snd, uncurry)
 import Data.Vector (Vector)
 import Data.Word
@@ -179,13 +183,12 @@ import Control.Monad.State (StateT)
 import Control.Monad.Trans.State.Selectable (StateTransformer)
 import Control.Monad.Trans.Writer.Selectable (WriterTransformer)
 import Control.Monad.Writer.CPS (WriterT)
-import Data.ByteString qualified
 import Data.ByteString.Builder qualified
 import Data.ByteString.Builder.Internal (byteStringInsert, byteStringThreshold, toLazyByteStringWith, safeStrategy, smallChunkSize)
-import Data.ByteString.Lazy qualified
 import Data.Convert (ConvertSequence(convertSequence))
 import Data.Either (Either(Left))
 import Data.Text qualified
+import Data.Text.Lazy.Builder qualified
 import GHC.Exts (IsList(..))
 import System.Timeout (timeout)
 import Test.Hspec qualified
@@ -238,15 +241,13 @@ instance IsList a => IsList (Identity a) where
   fromList = Identity . fromList
   toList = GHC.Exts.toList . runIdentity
 
-type StrictText = Data.Text.Text
-type StrictByteString = Data.ByteString.ByteString
-type LazyByteString = Data.ByteString.Lazy.ByteString
-type BuilderByteString = Data.ByteString.Builder.Builder
-
 packStrictText :: String -> StrictText
 packStrictText = Data.Text.pack
 
-instance Eq BuilderByteString where x == y = Data.ByteString.Builder.toLazyByteString x == Data.ByteString.Builder.toLazyByteString y
+type ByteStringBuilder = Data.ByteString.Builder.Builder
+type TextBuilder = Data.Text.Lazy.Builder.Builder
+
+instance Eq ByteStringBuilder where x == y = Data.ByteString.Builder.toLazyByteString x == Data.ByteString.Builder.toLazyByteString y
 
 instance Applicative m => ConvertSequence c String StrictText m where convertSequence = pure . fromString
 instance Applicative m => ConvertSequence c String StrictByteString m where convertSequence = pure . fromString
@@ -271,8 +272,8 @@ instance ShouldReturn IO where shouldReturn' x y = Test.Hspec.shouldReturn x y
 instance Show a => ShouldReturn (Either a) where shouldReturn' x y = either (fail . ("Expected Right but received " <>) . show . Left @_ @()) (`shouldBe` y) x
 
 
-instance IsList BuilderByteString where
-  type Item BuilderByteString = Word8
+instance IsList ByteStringBuilder where
+  type Item ByteStringBuilder = Word8
   fromList = byteStringInsert . fromList
   fromListN n = byteStringThreshold n . fromList
   toList = toList . toLazyByteStringWith (safeStrategy smallChunkSize smallChunkSize) mempty

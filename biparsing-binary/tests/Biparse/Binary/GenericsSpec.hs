@@ -10,7 +10,7 @@ import Biparse.Binary.Generics
 spec :: Spec
 spec = do
   fb "genericBinaryAdtIsoClass"
-    (genericBinaryAdtIsoClass :: Iso IndexContext IO IO () BuilderByteString () (IndexPosition LazyByteString) ABC)
+    (genericBinaryAdtIsoClass :: Iso IndexContext IO IO () ByteStringBuilder () (IndexPosition LazyByteString) ABC)
     ()
     ()
     (\fw -> do

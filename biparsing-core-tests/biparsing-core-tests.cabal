@@ -29,6 +29,7 @@ test-suite spec
       Biparse.ListSpec
       Biparse.PolarizeSpec
       Biparse.UnorderedSpec
+      Control.Monad.HandleWriterSpec
       Control.Monad.StateErrorSpec
       Control.Monad.UnrecoverableSpec
   hs-source-dirs:

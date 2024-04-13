@@ -2,10 +2,10 @@
 module Biparse.Mixes.SubStates
   ( module Data.ByteString
   , module Data.ByteString.Lazy
-  , BuilderByteString
-  , BuilderText
-  , StrictText
-  , LazyText
+  , ByteStringBuilder
+  , TextBuilder
+  , TS.StrictText
+  , TL.LazyText
   ) where
 
 import Data.ByteString (StrictByteString)
@@ -15,8 +15,6 @@ import Data.Text qualified as TS
 import Data.Text.Lazy qualified as TL
 import Data.Text.Lazy.Builder qualified as TB
 
-type BuilderByteString = BB.Builder
-type BuilderText = TB.Builder
-type StrictText = TS.Text
-type LazyText = TL.Text
+type ByteStringBuilder = BB.Builder
+type TextBuilder = TB.Builder
 
