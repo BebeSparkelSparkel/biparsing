@@ -40,6 +40,7 @@ module Prelude
   , module GHC.TypeLits
   , module Data.Default
   , module Control.Monad.Trans.Class
+  , module Data.Semigroup
   ) where
 
 import Biparse.Utils (headAlt, tailAlt, initAlt, lastAlt, symbol, (<$$>))
@@ -70,6 +71,7 @@ import Data.Kind (Type, Constraint)
 import Data.Maybe (Maybe(Just,Nothing), maybe)
 import Data.MonoTraversable (MonoFoldable, MonoPointed, Element)
 import Data.MonoTraversable.Unprefixed (length, null, toList)
+import Data.Semigroup (Semigroup((<>)))
 import Data.Monoid (Monoid(mempty), (<>))
 import Data.Ord (Ord((>=),(>)))
 import Data.Sequences (IsSequence, SemiSequence, Index, initTails, replicate, cons, snoc, lengthIndex, span, singleton, fromList)

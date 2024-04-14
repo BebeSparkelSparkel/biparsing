@@ -74,17 +74,22 @@ spec = do
           b (fromChar 'd') `shouldBe` EValue (fromChar 'd', "d")
 
     describe "Handle" $ do
-      --fb "as state"
-      --  (one :: Iso UnixLC IO HandleWriter () HandleText () HandleText Char)
-      --  ()
-      --  ()
-      --  (\f -> do
-      --    nullHandle <- openFile "/dev/null" ReadMode
-      --    it "empty" f nullHandle `shouldThrow` isUserError
-      --  )
-      --  \b -> do
-      --    it "write character" do
-      --      (tmpPath, tmpHandle) <- openTempFile "/tmp" ""
+      fb "as state"
+        (one :: Iso UnixLC (FileM StrictByteString) (FileM StrictByteString) () (File StrictByteString) () (Position () (File StrictByteString)) Word8)
+        ()
+        ()
+        (\f -> do
+          it "empty" $ withFile "/dev/null" ReadMode \h ->
+            runFileM h (f $ startLineColumn File) `shouldThrow` isUserError
+        )
+        \b -> do
+          it "write character" do
+            (_,h) <- openTempFile "/tmp" ""
+            x <- runFileM h $ b $ fromChar 'a'
+            x `shouldBe` (fromChar 'a', File)
+            hSeek h AbsoluteSeek 0
+            w <- hGetContents h
+            w `shouldBe` "a"
 
       it "LineColumn" pending
 

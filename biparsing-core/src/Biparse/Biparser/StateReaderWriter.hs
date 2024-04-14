@@ -131,7 +131,7 @@ zoomOne :: forall is c' mProgenitor w m' c s s' m n r ws u v i.
 zoomOne (B.Biparser fw' bw') = B.Biparser
   (StateErrorT \s -> do
     (ss,s') <- runStateErrorT @i (oneFw @c) s
-    (x,_) <- changeMonad' @is () $ runStateErrorT fw' $ replaceSubState s ss
+    (x,_) <- changeMonad' @is () $ runStateErrorT fw' $ _ -- replaceSubState s ss
     pure (x,s')
   )
   \u -> backwardT @c \r s -> do

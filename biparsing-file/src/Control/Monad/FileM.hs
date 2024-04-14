@@ -1,14 +1,16 @@
 {-# LANGUAGE BangPatterns #-}
 module Control.Monad.FileM
-  ( FileM
+  ( File(File)
+  , FileM
   , runFileM
+  , runFileMWithPath
   ) where
 
 --import Data.ByteString (StrictByteString)
-import BasePrelude (seq)
 import Control.Monad.Extra (whenM)
-import Control.Monad.Reader
-import Control.Monad.Writer.Class
+import Control.Monad.Reader (ReaderT(ReaderT,runReaderT))
+import Control.Monad.IO.Class (MonadIO(liftIO))
+import Control.Monad.Writer.Class (writer, listen)
 import Data.ByteString (StrictByteString)
 import Data.ByteString qualified as BS
 import Data.ByteString.Lazy (LazyByteString)
@@ -21,6 +23,15 @@ import GHC.IO (finally)
 import GHC.Num (fromInteger)
 import System.IO (IO, Handle, FilePath, IOMode(ReadWriteMode), hClose, openFile, openBinaryFile, hTell, hSeek, SeekMode(AbsoluteSeek), hIsOpen, hSetFileSize)
 import System.IO qualified as S
+import Data.MonoTraversable (MonoFunctor(omap), MonoFoldable(ofoldMap,ofoldr), MonoTraversable(otraverse))
+
+-- * File
+
+data File a = File deriving (Show, Eq)
+
+type instance Element (File a) = Element a
+
+-- * FileM
 
 type FileM :: Type -> Type -> Type
 newtype FileM w a = FileM (ReaderT Handle IO a)
@@ -118,13 +129,9 @@ instance MonadWriter LazyText (FileM LazyText) where
     TL.hPutStr h w
     return x
 
--- lifted file functions
-
---hClose :: MonadIO m => Handle -> m ()
---hClose = liftIO . S.hClose
---
---hTell :: Monad IO m => Handle -> m Integer
---hTell = liftIO . S.hTell
---
---hSeek :: Monad IO m => Handle -> SeekMode -> Integer -> m ()
---hSeek h m i = liftIO $ 
+instance  OneFw c s (FileM ss) where
+  oneFW = FileM $ ReaderT \h -> do
+    x <- BS.hGetSome h 1
+    case headMay x of
+      Just w -> pure w
+      Nothing -> fail "Could not take one element. The container is empty."

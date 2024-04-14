@@ -51,9 +51,9 @@ module Biparse.Biparser.Internal
   , UpdateStateWithElement(..)
   , ElementContext
   , UpdateStateWithNConsumed(..)
-  , One
+  --, One
   , one
-  , oneFw
+  , OneFw(..)
   , split
   , splitFw
   , peek
@@ -323,7 +323,7 @@ class GetSubState state where
   type SubState state :: Type
   getSubState :: state -> SubState state
 
-class SubState s' ~ ss' => ReplaceSubState s ss' s' | s ss' -> s' where replaceSubState :: s -> ss' -> s'
+class SubState s' ~ ss' => ReplaceSubState s ss' s' | s ss' -> s', s' -> ss' where replaceSubState :: s -> ss' -> s'
 
 --class SubStateLens s s' ss ss' | s -> ss, s' -> ss', s ss' -> s' where
 type SubStateLens s s' ss ss' = (GetSubState s, SubState s ~ ss, ReplaceSubState s ss' s')
@@ -389,24 +389,31 @@ instance (Functor m, Functor n) => Functor (Biparser c s m n u) where
 -- Must be used to construct all other biparsers that have context.
 -- Used to ensure that context is updated correctly.
 
-type One c s m n ss se w =
-  ( IsSequence ss
-  , ElementContext c s
-  -- m
-  , MonadState s m
-  , MonadFail m
-  , Alt m
-  -- n
+--type One c s m n ss se w =
+--  ( IsSequence ss
+--  , ElementContext c s
+--  -- m
+--  , MonadState s m
+--  , MonadFail m
+--  , Alt m
+--  -- n
+--  , MonadWriter w n
+--  , ConvertElement c se w n
+--  -- w
+--  -- assignments
+--  , ss ~ SubState s
+--  , se ~ SubElement s
+--  )
+
+-- | Takes and writes one element. Updates the context and substate.
+--one :: forall w c s m n ss se. One c s m n ss se w => Iso c m n s se
+one :: forall w c s m n ss se.
+  ( OneFw c s m
   , MonadWriter w n
   , ConvertElement c se w n
-  -- w
-  -- assignments
-  , ss ~ SubState s
   , se ~ SubElement s
-  )
--- | Takes and writes one element. Updates the context and substate.
-one :: forall w c s m n ss se. One c s m n ss se w => Iso c m n s se
-one = Biparser (oneFw @c) bw
+  ) => Iso c m n s se
+one = Biparser (oneFw @c @s) bw
   where
   bw :: se -> n se
   bw c = (tell =<< convertElement @c c) $> c
@@ -414,21 +421,24 @@ one = Biparser (oneFw @c) bw
 -- | Forward Only! Takes one element. Updates the context and substate.
 -- Useful for when forwards and backwards are to divergent to reasonably work with
 -- and you still want to correctly update the state.
-oneFw :: forall c s m ss se.
-  ( IsSequence ss
-  , ElementContext c s
-  -- m
-  , MonadState s m
-  , MonadFail m
-  , Alt m
-  -- assignments
-  , ss ~ SubState s
-  , se ~ SubElement s
-  ) => m se
-oneFw = do
-  s <- get
-  (x, ss) <- headTailAlt (getSubState s) <!> fail "Could not take one element. The container is empty."
-  put (updateElementContext @c s x ss) $> x
+class OneFw c s m where oneFw :: m (SubElement s)
+
+  
+--instance 
+--  ( IsSequence ss
+--  , ElementContext c s
+--  -- m
+--  , MonadState s m
+--  , MonadFail m
+--  , Alt m
+--  -- assignments
+--  , ss ~ SubState s
+--  , se ~ SubElement s
+--  ) => OneFw c m se where
+--  oneFw = do
+--    s <- get
+--    (x, ss) <- headTailAlt (getSubState s) <!> fail "Could not take one element. The container is empty."
+--    put (updateElementContext @c s x ss) $> x
 
 -- | Takes and writes substate. Updates the context and substate.
 split :: forall c s m n ss w.

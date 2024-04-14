@@ -4,10 +4,9 @@ cabal-version: 2.2
 --
 -- see: https://github.com/sol/hpack
 
-name:           biparsing-core-tests
+name:           biparsing-file
 version:        0.0.0.1
-synopsis:       Tests for biparsing-core
-description:    Cabal does not allow circular dependencies for tests in new builds and many of the tests for biparsing-core require biparsing-text which was extracted to its own package.
+synopsis:       Work biparsers directly on files.
 category:       Parsing
 homepage:       https://github.com/BebeSparkelSparkel/biparsing
 author:         William Rusnack
@@ -16,39 +15,29 @@ license:        BSD-3-Clause
 license-file:   LICENSE
 build-type:     Simple
 
+library
+  exposed-modules:
+      Control.Monad.FileM
+  other-modules:
+      Prelude
+  hs-source-dirs:
+      src/
+  ghc-options: -Weverything -Wno-implicit-prelude -Wno-missing-deriving-strategies -Wno-missing-kind-signatures -Wno-missing-local-signatures -Wno-missing-safe-haskell-mode -Wno-safe -Wno-unsafe -Wno-unused-packages
+  build-depends:
+      base
+    , biparsing-core
+    , bytestring
+  mixins:
+      base hiding (Prelude)
+  default-language: Haskell2010
+
 test-suite spec
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
-      Biparse.AlternativeAttributesSpec
-      Biparse.Biparser.StateReaderWriterSpec
-      Biparse.BiparserSpec
-      Biparse.ConstructorSpec
-      Biparse.Context.IndexSpec
-      Biparse.GeneralSpec
-      Biparse.ListSpec
-      Biparse.PolarizeSpec
-      Biparse.UnorderedSpec
-      Control.Monad.StateErrorSpec
-      Control.Monad.UnrecoverableSpec
+      Control.Monad.FileMSpec
   hs-source-dirs:
       tests/
-  default-extensions:
-      BlockArguments
-      ConstraintKinds
-      DataKinds
-      DeriveGeneric
-      FlexibleContexts
-      FlexibleInstances
-      ImportQualifiedPost
-      LambdaCase
-      MultiParamTypeClasses
-      NamedFieldPuns
-      OverloadedLists
-      OverloadedStrings
-      ScopedTypeVariables
-      TypeApplications
-      TypeFamilies
   ghc-options: -Werror -Weverything -fprint-potential-instances -Wno-implicit-prelude -Wno-incomplete-uni-patterns -Wno-missing-deriving-strategies -Wno-missing-export-lists -Wno-missing-import-lists -Wno-missing-kind-signatures -Wno-missing-local-signatures -Wno-missing-safe-haskell-mode -Wno-orphans -Wno-safe -Wno-unsafe -Wno-unused-packages
   build-tool-depends:
       hspec-discover:hspec-discover
@@ -59,8 +48,7 @@ test-suite spec
     , biparsing-text
     , bytestring
     , hspec
-    , mono-traversable
-    , mtl
+    , hspec-expectations-lifted
   mixins:
       base hiding (Prelude)
   default-language: Haskell2010

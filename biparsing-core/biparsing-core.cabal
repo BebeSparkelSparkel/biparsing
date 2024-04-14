@@ -31,7 +31,6 @@ library
       Biparse.Utils
       Control.Monad.ChangeMonad
       Control.Monad.EitherString
-      Control.Monad.FileM
       Control.Monad.MonadProgenitor
       Control.Monad.StateError
       Control.Monad.Trans.State.Selectable
@@ -96,5 +95,5 @@ library
     , text >=2.1.1
     , transformers >=0.6.1.1
   mixins:
-      base (Prelude as BasePrelude, Data.Function, Data.Monoid, Control.Applicative, Control.Monad, Data.Functor, Data.Proxy, GHC.TypeLits, Text.Printf, Data.Maybe, Data.String, Data.Bool, Data.Coerce, Data.Either, Data.Eq, Data.Ord, Text.Show, Data.Functor.Identity, Data.Kind, Data.List, Data.Bifunctor, Data.Int, Data.Traversable, Data.Tuple, GHC.Enum, GHC.Num, GHC.Real, Numeric.Natural, GHC.Generics, GHC.Err, System.IO, Unsafe.Coerce, Data.List.NonEmpty, Data.IORef, GHC.IO, System.IO.Unsafe, GHC.Exts)
+      base hiding (Prelude)
   default-language: Haskell2010

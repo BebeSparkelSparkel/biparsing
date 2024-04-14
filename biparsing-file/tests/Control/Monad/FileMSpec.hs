@@ -3,7 +3,6 @@ module Control.Monad.FileMSpec where
 
 import Prelude hiding (shouldBe)
 import Control.Monad.FileM
-import System.IO (openTempFile, openBinaryTempFile, hSeek, SeekMode(AbsoluteSeek))
 import System.IO qualified as S
 import Control.Monad.Writer.Class
 import Test.Hspec.Expectations.Lifted (shouldBe)

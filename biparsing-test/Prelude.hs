@@ -94,6 +94,7 @@ module Prelude
   , module Data.ByteString
   , module Data.ByteString.Lazy
   , module Control.Monad.IO.Class
+  , module Control.Monad.FileM
 
   , fb
   , EEP
@@ -125,6 +126,7 @@ import Control.Monad.ChangeMonad (ChangeMonad(changeMonad'), Lift)
 import Control.Monad.EitherString (EitherString, pattern EString, pattern EValue, isString, _EValue)
 import Control.Monad.Error.Class (throwError, catchError)
 import Control.Monad.Fail (MonadFail(fail))
+import Control.Monad.FileM (File(File), FileM, runFileM)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.State.Class (get, put)
 import Control.Monad.StateError (StateErrorT, ErrorState(ErrorState), ErrorInstance(ErrorStateInstance))
@@ -172,7 +174,7 @@ import Lens.Micro ((^.), (%~), _1, _2, _3)
 import Numeric (showHex)
 import Numeric.Natural (Natural)
 import Safe (headMay)
-import System.IO (IO, FilePath)
+import System.IO (IO, FilePath, openFile, openTempFile, hSeek, hGetContents, SeekMode(AbsoluteSeek), IOMode(ReadMode, ReadWriteMode), withFile)
 import System.IO.Error (isUserError, ioeGetErrorString, userError)
 import Test.Hspec hiding (shouldReturn)
 import Test.Hspec.QuickCheck
