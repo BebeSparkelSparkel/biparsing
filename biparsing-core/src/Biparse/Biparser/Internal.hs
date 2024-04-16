@@ -323,7 +323,7 @@ class GetSubState state where
   type SubState state :: Type
   getSubState :: state -> SubState state
 
-class SubState s' ~ ss' => ReplaceSubState s ss' s' | s ss' -> s' where replaceSubState :: s -> ss' -> s'
+class SubState s' ~ ss' => ReplaceSubState s ss' s' | s ss' -> s', s' -> ss' where replaceSubState :: s -> ss' -> s'
 
 --class SubStateLens s s' ss ss' | s -> ss, s' -> ss', s ss' -> s' where
 type SubStateLens s s' ss ss' = (GetSubState s, SubState s ~ ss, ReplaceSubState s ss' s')
