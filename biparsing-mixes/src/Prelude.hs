@@ -42,6 +42,8 @@ import Data.Either (Either)
 import Biparse.Text.Context.LineColumn (ElementToList)
 import Control.Monad.ChangeMonad (ChangeMonad, changeMonad')
 import Lens.Micro (_Left, (%~))
+import Control.Monad.State (StateT)
+import Control.Monad.Trans.State.Selectable (StateTransformer)
 
 -- * Mixes Context
 
@@ -90,4 +92,6 @@ type BiparserTemplate fm bm c ss r ws = SRW.Biparser (Mixes c) (SuperState c ss)
 
 instance SubStateLens s s' ss [ss] => ChangeMonad (Mixes ElementToList) (Either (ErrorState e s)) (Either (ErrorState e s')) () where
   changeMonad' = const $ _Left . errorState . subState %~ (: [])
+
+type instance StateTransformer (Mixes _) = StateT
 
