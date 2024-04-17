@@ -169,8 +169,9 @@ focus f g (Biparser fw bw) (ConstructorUnT fw' bw') = Biparser
 lensBiparse :: forall c w s s' m n u v.
   ( MonadFail m
   , Monad n
-  , BSRW.BackwardC c n w
+  , BSRW.BackwardC c n () w ()
   , ConvertSequence c w s' (S.StateT s n)
+  , Default (BSRW.BackwardArgC c)
   )
   => Traversal' s s'
   -> BSRW.Biparser c (Identity s') m n () w () u v

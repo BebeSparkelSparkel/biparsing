@@ -93,8 +93,6 @@ module Prelude
   , module Data.Text.Lazy
   , module Data.ByteString
   , module Data.ByteString.Lazy
-  , module Control.Monad.IO.Class
-  , module Control.Monad.FileM
 
   , fb
   , EEP
@@ -114,7 +112,7 @@ module Prelude
 
 -- Exported
 import Biparse.Biparser (UpdateStateWithElement(updateElementContext), UpdateStateWithSubState(updateSubStateContext), One, one, askBw, comap, upon, count, breakWhen', isNull, setBackward, try, peek, split, SubElement, IsoClass(iso), fromSubState)
-import Biparse.Biparser.StateReaderWriter (Biparser, Iso, Unit, Const, ConstU, BackwardC(BackwardT,backwardT,runBackwardT), runForward, evalForward, runBackward)
+import Biparse.Biparser.StateReaderWriter (Biparser, Iso, Unit, Const, ConstU, BackwardC(BackwardT,backwardT,runBackwardT), BackwardArgC, BackwardArg, runForward, evalForward, runBackward)
 import Biparse.Context.Index
 import Biparse.General
 import Biparse.List (all, takeElementsWhile)
@@ -126,7 +124,6 @@ import Control.Monad.ChangeMonad (ChangeMonad(changeMonad'), Lift)
 import Control.Monad.EitherString (EitherString, pattern EString, pattern EValue, isString, _EValue)
 import Control.Monad.Error.Class (throwError, catchError)
 import Control.Monad.Fail (MonadFail(fail))
-import Control.Monad.FileM (File(File), FileM, runFileM)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.State.Class (get, put)
 import Control.Monad.StateError (StateErrorT, ErrorState(ErrorState), ErrorInstance(ErrorStateInstance))
@@ -200,18 +197,19 @@ import Test.Hspec qualified
 
 fb :: forall c s m n r w ws u v.
   ( Functor n
-  , BackwardC c n w
+  , BackwardC c n r w ws
   )
   => String
   -> Biparser c s m n r w ws u v
+  -> BackwardArgC c
   -> r
   -> ws
   -> ((s -> m (v, s)) -> Spec)
   -> ((u -> n (v, w)) -> Spec)
   -> Spec
-fb describeLabel bp r ws fws bws = describe describeLabel do
+fb describeLabel bp ba r ws fws bws = describe describeLabel do
   describe "forward" $ fws $ runForward bp
-  describe "backward" $ bws \u -> runBackward bp r ws u
+  describe "backward" $ bws \u -> runBackward bp ba r ws u
 
 type EEP dataId e text = Either (ErrorState e (Position dataId text))
 type EESP dataId text = EEP dataId String text
@@ -259,10 +257,11 @@ instance Applicative m => ConvertSequence c String StrictByteString m where conv
 instance Applicative m => ConvertSequence c String LazyText m where convertSequence = pure . fromString
 instance Applicative m => ConvertSequence c String LazyByteString m where convertSequence = pure . fromString
 
-instance (Functor n, Monoid w) => BackwardC c n w where
+instance Monoid w => BackwardC c IO r w s where
   type BackwardT c = RWST
   backwardT = rwsT
-  runBackwardT = runRWST
+  runBackwardT m _ = runRWST m
+type instance BackwardArg RWST = ()
 
 instance UpdateStateWithElement () (Identity ss) where
   updateElementContext _ _ = Identity

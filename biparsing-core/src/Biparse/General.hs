@@ -36,7 +36,7 @@ module Biparse.General
 
 import Data.Sequences qualified as MT
 import Control.Profunctor.FwdBwd (endoSecond)
-import Biparse.Biparser (Biparser, Iso, Unit, unit, one, OneFw, try, SubState, SubElement, ElementContext, SubStateContext, split, Const, mapWrite, Unit, ignoreForward, upon, uponM, comapM, count, resetState, splitFw)
+import Biparse.Biparser (Biparser, Iso, Unit, unit, one, try, SubState, SubElement, ElementContext, SubStateContext, split, Const, mapWrite, Unit, ignoreForward, upon, uponM, comapM, count, resetState, splitFw)
 import Data.Bool qualified
 import Data.EqElement qualified
 import Control.Profunctor.FwdBwd (firstM)
@@ -61,8 +61,7 @@ identity = split do
 
 type Take c s m n ss se w e =
   -- m
-  ( OneFw c s m
-  , MonadState s m
+  ( MonadState s m
   , MonadFail m
   , MonadError e m
   , Alt m
@@ -329,8 +328,8 @@ padCount n c x = endoSecond (first $ const $ fromIntegral n) $ count $ pad n c x
 
 type BreakWhen c s m n ss se w e =
   -- m
-  ( OneFw c s m
-  , MonadState s m
+  ( MonadState s m
+  , MonadFail m
   , MonadError e m
   , Alt m
   -- n
@@ -341,10 +340,13 @@ type BreakWhen c s m n ss se w e =
   , IsSequence ss
   -- w
   , ConvertElement c se w n
+  -- context
+  , ElementContext c s
   -- assignments
   , ss ~ SubState s
   , se ~ SubElement s
   )
+
 -- | Breaks off the substate head when 'x' succeeds. Writes x after given 'ss'.
 -- DEV NOTE: Seems like there could be a more simplistic solution.
 breakWhen :: forall c s m n ss se w e.
