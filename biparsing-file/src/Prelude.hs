@@ -21,11 +21,11 @@ module Prelude
   , module Data.Bifunctor
   , module Data.Tuple
   , module UnliftIO
+  , module Data.Maybe
   ) where
 
-
 import Control.Applicative (Applicative, (<*))
-import Control.Monad (Monad(return))
+import Control.Monad (Monad((>>=),return))
 import Control.Monad.Extra (whenM)
 import Control.Monad.Fail (MonadFail)
 import Control.Monad.IO.Class (MonadIO(liftIO))
@@ -36,6 +36,7 @@ import Data.Eq (Eq)
 import Data.Function (($), (.))
 import Data.Functor (Functor, (<$>), (<&>))
 import Data.Kind (Type)
+import Data.Maybe (Maybe(Nothing))
 import Data.MonoTraversable (Element)
 import Data.Sequences (Index)
 import Data.String (String)
@@ -43,6 +44,6 @@ import Data.Text (StrictText)
 import Data.Text.Lazy (LazyText)
 import Data.Tuple (fst, snd)
 import GHC.Num (Num, (-), fromInteger)
-import System.IO (IO, Handle, FilePath, IOMode(ReadMode,ReadWriteMode), hClose, openFile, openBinaryFile, hTell, hSeek, SeekMode(AbsoluteSeek), hIsOpen, hSetFileSize)
+import System.IO (IO, Handle, FilePath, IOMode(ReadMode,WriteMode,ReadWriteMode), hClose, openFile, openBinaryFile, hTell, hSeek, SeekMode(AbsoluteSeek), hIsOpen, hSetFileSize)
 import Text.Show (Show)
 import UnliftIO (MonadUnliftIO, finally)

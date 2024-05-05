@@ -3,28 +3,32 @@
 module Biparse.File
   ( Biparser
   , Iso
+  , decodeBinaryFile
+  , decodeTextFile
   , decodeFile
   , encodeFile
   ) where
 
-import Biparse.Biparser (pattern Biparser, InitSuperState(SuperState,fromSubState), SuperArg, BackwardMonad)
-import Control.Monad.FileT
-import Data.Text.Lazy.IO qualified as TL
-import Data.Text.Lazy.Builder qualified as TL
-import System.IO qualified as S
-import Data.ByteString.Lazy qualified as BL
-import Data.ByteString.Builder qualified as BL
-import Biparse.Text.Context.LineColumn
-import Biparse.Context.Index
-import Biparse.Biparser.StateReaderWriter qualified as SRW
+import Biparse.Biparser hiding (Biparser, Iso)
+import Biparse.Biparser (pattern Biparser)
 import Biparse.Biparser.StateReaderWriter hiding (Biparser, Iso)
-import Control.Monad.StateError
+import Biparse.Biparser.StateReaderWriter qualified as SRW
+import Biparse.Context.Index
+import Biparse.Text.Context.LineColumn
+import Control.Monad.FileT
+import Control.Monad.RWS.CPS
 import Control.Monad.Reader
 import Control.Monad.State.Class
-import Control.Monad.Writer.Class
+import Control.Monad.StateError
 import Control.Monad.Trans
+import Control.Monad.Writer.Class
+import Data.ByteString.Builder qualified as BB
+import Data.ByteString.Lazy qualified as BL
 import Data.Monoid
-import GHC.Err (undefined)
+import Data.Text.Lazy.Builder qualified as TB
+import Data.Text.Lazy.IO qualified as TL
+import System.IO qualified as S
+import Control.DeepSeq (NFData, deepseq)
 
 
 -- -- * Easy Types and Functions
@@ -61,16 +65,22 @@ import GHC.Err (undefined)
 --
 -- | Try using these before using the more general types and functions defined in Biparse.Biparser.StateReaderWriter and Biparse.Biparser
 
-type Biparser c m ss r ws = SRW.Biparser c (SuperState c ss) m m r (AssociatedWriter ss) ws
-type Iso c m ss r ws v = Biparser c m ss r ws v v
+type Biparser c ss m r ws = SRW.Biparser c (SuperState c ss) m m r (FileAssociatedWriter ss) ws
+type Iso c m ss r ws v = Biparser c ss m r ws v v
 
 newtype TextPosition text = TextPosition (Position FilePath text) deriving (Show, Eq)
 
-data BinaryFile
-data TextFile
+newtype FileRWST r w s m a = FileRWST (FileT w m a) deriving (Functor, Applicative, Monad, MonadFail, MonadTrans)
+deriving instance (MonadReader r  (FileT w m), Monad m) => MonadReader r (FileRWST r w s m)
+deriving instance (MonadWriter w  (FileT w m), Monad m) => MonadWriter w (FileRWST r w s m)
+deriving instance (MonadState s  (FileT w m), Monad m) => MonadState s (FileRWST r w s m)
 
-instance (Monad n, MonadWriter w (FileT r w s n), Monoid w) => BackwardC BinaryFile n r w s where
-  type BackwardT BinaryFile = FileT
+-- * File Types
+
+-- ** Binary File
+data BinaryFile
+
+instance MonadWriter BB.Builder (FileT BB.Builder (RWST r () s IO)) => BackwardC BinaryFile (RWST r () s IO) r BB.Builder s where
   backwardT f = do
     r <- ask
     s <- get
@@ -78,61 +88,112 @@ instance (Monad n, MonadWriter w (FileT r w s n), Monoid w) => BackwardC BinaryF
     tell w
     put s'
     return a
-  runBackwardT x h r s = (\(a,s') -> (a,s',mempty)) <$> runFileT x h r s
-type instance BackwardArg FileT = Handle
+  runBackwardT (FileRWST x) h _ _ = runFileT x h >>= \a -> do
+    s <- get
+    return (a, s, mempty)
+type instance BackwardT BinaryFile = FileRWST
+type instance BackwardArg FileRWST = Handle
 
-data BinaryPosition ss = BinaryPosition FilePath (IndexPosition ss)
-deriving instance (Show ss, Show (Index ss)) => Show (BinaryPosition ss)
-deriving instance (Eq ss, Eq (Index ss)) => Eq (BinaryPosition ss)
-instance Num (Index ss) => InitSuperState BinaryFile ss where
-  type SuperState BinaryFile ss = BinaryPosition ss
+data BinaryPosition = BinaryPosition FilePath (IndexPosition LazyByteString) deriving (Show, Eq)
+
+instance GetSubState BinaryPosition where
+  type SubState BinaryPosition = LazyByteString
+  getSubState (BinaryPosition _ x) = getSubState x
+
+instance InitSuperState BinaryFile LazyByteString where
+  type SuperState BinaryFile LazyByteString = BinaryPosition
   fromSubState fp = BinaryPosition fp . startIndex
-type instance SuperArg (BinaryPosition _) = FilePath
+type instance SuperArg BinaryPosition = FilePath
 
-type StateType :: Type -> Type -> Type
-type family StateType c where
-  StateType LineColumnUnknownBreak = TextPosition
-  StateType BinaryFile = BinaryPosition
+instance UpdateStateWithSubState BinaryFile BinaryPosition where
+  updateSubStateContext (BinaryPosition fp ip) ss ss' = BinaryPosition fp $ updateSubStateContext @IndexContext ip ss ss'
 
-type AssociatedWriter :: Type -> Type
-type family AssociatedWriter ss where
-  AssociatedWriter String = String
-  AssociatedWriter LazyByteString = BL.Builder
-  AssociatedWriter LazyText = TL.Builder
+instance Monad m => ConvertSequence BinaryFile LazyByteString BB.Builder m where
+  convertSequence = return . BB.lazyByteString
+
+-- ** Text File
+
+data TextFile
+
+instance MonadWriter TB.Builder (FileT TB.Builder (RWST r () s IO)) => BackwardC TextFile (RWST r () s IO) r TB.Builder s where
+  backwardT f = do
+    r <- ask
+    s <- get
+    (a, s', w) <- lift $ f r s
+    tell w
+    put s'
+    return a
+  runBackwardT (FileRWST x) h _ _ = runFileT x h >>= \a -> do
+    s <- get
+    return (a, s, mempty)
+type instance BackwardT TextFile = FileRWST
+type instance BackwardArg FileRWST = Handle
+
+instance InitSuperState TextFile LazyText where
+  type SuperState TextFile LazyText = Position FilePath LazyText
+  fromSubState = startLineColumn'
+
+-- File Associated Writer Type
+
+type FileAssociatedWriter :: Type -> Type
+type family FileAssociatedWriter ss where
+  FileAssociatedWriter String = String
+  FileAssociatedWriter LazyByteString = BB.Builder
+  FileAssociatedWriter LazyText = TB.Builder
 
 class GetContents ss where hGetContents :: Handle -> IO ss
 instance GetContents String where hGetContents = S.hGetContents
 instance GetContents LazyByteString where hGetContents = BL.hGetContents
 instance GetContents LazyText where hGetContents = TL.hGetContents
 
-decodeFile :: forall c m ss r ws u v aw.
+decodeBinaryFile :: forall m r ws u v.
+  ( MonadUnliftIO m
+  , NFData v
+  )
+  => FilePath
+  -> Biparser BinaryFile LazyByteString m r ws u v
+  -> m v
+decodeBinaryFile = decodeFile @LazyByteString
+
+decodeTextFile :: forall m r ws u v.
+  ( MonadUnliftIO m
+  , NFData v
+  )
+  => FilePath
+  -> Biparser TextFile LazyText m r ws u v
+  -> m v
+decodeTextFile = decodeFile @LazyText
+
+decodeFile :: forall ss c m r ws u v aw.
   ( FilePath ~ SuperArg (SuperState c ss)
   , InitSuperState c ss
   , MonadUnliftIO m
   , GetContents ss
   , Open aw
-  , Num (Index ss)
-  , aw ~ AssociatedWriter ss
+  , NFData v
+  , aw ~ FileAssociatedWriter ss
   )
   => FilePath
-  -> Biparser c m ss r ws u v
+  -> Biparser c ss m r ws u v
   -> m v
 decodeFile fp bp = withFile @aw fp ReadMode \h -> do
   ss <- liftIO $ hGetContents @ss h
-  evalForward bp $ fromSubState @c fp ss
+  v <- evalForward bp $ fromSubState @c fp ss
+  deepseq v $ return v
 
-encodeFile :: forall c m ss r ws u v aw.
+encodeFile :: forall ss c m r ws u v aw.
   ( Open aw
   , MonadUnliftIO m
   , BackwardC c m r aw ws
-  , BackwardT c ~ FileT
-  , aw ~ AssociatedWriter ss
+  , BackwardArgC c ~ Handle
+  , aw ~ FileAssociatedWriter ss
   )
   => FilePath
   -> r
   -> ws
   -> u
-  -> Biparser c m ss r ws u v
+  -> Biparser c ss m r ws u v
   -> m (v, ws)
-encodeFile fp r ws u (Biparser _ bw) = withFile @aw fp ReadWriteMode \h ->
-  (\(v,ws',_) -> (v,ws')) <$> runBackwardT @c (bw u) h r ws
+encodeFile fp r ws u (Biparser _ bw) = withFile @aw fp WriteMode \h ->
+  (\(v,ws,_) -> (v,ws)) <$> runBackwardT @c (bw u) h r ws
+

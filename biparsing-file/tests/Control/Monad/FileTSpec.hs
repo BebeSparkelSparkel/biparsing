@@ -1,25 +1,23 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 module Control.Monad.FileTSpec where
 
-import Prelude hiding (shouldBe)
 import Control.Monad.FileT
+import Data.ByteString.Lazy qualified as BL
+import Prelude hiding (shouldBe)
 import System.IO qualified as S
 import Test.Hspec.Expectations.Lifted (shouldBe)
-import Data.ByteString.Lazy qualified as BL
 
 spec :: Spec
 spec = do
   describe "MonadWriter" do
-    monadWriterTest @StrictByteString
-    monadWriterTest @LazyByteString
-
     monadWriterIncompleteTest @String
-    monadWriterIncompleteTest @StrictText
-    monadWriterIncompleteTest @LazyText
+    monadWriterIncompleteTest @TextBuilder
+    monadWriterIncompleteTest @ByteStringBuilder
+    monadWriterTest @LazyByteString
 
 monadWriterTest :: forall w.
   ( Typeable w
-  , MonadWriter w (FileT w)
+  , MonadWriter w (FileT w IO)
   , SemiSequence w
   , IsString w
   , Eq w
@@ -29,7 +27,7 @@ monadWriterTest =
   describe (show $ typeRep @w) do
     it "writer" do
       (_, h) <- openBinaryTempFile "/tmp" ""
-      x <- runFileT @w h do
+      x <- flippedRunFileT @w h do
         tell "test "
         writer ('x', "writer")
       x `shouldBe` 'x'
@@ -40,7 +38,7 @@ monadWriterTest =
     describe "listen" do
       it "non-nested" do
         (_, h) <- openBinaryTempFile "/tmp" ""
-        x <- runFileT @w h do
+        x <- flippedRunFileT @w h do
           tell "test "
           (x,w) <- listen do
             tell "non-nested "
@@ -55,7 +53,7 @@ monadWriterTest =
 
       it "nested" do
         (_, h) <- openBinaryTempFile "/tmp" ""
-        x <- runFileT @w h do
+        x <- flippedRunFileT @w h do
           tell "test"
           (x,w) <- listen do
             tell " "
@@ -74,7 +72,7 @@ monadWriterTest =
     describe "pass" do
       it "non-nested" do
         (_, h) <- openBinaryTempFile "/tmp" ""
-        x <- runFileT @w h do
+        x <- flippedRunFileT @w h do
           tell "test "
           y <- pass do
             tell " detsen-non"
@@ -88,7 +86,7 @@ monadWriterTest =
 
       it "is nested" do
         (_, h) <- openBinaryTempFile "/tmp" ""
-        x <- runFileT @w h do
+        x <- flippedRunFileT @w h do
           tell "test "
           y <- pass do
             tell " detsen"
@@ -107,13 +105,13 @@ monadWriterTest =
 monadWriterIncompleteTest :: forall w.
   ( Typeable w
   , IsString w
-  , MonadWriter w (FileT w)
+  , MonadWriter w (FileT w IO)
   ) => Spec
 monadWriterIncompleteTest =
   describe (show $ typeRep @w) do
     it "writer" do
       (_, h) <- openTempFile "/tmp" ""
-      x <- runFileT @w h do
+      x <- flippedRunFileT @w h do
         tell @w "test "
         writer ('x', "writer")
       x `shouldBe` 'x'
@@ -128,3 +126,5 @@ monadWriterIncompleteTest =
 
     it "pass" $ pendingWith "not implemented"
 
+flippedRunFileT :: forall w m a. S.Handle -> FileT w m a -> m a
+flippedRunFileT = flip runFileT
