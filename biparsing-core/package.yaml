@@ -22,7 +22,6 @@ library:
     - data-default
     - data-diverse
     - extra
-    - generic-data
     - hvect
     - microlens
     - microlens-mtl
@@ -67,7 +66,7 @@ library:
     - TypeFamilies
     - TypeOperators
   ghc-options:
-    #- -Werror
+    - -Werror
     - -Weverything
 
     - -Wno-implicit-prelude

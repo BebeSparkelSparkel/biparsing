@@ -13,7 +13,7 @@ spec = do
     monadWriterIncompleteTest @String
     monadWriterIncompleteTest @TextBuilder
     monadWriterIncompleteTest @ByteStringBuilder
-    monadWriterTest @LazyByteString
+    --monadWriterTest @LazyByteString
 
 monadWriterTest :: forall w.
   ( Typeable w

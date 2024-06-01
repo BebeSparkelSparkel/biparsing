@@ -31,7 +31,7 @@ import Control.Applicative (Applicative, pure)
 import Data.Char (Char)
 import Data.Functor (Functor)
 import Control.Monad.Trans.RWS.CPS (RWST, rwsT, runRWST)
-import Biparse.Biparser.StateReaderWriter (BackwardC(BackwardT,backwardT,runBackwardT))
+import Biparse.Biparser.StateReaderWriter (BackwardC(backwardT,runBackwardT), BackwardT, BackwardArg)
 import Biparse.Biparser (UpdateStateWithElement, updateElementContext, UpdateStateWithSubState, updateSubStateContext, UpdateStateWithNConsumed, updateStateWithNConsumed, ConvertElement, convertElement, ConvertSequence, convertSequence, InitSuperState, SuperState, fromSubState, subState, SubStateLens)
 import Data.Word (Word8)
 import Data.ByteString.Builder qualified as B
@@ -51,10 +51,11 @@ instance UpdateStateWithElement c s => UpdateStateWithElement (Mixes c) s where 
 instance UpdateStateWithSubState c s => UpdateStateWithSubState (Mixes c) s where updateSubStateContext = updateSubStateContext @c @s
 instance UpdateStateWithNConsumed c s => UpdateStateWithNConsumed (Mixes c) s where updateStateWithNConsumed = updateStateWithNConsumed @c @s
 
-instance (Functor n, Monoid w) => BackwardC (Mixes c) n w where
-  type BackwardT (Mixes _) = RWST
+instance (Functor n, Monoid w) => BackwardC (Mixes c) n r w s where
   backwardT = rwsT
-  runBackwardT = runRWST
+  runBackwardT = const . runRWST
+type instance BackwardT (Mixes _) = RWST
+type instance BackwardArg RWST = ()
 
 instance Applicative m => ConvertElement (Mixes c) a [a] m where
   convertElement = pure . (: [])

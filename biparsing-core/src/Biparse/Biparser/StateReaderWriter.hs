@@ -11,6 +11,7 @@ module Biparse.Biparser.StateReaderWriter
   , M
   , N
   , BackwardC(..)
+  , BackwardT
   , BackwardArgC
   , BackwardArg
   , zoom
@@ -40,9 +41,11 @@ type IsoClass c m n r w ws a b = B.IsoClass c (M a m) (N c n r w ws) a b
 type N c n r w ws = BackwardT c r w ws n
 
 class BackwardC c n r w s where
-  type BackwardT c :: Type -> Type -> Type -> (Type -> Type) -> Type -> Type
   backwardT :: forall a. (r -> s -> n (a, s, w)) -> BackwardT c r w s n a
   runBackwardT :: forall a. BackwardT c r w s n a -> BackwardArgC c -> r -> s -> n (a, s, w)
+
+type BackwardT :: Type -> (Type -> Type -> Type -> (Type -> Type) -> Type -> Type)
+type family BackwardT c
 
 type BackwardArgC c = BackwardArg (BackwardT c)
 type BackwardArg :: (Type -> Type -> Type -> (Type -> Type) -> Type -> Type) -> Type

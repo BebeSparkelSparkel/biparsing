@@ -11,6 +11,9 @@ spec-version: 0.36.0
 
 dependencies:
     - mtl
+    - text
+    - bytestring
+    - biparsing-text
 
 default-extensions:
     - ImportQualifiedPost
@@ -29,12 +32,12 @@ library:
       mixin:
         - hiding (Prelude)
     - biparsing-core
-    - biparsing-text
-    - bytestring
     - extra
     - mono-traversable
-    - text
     - unliftio
+    - microlens
+    - transformers
+    - semigroupoids
   default-extensions:
     - StandaloneKindSignatures
     - FlexibleInstances
@@ -45,7 +48,7 @@ library:
     - PatternSynonyms
     - StandaloneDeriving
   ghc-options:
-    #- -Werror
+    - -Werror
     - -Weverything
 
     - -Wno-implicit-prelude
@@ -66,12 +69,10 @@ tests:
       - name: base
         mixin:
           - hiding (Prelude)
-      - biparsing-core
       - name: biparsing-test
         mixin:
           - (Prelude as Biparse.Prelude)
       - biparsing-file
-      - bytestring
       - hspec
       - hspec-expectations-lifted
     default-extensions:

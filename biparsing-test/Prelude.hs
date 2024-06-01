@@ -112,7 +112,7 @@ module Prelude
 
 -- Exported
 import Biparse.Biparser (UpdateStateWithElement(updateElementContext), UpdateStateWithSubState(updateSubStateContext), One, one, askBw, comap, upon, count, breakWhen', isNull, setBackward, try, peek, split, SubElement, IsoClass(iso), fromSubState)
-import Biparse.Biparser.StateReaderWriter (Biparser, Iso, Unit, Const, ConstU, BackwardC(BackwardT,backwardT,runBackwardT), BackwardArgC, BackwardArg, runForward, evalForward, runBackward)
+import Biparse.Biparser.StateReaderWriter (Biparser, Iso, Unit, Const, ConstU, BackwardC(backwardT,runBackwardT), BackwardT, BackwardArgC, BackwardArg, runForward, evalForward, runBackward)
 import Biparse.Context.Index
 import Biparse.General
 import Biparse.List (all, takeElementsWhile)
@@ -148,12 +148,12 @@ import Data.List (zip)
 import Data.List.NonEmpty (NonEmpty)
 import Data.Maybe (Maybe(Just,Nothing), maybe)
 import Data.MonoTraversable (Element)
-import Data.MonoTraversable.Unprefixed (length)
+import Data.MonoTraversable.Unprefixed (length, elem)
 import Data.Monoid (Monoid(mempty))
 import Data.Ord
 import Data.Semigroup (Semigroup((<>)))
 import Data.Sequence (Seq)
-import Data.Sequences (IsSequence, SemiSequence, Index, cons, snoc, singleton, drop, reverse)
+import Data.Sequences (IsSequence, SemiSequence, Index, cons, snoc, singleton, reverse)
 import Data.String (String, IsString(fromString))
 import Data.Text (Text, StrictText)
 import Data.Text.Lazy (LazyText)
@@ -194,6 +194,7 @@ import Data.Text.Lazy.Builder qualified
 import GHC.Exts (IsList(..))
 import System.Timeout (timeout)
 import Test.Hspec qualified
+import System.IO.Unsafe (unsafePerformIO)
 
 fb :: forall c s m n r w ws u v.
   ( Functor n
@@ -257,10 +258,16 @@ instance Applicative m => ConvertSequence c String StrictByteString m where conv
 instance Applicative m => ConvertSequence c String LazyText m where convertSequence = pure . fromString
 instance Applicative m => ConvertSequence c String LazyByteString m where convertSequence = pure . fromString
 
-instance Monoid w => BackwardC c IO r w s where
-  type BackwardT c = RWST
-  backwardT = rwsT
-  runBackwardT m _ = runRWST m
+instance (Monoid w, Functor m) => BackwardC () m r w s where backwardT = rwsT; runBackwardT m _ = runRWST m
+type instance BackwardT () = RWST
+instance (Monoid w, Functor m) => BackwardC IndexContext m r w s where backwardT = rwsT; runBackwardT m _ = runRWST m
+type instance BackwardT IndexContext = RWST
+instance (Monoid w, Functor m) => BackwardC (LineColumn lb) m r w s where backwardT = rwsT; runBackwardT m _ = runRWST m
+type instance BackwardT (LineColumn _) = RWST
+instance (Monoid w, Functor m) => BackwardC LinesOnly m r w s where backwardT = rwsT; runBackwardT m _ = runRWST m
+type instance BackwardT LinesOnly = RWST
+instance (Monoid w, Functor m) => BackwardC ColumnsOnly m r w s where backwardT = rwsT; runBackwardT m _ = runRWST m
+type instance BackwardT ColumnsOnly = RWST
 type instance BackwardArg RWST = ()
 
 instance UpdateStateWithElement () (Identity ss) where
@@ -283,3 +290,12 @@ instance IsList ByteStringBuilder where
   fromList = byteStringInsert . fromList
   fromListN n = byteStringThreshold n . fromList
   toList = toList . toLazyByteStringWith (safeStrategy smallChunkSize smallChunkSize) mempty
+
+instance IsString (Vector Char) where fromString = fromList
+
+instance Show a => Show (IO a) where
+  show x = unsafePerformIO $ x <&> (\y -> "IO " <> (bool id (cons '(' . flip snoc ')' ) $ ' ' `elem` y) y) . show
+
+instance Eq a => Eq (IO a) where
+  x == y = unsafePerformIO $ liftA2 (==) x y
+

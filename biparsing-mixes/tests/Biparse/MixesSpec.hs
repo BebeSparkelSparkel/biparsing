@@ -1,6 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-incomplete-patterns -Wno-monomorphism-restriction #-}
-{-# OPTIONS_GHC -ddump-splices #-}
 module Biparse.MixesSpec where
 
 import Language.Haskell.TH

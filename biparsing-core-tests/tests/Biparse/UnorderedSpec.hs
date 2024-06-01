@@ -9,6 +9,7 @@ spec = do
     (unorderedDef :: Iso LinesOnly (FM Ts) EitherString () Ts () (Position () Ts) AllParserTypes)
     ()
     ()
+    ()
     (\f -> do
       it "in order" do
         let result = AllParserTypes 1 (Accumulating ["Not Default"]) (Optional $ Just True)

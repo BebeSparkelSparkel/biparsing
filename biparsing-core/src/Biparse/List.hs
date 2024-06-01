@@ -15,6 +15,8 @@ module Biparse.List
   , whileM
   , whileM'
   , whileFwdAllBwd
+  , until
+  , untilSuccessOf
   , untilFwdSuccessBwdAll
   , untilInclusive
   , untilExclusive
@@ -26,11 +28,12 @@ module Biparse.List
   , tailAlt
   ) where
 
-import Biparse.Biparser (Biparser, pattern Biparser, forward, backward, Iso, SubElement, SubState, one, try, mono, ElementContext, peek, Unit, UpdateStateWithSubState, isNull, breakWhen', GetSubState, upon, uponM, UpdateStateWithElement, SubStateContext, forwardFail)
-import Biparse.General (take, takeNot, memptyWrite, BreakWhen, rest, stripPrefix)
+import Biparse.Biparser (Biparser, Const, pattern Biparser, forward, backward, Iso, SubElement, SubState, one, try, mono, ElementContext, peek, Unit, UpdateStateWithSubState, isNull, breakWhen', GetSubState, upon, uponM, UpdateStateWithElement, SubStateContext, forwardFail, eofFw, tryState)
+import Biparse.General (take, takeNot, memptyWrite, BreakWhen, rest, stripPrefix, failBool)
 import Data.List.NonEmpty (NonEmpty, nonEmpty)
 import Control.Profunctor.FwdBwd (MapMs(mapMs))
 import Data.Maybe (fromJust)
+import Data.Bitraversable (bitraverse)
 
 replicateBiparserT :: forall c s m n u v.
   ( Monoid (SubState s)
@@ -229,7 +232,6 @@ splitOn :: forall c s m n ss w m' n' e.
   , EqElement ss
   -- writer
   , ConvertSequence c ss w n'
-  , ConvertElement c (SubElement s) w n'
   -- context
   , ElementContext c s
   , SubStateContext c s
@@ -274,7 +276,6 @@ liftStateMaybe = mapMs
 splitWith :: forall c s m n ss se w e.
   ( BreakWhen c s m n ss se w e
   , UpdateStateWithSubState c s
-  , ConvertSequence c ss w n
   , ContextualStateTransformerPLEASEREMOVESUFFIX c ss m
   )
   => Unit c s m n
@@ -341,7 +342,7 @@ whileFwdAllBwd predicate produce = Biparser
   )
   \us -> traverse (backward produce) us <* backward predicate ()
 
--- | Like 'whileFwdAllBwd' but runs 'produce' until 'predicate' succeeds.
+-- | Like @whileFwdAllBwd@ but runs 'produce' until 'predicate' succeeds.
 untilFwdSuccessBwdAll :: forall c s m n u v.
   ( Monad m
   , Alt m
@@ -400,6 +401,39 @@ untilFwdSuccessBwdAll produce predicate = whileFwdAllBwd (False <$ predicate <!>
 --  =    bp `uponM` headAlt
 --  >>= maybe (pure mempty) \x -> cons x
 --  <$> untilNothing bp `uponM` tailAlt
+
+type Until s m n e =
+  ( MonadError e m
+  , MonadFail m
+  , MonadState s m
+  , GetSubState s
+  , MonoFoldable (SubState s)
+  , Alt m
+  , MonadFail n
+  , Alt n
+  )
+
+-- | For forward, run the first biparser and accumulate the resultes in a list until the second succeeds. The second is run before the first.
+-- For backwards, run the first for all @u@ in list and then run the second.
+until :: forall c s m n u u' v v' e.
+  Until s m n e
+  => Biparser c s m n u v
+  -> Biparser c s m n u' v'
+  -> Biparser c s m n ([u], u') ([v], v')
+until (Biparser toRepeatFw toRepeatBw) (Biparser toSucceedFw toSucceedBw) = Biparser fw bw
+  where
+  fw = do
+    unlessM (failBool eofFw) $ fail "until reached eof"
+    (mempty,) <$> tryState toSucceedFw <!> first . (:) <$> toRepeatFw <*> fw
+  bw = bitraverse (traverse toRepeatBw) toSucceedBw
+
+-- | For forward, try running the second forward and if it succeeds return all the accumulated results from the first parser; if it fails run the first parser and append its result to the end of the result list.
+untilSuccessOf :: forall c s m n u v e.
+  Until s m n e
+  => Biparser c s m n u v
+  -> Const c s m n [u]
+  -> Biparser c s m n [u] [v]
+untilSuccessOf toRepeat toSucceed = fst <$> until toRepeat toSucceed `upon` \u -> (u, u)
 
 -- | Run 'bp' until 'p' succeeds. Includes the success result in list. If 'p' does not succeed, fails.
 untilInclusive, untilExclusive :: forall c s m n u v.

@@ -132,7 +132,6 @@ instance
   , Alt m'
   , MonadState ss (StateTransformer c ss m')
   , ContextualWriterTransformer c w Maybe n'
-  , ConvertElement c se w n'
   , ConvertSequence c ss w n'
   , MonadFail n'
   , Alt n'

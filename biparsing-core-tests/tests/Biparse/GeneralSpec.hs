@@ -11,6 +11,7 @@ spec = do
         (take 'a' :: Unit () (Identity Text) IO IO () Text ())
         ()
         ()
+        ()
         (\f -> do
           it "take matching" $ f "abc" >>= (`shouldBe` ((), "bc"))
 
@@ -26,6 +27,7 @@ spec = do
         (take 'a' *> take 'b' :: Unit () (Identity Text) IO IO () Text ())
         ()
         ()
+        ()
         (\f -> do
           it "take two matching" $ f "abc" >>= (`shouldBe` ((), "c"))
         )
@@ -35,6 +37,7 @@ spec = do
     describe "LineColumn" do
       fb "uni"
         (take 'a' :: Unit UnixLC (Position () Text) (FM Text) Maybe () Text ())
+        ()
         ()
         ()
         (\f -> do
@@ -52,6 +55,7 @@ spec = do
         (take 'a' *> take 'b' :: Unit UnixLC (Position () Text) (FM Text) Maybe () Text ())
         ()
         ()
+        ()
         (\f -> do
           it "take two matching" $ f "abc" `shouldBe` Right ((), Position () 1 3 "c")
 
@@ -67,6 +71,7 @@ spec = do
    (takeUni 'a' :: Iso UnixLC (FM Text) Maybe () Text () (Position () Text) Char)
    ()
    ()
+   ()
    (\f -> do
      it "fail positon is correct" $ f "bc" `shouldSatisfy` errorPosition 1 1
    )
@@ -75,6 +80,7 @@ spec = do
   describe "takeDi" do
     fb "Identity"
       (takeDi 'x' 1 :: Iso () IO IO () Text () (Identity Text) Int)
+      ()
       ()
       ()
       (\f -> do
@@ -88,6 +94,7 @@ spec = do
       (takeDi 'x' 1 :: Iso UnixLC (FM Text) Maybe () Text () (Position () Text) Int)
       ()
       ()
+      ()
       (\f -> do
         it "matches" $ f "xabc" `shouldBe` Right (1, Position () 1 2 "abc")
 
@@ -98,6 +105,7 @@ spec = do
   describe "takeNot" do
     fb "Identity"
       (takeNot 'A' :: Iso () IO IO () String () (Identity String) Char)
+      ()
       ()
       ()
       (\f -> do
@@ -115,6 +123,7 @@ spec = do
       (takeNot 'A' :: Iso UnixLC (FM String) Maybe () String () (Position () String) Char)
       ()
       ()
+      ()
       (\f -> do
         it "takes non-matching element" $ f "bc" `shouldBe` Right ('b', Position () 1 2 "c")
 
@@ -128,6 +137,7 @@ spec = do
 
   fb "takeWhile"
     (takeWhile (/= 'x') :: Iso UnixLC (FM Text) IO () Text () (Position () Text) Text)
+    ()
     ()
     ()
     (\f -> do
@@ -146,8 +156,24 @@ spec = do
 
       it "has x" $ b "axc" >>= (`shouldBe` ("axc", "axc"))
 
+  fb "drop"
+    (drop (take 'a') :: Biparser ColumnsOnly (Position () (Vector Char)) (FM (Vector Char)) EitherString () Text () () ())
+    ()
+    ()
+    ()
+    (\f -> do
+      it "empty" $ f "" `shouldBe` Right ((), Position () 1 1 "")
+      it "one" $ f "a" `shouldBe` Right ((), Position () 1 2 "")
+      it "many" $ f "aaaa" `shouldBe` Right ((), Position () 1 5 "")
+      it "stops" $ f "aab" `shouldBe` Right ((), Position () 1 3 "b")
+      it "no matches" $ f "bb" `shouldBe` Right ((), Position () 1 1 "bb")
+    )
+    \b -> do
+      it "does not print anything" $ b () `shouldBe` EValue ((), "")
+
   fb "dropWhile"
     (dropWhile (== 1) :: Iso LinesOnly (FM (Vector Int)) EitherString () (Vector Int) () (Position () (Vector Int)) ())
+    ()
     ()
     ()
     (\f -> do
@@ -159,8 +185,23 @@ spec = do
     \b -> do
       it "success" $ b () `shouldBe` EValue ((), mempty)
 
+  fb "dropUntil"
+    (dropUntil 'b' :: Iso ColumnsOnly (FM (Seq Char)) EitherString () (Seq Char) () (Position () (Seq Char)) ())
+    ()
+    ()
+    ()
+    (\f -> do
+      it "empty" $ f "" `shouldSatisfy` errorPosition 1 1
+      it "not found" $ f "aaa" `shouldSatisfy`errorPosition 1 4
+      it "drop one" $ f "abb" `shouldBe` Right ((), Position () 1 3 "b")
+      it "drop many" $ f "aaab" `shouldBe` Right ((), Position () 1 5 "")
+    )
+    \b -> do
+      it "prints element" $ b () `shouldBe` EValue ((), "b")
+
   fb "skipUntil"
     (skipUntil $ (> 2) <$> one :: Const LinesOnly (Position () [Int]) (FM [Int]) EitherString () [Int] () Int)
+    ()
     ()
     ()
     (\f -> do
@@ -177,6 +218,7 @@ spec = do
     (untilJust $ bool Nothing (Just ()) . (> 2) <$> one :: Biparser LinesOnly (Position () [Int]) (FM [Int]) EitherString () [Int] () Int ())
     ()
     ()
+    ()
     (\f -> do
       it "empty" $ f [] `shouldSatisfy` errorPosition 1 1
 
@@ -189,6 +231,7 @@ spec = do
 
   fb "pad"
     (pad 4 'x' naturalBaseTen :: Iso UnixLC (FM Text) IO () Text () (Position () Text) Int)
+    ()
     ()
     ()
     (\f -> do
@@ -220,6 +263,7 @@ spec = do
 
   fb "padSet"
     (padSet 4 'x' ['x','y'] naturalBaseTen :: Iso UnixLC (FM (Seq Char)) IO () (Seq Char) () (Position () (Seq Char)) Int)
+    ()
     ()
     ()
     (\f -> do
@@ -260,7 +304,7 @@ spec = do
       bp :: Biparser () (Identity (Seq Char)) (FM (Seq Char)) (Either String) () (Seq Char) () (Seq Char) (Natural, Seq Char)
       bp = padCount n 'a' $ takeWhile (== 'b')
       f = runForward @() bp
-      b = runBackward bp () ()
+      b = runBackward bp () () ()
       n' = fromIntegral n
       na' = fromIntegral na
       nb' = fromIntegral nb
@@ -272,9 +316,9 @@ spec = do
     (breakWhen $ stripPrefix "ab" :: Iso UnixLC (FM (Seq Char)) IO () (Seq Char) () (Position () (Seq Char)) (Seq Char))
     ()
     ()
+    ()
     (\f -> do
-      it "empty" do
-        f "" `shouldBe` Right (mempty, "")
+      it "empty" $ f "" `shouldSatisfy` errorPosition 1 1
 
       it "break first" do
         f "abcd" `shouldBe` Right (mempty, Position () 1 3 "cd")
@@ -286,7 +330,7 @@ spec = do
         f "cdabef" `shouldBe` Right ("cd", Position () 1 5 "ef")
 
       it "no break" do
-        f "cdefg" `shouldBe` Right ("cdefg", Position () 1 6 mempty)
+        f "cdefg" `shouldSatisfy` errorPosition 1 6
     )
     \b -> do
       it "empty" $ b mempty >>= (`shouldBe` (mempty,"ab"))
@@ -301,12 +345,24 @@ spec = do
     (rest :: Iso () (FM (Identity (Vector Int))) EitherString () (Vector Int) () (Identity (Vector Int)) (Vector Int))
     ()
     ()
+    ()
     (\f -> do
       it "success" $ f [1,2,3] `shouldBe` Right ([1,2,3], mempty)
     )
     \b -> do
       it "success" $ b [1,2,3] `shouldBe` EValue ([1,2,3], [1,2,3])
 
+  fb "shouldFail"
+    (shouldFail (take 1) "take 1 did not fail" :: Biparser ColumnsOnly (Position () [Int]) (FM [Int]) EitherString () [Int] () () ())
+    ()
+    ()
+    ()
+    (\f -> do
+      it "empty" $ f [] `shouldBe` Right ((), Position () 1 1 [])
+      it "take fails" $ f [2] `shouldBe` Right ((), Position () 1 1 [2])
+      it "take succeeds" $ f [1] `shouldSatisfy` errorPosition 1 2
+    )
+    \b -> it "prints nothing" $ b () `shouldBe` EValue ((), [])
 
   let mapBool :: Bool -> Int
       mapBool = \case True -> 1; False -> 2
@@ -314,6 +370,7 @@ spec = do
     ((,) <$> optionMaybe (takeUni 1 `upon` mapBool $> "one")
          <*> optionMaybe (takeUni 2 `upon` mapBool $> "two")
     :: Biparser () (Identity (Vector Int)) IO IO () (Vector Int) () Bool (Maybe String, Maybe String))
+    ()
     ()
     ()
     (\f -> do
@@ -339,6 +396,7 @@ spec = do
       (stripPrefix "abc" :: Unit () (Identity Text) IO IO () Text ())
       ()
       ()
+      ()
       (\f -> do
         it "match" $ f "abcdef" >>= (`shouldBe` ((), "def"))
 
@@ -353,6 +411,7 @@ spec = do
       (stripPrefix "abc" :: Unit UnixLC (Position () Text) (FM Text) IO () Text ())
       ()
       ()
+      ()
       (\f -> do
         it "match" $ f "abcdef" `shouldBe` Right ((), Position () 1 4 "def")
 
@@ -365,6 +424,7 @@ spec = do
 
   fb "not"
     (not $ (== 'x') <$> one :: Biparser () (Identity String) IO IO () String () Char Bool)
+    ()
     ()
     ()
     (\f -> do

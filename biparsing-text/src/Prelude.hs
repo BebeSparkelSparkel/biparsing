@@ -35,7 +35,7 @@ module Prelude
   , module Lens.Micro
   ) where
 
-import Biparse.Biparser (Biparser, pattern Biparser, Iso, Const, IsoClass(iso), SubElement, GetSubState(SubState, getSubState), ReplaceSubState(replaceSubState), InitSuperState(SuperState,fromSubState), SuperArg, ElementContext, SubStateContext, one, comap, upon, uponM, UpdateStateWithElement(updateElementContext), UpdateStateWithSubState(updateSubStateContext), peek, try, ignoreBackward, split)
+import Biparse.Biparser (Biparser, pattern Biparser, Iso, Const, IsoClass(iso), SubElement, GetSubState(SubState, getSubState), ReplaceSubState(replaceSubState), InitSuperState(SuperState,fromSubState), SuperArg, ElementContext, SubStateContext, one, comap, upon, uponM, UpdateStateWithElement(updateElementContext), UpdateStateWithSubState(updateSubStateContext), peek, try, ignoreBackwardIso, split)
 import Control.Applicative (Applicative((<*>),pure), liftA2)
 import Control.Monad (Monad, unless, (=<<))
 import Control.Monad.Except (MonadError)

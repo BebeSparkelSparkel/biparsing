@@ -20,3 +20,6 @@ instance FixFailM m m' => FixFailM (StateT s m) (StateT s m') where
 instance (FixFailM m m', Monoid w) => FixFailM (WriterT w m) (WriterT w m') where
   fixFailM x y = WriterT $ (x,mempty) `fixFailM` runWriterT y
 
+
+instance (FixFailM m m', FixFailM n n') => FixFailM (Biparser c s m n u) (Biparser c s m' n' u) where
+  fixFailM x (Biparser fw bw) = Biparser (fixFailM x fw) (fixFailM x . bw)

@@ -41,6 +41,7 @@ spec = do
       (lineSplitter @('Left '\n') @'True :: Iso UnixLC (FM ByteString) EitherString () ByteString () (Position () ByteString) [ByteString])
       ()
       ()
+      ()
       (\f -> do
         it "empty" $ f "" `shouldBe` Right ([], Position () 1 1 "")
         it "no break" $ f "abc" `shouldBe` Right (["abc"], Position () 1 4 "")
@@ -55,6 +56,7 @@ spec = do
 
     fb "LineSplitter ('Right '\\r\\n') 'True UnixLC (FM ByteString) EitherString (Position () ByteString)"
       (lineSplitter @('Right "\r\n") @'True :: Iso UnixLC (FM ByteString) EitherString () ByteString () (Position () ByteString) [ByteString])
+      ()
       ()
       ()
       (\f -> do
@@ -73,6 +75,7 @@ spec = do
       (lineSplitter @('Left '\n') @'False :: Iso UnixLC (FM ByteString) EitherString () ByteString () (Position () ByteString) [ByteString])
       ()
       ()
+      ()
       (\f -> do
         it "empty" $ f "" `shouldBe` Right ([], Position () 1 1 "")
         it "no break" $ f "abc" `shouldBe` Right (["abc"], Position () 1 1 "")
@@ -87,6 +90,7 @@ spec = do
 
     fb "LineSplitter ('Right '\\r\\n') 'False UnixLC (FM ByteString) EitherString (Position () ByteString)"
       (lineSplitter @('Right "\r\n") @'False :: Iso UnixLC (FM ByteString) EitherString () ByteString () (Position () ByteString) [ByteString])
+      ()
       ()
       ()
       (\f -> do

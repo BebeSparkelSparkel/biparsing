@@ -9,6 +9,7 @@ spec = do
     (w2c <$$> takeElementsWhile (isDigit . w2c) `upon` (c2w <$>) :: Iso () IO IO () ByteString () (Identity ByteString) String)
     ()
     ()
+    ()
     (\f -> do
       it "matches some digits" do
         f "123 abc" >>= (`shouldBe` ("123", " abc"))
@@ -29,6 +30,7 @@ spec = do
 
   fb "takeNElements"
     (takeNElements 2 :: Iso IndexContext (EISP [Int]) EitherString () [Int] () (IndexPosition [Int]) [Int])
+    ()
     ()
     ()
     (\f -> do
@@ -54,6 +56,7 @@ spec = do
       (many $ takeUni 'a' :: Iso () IO IO () Text () (Identity Text) [Char])
       ()
       ()
+      ()
       (\f -> do
         it "takes none" do
           f mempty >>= (`shouldBe` (mempty, mempty))
@@ -71,6 +74,7 @@ spec = do
       $   try (takeTri "TRUE" True 1)
       <!>      takeTri "FALSE" False 0
       :: Biparser () (Identity [String]) Maybe Maybe () [String] () [Bool] [Int])
+      ()
       ()
       ()
       (\f -> do
@@ -98,6 +102,7 @@ spec = do
     --(some (takeUni 1) :: Iso IndexContext IO IO () [Int] () (IndexPosition [Int]) (NonEmpty Int))
     ()
     ()
+    ()
     (\f -> do
       it "fails on none" do
         f mempty `shouldThrow` isUserError
@@ -113,6 +118,7 @@ spec = do
 
   fb "all"
     (all $ takeUni 'a' <!> takeUni 'b' :: Iso UnixLC (FM Text) IO () Text () (Position () Text) [Char])
+    ()
     ()
     ()
     (\f -> do
@@ -143,7 +149,7 @@ spec = do
     let bp :: Iso () IO IO () Text () (Identity Text) [Text]
         bp = splitElem ':'
         f = runForward @() bp
-        b = runBackward bp () ()
+        b = runBackward bp () () ()
         t name f' b' = describe name do
           it "forward" $ limit do
             f (Identity f') >>= (`shouldBe` (b', mempty))
@@ -164,6 +170,7 @@ spec = do
 
   fb "splitOn"
     (splitOn "ab" :: Iso () IO IO () Text () (Identity Text) [Text])
+    ()
     ()
     ()
     (\f -> do
@@ -199,6 +206,7 @@ spec = do
 
   fb "whileM"
     (whileM (peek (memptyWrite one >>= \x -> pure $ x /= 'x')) one :: Iso () IO IO () Text () (Identity Text) [Char])
+    ()
     ()
     ()
     (\f -> do
@@ -287,6 +295,7 @@ spec = do
     (whileFwdAllBwd (take 3 $> False <!> pure True) one :: Iso () EitherString EitherString () [Int] () (Identity [Int]) [Int])
     ()
     ()
+    ()
     (\f -> do
       it "empty success" $ f [3] `shouldBe` EValue (mempty,mempty)
       it "some success" $ f [0,1,2,3,4] `shouldBe` EValue ([0,1,2],[4])
@@ -300,6 +309,7 @@ spec = do
     (one `untilFwdSuccessBwdAll` take 3 :: Iso () EitherString EitherString () [Int] () (Identity [Int]) [Int])
     ()
     ()
+    ()
     (\f -> do
       it "empty success" $ f [3] `shouldBe` EValue (mempty,mempty)
       it "some success" $ f [0,1,2,3,4] `shouldBe` EValue ([0,1,2],[4])
@@ -309,8 +319,53 @@ spec = do
       it "empty u" $ b [] `shouldBe` EValue ([],[3])
       it "some u" $ b [0,1,2] `shouldBe` EValue ([0,1,2],[0,1,2,3])
 
+  fb "until"
+    (takeUni 'a' `until` takeUni 'b'
+      :: Iso UnixLC (FM Text) EitherString () Text () (Position () Text) (String, Char))
+    ()
+    ()
+    ()
+    (\f -> do
+      it "empty" $ f "" `shouldSatisfy` errorPosition 1 1
+      it "first fails" $ f "c" `shouldSatisfy` errorPosition 1 1
+      it "no results" $ f "b" `shouldBe` Right (([], 'b'), Position () 1 2 "")
+      it "one match" $ f "ab" `shouldBe` Right (("a", 'b'), Position () 1 3 "")
+      it "two matches" $ f "aab" `shouldBe` Right (("aa", 'b'), Position () 1 4 "")
+      it "no stop" $ f "aaa" `shouldSatisfy` errorPosition 1 4
+      it "stops" do
+        f "aba" `shouldBe` Right (("a", 'b'), Position () 1 3 "a")
+        f "abb" `shouldBe` Right (("a", 'b'), Position () 1 3 "b")
+    )
+    \b -> do
+      it "null fail bad second" $ b ([], 'a') `shouldSatisfy` isString
+      it "fail bad second" $ b ("aaa", 'a') `shouldSatisfy` isString
+      it "null" $ b ([], 'b') `shouldBe` EValue (([],'b'), "b")
+      it "some" $ b ("aaa", 'b') `shouldBe` EValue (("aaa",'b'), "aaab")
+
+  fb "untilSuccessOf"
+    (takeUni 'a' `untilSuccessOf` take 'b'
+      :: Iso UnixLC (FM String) EitherString () String () (Position () String) String)
+    ()
+    ()
+    ()
+    (\f -> do
+      it "empty" $ f "" `shouldSatisfy` errorPosition 1 1
+      it "first fails" $ f "c" `shouldSatisfy` errorPosition 1 1
+      it "no results" $ f "b" `shouldBe` Right ([], Position () 1 2 "")
+      it "one match" $ f "ab" `shouldBe` Right ("a", Position () 1 3 "")
+      it "two matches" $ f "aab" `shouldBe` Right ("aa", Position () 1 4 "")
+      it "no stop" $ f "aaa" `shouldSatisfy` errorPosition 1 4
+      it "stops" do
+        f "aba" `shouldBe` Right ("a", Position () 1 3 "a")
+        f "abb" `shouldBe` Right ("a", Position () 1 3 "b")
+    )
+    \b -> do
+      it "null" $ b "" `shouldBe` EValue ([], "b")
+      it "some" $ b "aaa" `shouldBe` EValue ("aaa", "aaab")
+
   fb "untilInclusive"
     (untilInclusive (== 'c') one :: Iso UnixLC (FM (Seq Char)) IO () (Seq Char) () (Position () (Seq Char)) String)
+    ()
     ()
     ()
     (\f -> do
@@ -331,6 +386,7 @@ spec = do
     (intersperse (one >>= \x -> if x == 'x' then pure x else fail "not x")
       (one `upon` const ',' >>= \x -> if x == ',' then pure x else fail "not ,")
       :: Iso ColumnsOnly (FM String) EitherString () String () (Position () String) [Char])
+    ()
     ()
     ()
     (\f -> do

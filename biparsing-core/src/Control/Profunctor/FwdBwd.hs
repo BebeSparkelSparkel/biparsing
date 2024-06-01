@@ -13,23 +13,16 @@ module Control.Profunctor.FwdBwd
   ) where
 
 import GHC.Generics (Generic, Generic1)
-import Generic.Data (gpure, gap, gempty, galt)
-import Data.Functor.Alt qualified
 import Control.Monad.Unrecoverable (MonadUnrecoverable, UnrecoverableError, throwUnrecoverable)
-import Control.Monad (MonadPlus)
-import Control.Applicative (Alternative, empty, (<|>))
+import Data.Profunctor (Profunctor(dimap))
 
-data (:*:) p q u v = (:*:) {pfst :: p u v, psnd :: q u v} deriving (Functor, Generic, Generic1)
+data (:*:) p q u v = (:*:) {pfst :: p u v, psnd :: q u v} deriving (Show, Eq, Functor, Generic, Generic1)
 {-# COMPLETE (:*:) #-}
 instance (Applicative (p u), Applicative (q u)) => Applicative ((:*:) p q u) where
-  pure = gpure
-  (<*>) = gap
-instance (Alternative (p u), Monad (p u), Alternative (q u), Monad (q u)) => MonadPlus ((:*:) p q u)
-instance (Alternative (p u), Alternative (q u)) => Alternative ((:*:) p q u) where
-  empty = gempty
-  (<|>) = galt
+  pure x = pure x :*: pure x
+  (f :*: b) <*> ~(f' :*: b') = (f <*> f') :*: (b <*> b')
 instance (Alt (p u), Alt (q u)) => Alt ((:*:) p q u) where
-  (<!>) = Data.Functor.Alt.galt
+  (f :*: b) <!> ~(f' :*: b') = (f <!> f') :*: (b <!> b')
 instance (Monad (p u), Monad (q u)) => Monad ((:*:) p q u) where
   (fw :*: bw) >>= f = (fw >>= pfst . f) :*: (bw >>= psnd . f)
 instance (MonadFail (p u), MonadFail (q u)) => MonadFail ((:*:) p q u) where
@@ -40,23 +33,27 @@ instance (MonadError e (p u), MonadError e (q u)) => MonadError e ((:*:) p q u) 
 instance (MonadUnrecoverable (p u), MonadUnrecoverable (q u), UnrecoverableError (p u) ~ UnrecoverableError (q u)) => MonadUnrecoverable ((:*:) p q u) where
   type UnrecoverableError ((:*:) p q u) = UnrecoverableError (p u)
   throwUnrecoverable e = throwUnrecoverable e :*: throwUnrecoverable e
+instance (Profunctor p, Profunctor q) => Profunctor ((:*:) p q) where
+  dimap f g (l :*: r) = dimap f g l :*: dimap f g r
 
-newtype Fwd m u v = Fwd {unFwd :: m v} deriving (Functor, Applicative, Alternative, Monad, MonadFail)
+newtype Fwd m u v = Fwd {unFwd :: m v} deriving (Show, Eq, Functor, Applicative, Monad, MonadFail)
 deriving instance MonadError e m => MonadError e (Fwd m u)
 deriving instance MonadUnrecoverable m => MonadUnrecoverable (Fwd m u)
 instance Alt m => Alt (Fwd m u) where
   Fwd x <!> Fwd y = Fwd $ x <!> y
+instance Functor m => Profunctor (Fwd m) where
+  dimap _ g (Fwd x) = Fwd $ g <$> x
 
 newtype Bwd m u v = Bwd {unBwd :: u -> m v} deriving (Functor, Generic1)
+instance (Default u, Show (m v)) => Show (Bwd m u v) where
+  show (Bwd f) = "Bwd " <> show (f def)
+instance (Default u, Eq (m v)) => Eq (Bwd m u v) where
+  Bwd f == Bwd g = f def == g def
 instance Applicative m => Applicative (Bwd m u) where
-  pure = gpure
-  (<*>) = gap
+  pure = Bwd . const . pure
+  Bwd x <*> Bwd y = Bwd \u -> x u <*> y u
 instance Monad m => Monad (Bwd m u) where
   Bwd bw >>= f = Bwd \u -> bw u >>= ($ u) . unBwd . f
-instance (Alternative m, Monad m) => MonadPlus (Bwd m u)
-instance Alternative m => Alternative (Bwd m u) where
-  empty = Bwd $ const empty
-  Bwd x <|> Bwd y = Bwd \u -> x u <|> y u
 instance Alt m => Alt (Bwd m u) where
   Bwd x <!> Bwd y = Bwd \u -> x u <!> y u
 instance MonadFail m => MonadFail (Bwd m u) where
@@ -67,6 +64,8 @@ instance MonadError e m => MonadError e (Bwd m u) where
 instance MonadUnrecoverable m => MonadUnrecoverable (Bwd m u) where
   type UnrecoverableError (Bwd m u) = UnrecoverableError m
   throwUnrecoverable = Bwd . const . throwUnrecoverable
+instance Functor m => Profunctor (Bwd m) where
+  dimap f g (Bwd x) = Bwd $ fmap g . x . f
 
 type BwdMonad :: Type -> (Type -> Type -> Type) -> Type -> Type
 type family BwdMonad instanceSelector m

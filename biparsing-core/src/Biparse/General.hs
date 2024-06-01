@@ -11,7 +11,10 @@ module Biparse.General
   , Take'
   , takeDi'
   , takeTri'
+  , drop
+  , DropWhile
   , dropWhile
+  , dropUntil
   , skipUntil
   , untilJust
   , takeN
@@ -21,6 +24,7 @@ module Biparse.General
   , padCount
   , BreakWhen
   , breakWhen
+  , breakAt
   , optionMaybe
   , optional
   , stripPrefix
@@ -28,15 +32,17 @@ module Biparse.General
   , countElementSome
   , FromNatural(..)
   , not
+  , failBool
   , memptyWrite
   , rest
   , failForward
   , failBackward
+  , shouldFail
   ) where
 
 import Data.Sequences qualified as MT
 import Control.Profunctor.FwdBwd (endoSecond)
-import Biparse.Biparser (Biparser, Iso, Unit, unit, one, try, SubState, SubElement, ElementContext, SubStateContext, split, Const, mapWrite, Unit, ignoreForward, upon, uponM, comapM, count, resetState, splitFw)
+import Biparse.Biparser (Biparser, pattern Biparser, Iso, Unit, unit, one, oneFw, try, SubState, SubElement, ElementContext, SubStateContext, split, Const, mapWrite, Unit, upon, uponM, comapM, count, resetState, splitFw, ignoreBackward, peek)
 import Data.Bool qualified
 import Data.EqElement qualified
 import Control.Profunctor.FwdBwd (firstM)
@@ -200,8 +206,18 @@ takeWhile :: forall c s m n ss se w.
   -> Iso c m n s (SubState s)
 takeWhile = split . state @c . span
 
--- | Drop forward elements while predicate is true.
-dropWhile :: forall c s m n u ss se w.
+drop :: forall c s m n u v e.
+  ( MonadState s m
+  , MonadError e m
+  , Alt m
+  , Monad n
+  , Alt n
+  )
+  => Biparser c s m n u v
+  -> Biparser c s m n u ()
+drop bp = ignoreBackward () $ try bp *> drop bp <!> pure ()
+
+type DropWhile c s m n u ss se w =
   ( SubStateContext c s
   , IsSequence ss
   , MonadState s m
@@ -210,9 +226,22 @@ dropWhile :: forall c s m n u ss se w.
   , ss ~ SubState s
   , se ~ SubElement s
   )
+
+-- | Drop forward elements while predicate is true.
+dropWhile :: forall c s m n u ss se w.
+  DropWhile c s m n u ss se w
   => (se -> Bool)
   -> Const c s m n u
 dropWhile f = splitFw $ stateT @c $ return . MT.span f
+
+-- | Drop forward elements until @se@ is found. Fails if @se@ is not found.
+dropUntil :: forall c s m n u ss se w e.
+  ( DropWhile c s m n u ss se w
+  , Take c s m n ss se w e
+  )
+  => se
+  -> Const c s m n u
+dropUntil x = dropWhile (/= x) <* take x
 
 -- | Run until returns True
 skipUntil :: forall c s m n u.
@@ -339,7 +368,7 @@ type BreakWhen c s m n ss se w e =
   -- substate
   , IsSequence ss
   -- w
-  , ConvertElement c se w n
+  , ConvertSequence c ss w n
   -- context
   , ElementContext c s
   -- assignments
@@ -348,20 +377,30 @@ type BreakWhen c s m n ss se w e =
   )
 
 -- | Breaks off the substate head when 'x' succeeds. Writes x after given 'ss'.
--- DEV NOTE: Seems like there could be a more simplistic solution.
+-- DEV NOTE: Seems like there could be a more simple solution.
 breakWhen :: forall c s m n ss se w e.
   BreakWhen c s m n ss se w e
   => Unit c s m n
   -> Iso c m n s ss
-breakWhen x
-  = bw <* ignoreForward () (unit x)
+breakWhen (Biparser fw bw) = Biparser
+  fw'
+  \u -> do
+    tell =<< convertSequence @c u
+    bw ()
+    return u
   where
-  bw
-    =   mempty <$ failBackward (try $ unit x)
-    <!> do
-          y <- one `uponM` headAlt
-          cons y <$> bw `uponM` tailAlt
-    <!> pure mempty
+  fw' = mempty <$ fw <!> cons <$> oneFw @c <*> fw'
+    
+
+breakAt :: forall c s m n ss se w e.
+  ( BreakWhen c s m n ss se w e
+  , ConvertElement c se w n
+  , Eq se
+  , Show se
+  )
+  => se
+  -> Iso c m n s ss
+breakAt = breakWhen . take
 
 ---- | Like 'breakWhen' but fails if 'x' does not succeed
 --breakWhen' :: forall c s m n ss.
@@ -406,6 +445,20 @@ failBackward :: forall c s m n u v.
   => Biparser c s m n u v
   -> Biparser c s m n u v
 failBackward = comapM $ const $ fail "pureposely failed in the backwards direction"
+
+-- | The forward of the given biparser should fail. If it does not fail, fail with the given string.
+-- Backwards is ignored.
+shouldFail :: forall c s m n u u' v.
+  ( MonadFail m
+  , MonadState s m
+  , Alt m
+  , MonadFail n
+  , Alt n
+  )
+  => Biparser c s m n u v
+  -> String
+  -> Biparser c s m n u' ()
+shouldFail bp msg = ignoreBackward () $ peek $ bool (pure ()) (fail msg) =<< failBool bp
 
 -- * Optional parsing
 
@@ -502,10 +555,13 @@ not :: forall c s m n u.
   -> Biparser c s m n u Bool
 not = fmap Data.Bool.not
 
+-- | If success, returns True. If fails, returns False
+failBool :: (Applicative m, Alt m) => m a -> m Bool
+failBool x = x $> True <!> pure False
+
 -- | Causes backward to write nothing.
 memptyWrite :: forall c s m n u v w.
   MonadWriter w n
   => Biparser c s m n u v
   -> Biparser c s m n u v
 memptyWrite = flip mapWrite (const mempty)
-

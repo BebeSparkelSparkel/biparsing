@@ -56,7 +56,7 @@ encodeEasy :: forall c ss u v.
   => BiparserEasy c ss u v
   -> u
   -> Either String (AssociatedWriter ss)
-encodeEasy bp u = runEitherString $ SRW.evalBackward bp () () u
+encodeEasy bp u = runEitherString $ SRW.evalBackward bp () () () u
 
 data StringErrorIS
 
@@ -100,5 +100,5 @@ encode :: forall c ss r ws u v.
   -> ws
   -> u
   -> Either String (AssociatedWriter ss)
-encode bp r ws u = runEitherString $ SRW.evalBackward bp r ws u
+encode bp r ws u = runEitherString $ SRW.evalBackward bp () r ws u
 

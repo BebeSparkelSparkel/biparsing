@@ -38,16 +38,19 @@ library
       DerivingStrategies
       PatternSynonyms
       StandaloneDeriving
-  ghc-options: -Weverything -Wno-implicit-prelude -Wno-missing-kind-signatures -Wno-missing-local-signatures -Wno-missing-safe-haskell-mode -Wno-safe -Wno-unsafe -Wno-unused-packages
+  ghc-options: -Werror -Weverything -Wno-implicit-prelude -Wno-missing-kind-signatures -Wno-missing-local-signatures -Wno-missing-safe-haskell-mode -Wno-safe -Wno-unsafe -Wno-unused-packages
   build-depends:
       base
     , biparsing-core
     , biparsing-text
     , bytestring
     , extra
+    , microlens
     , mono-traversable
     , mtl
+    , semigroupoids
     , text
+    , transformers
     , unliftio
   mixins:
       base hiding (Prelude)
@@ -57,6 +60,7 @@ test-suite spec
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
+      Biparse.FileSpec
       Control.Monad.FileTSpec
       Prelude
   hs-source-dirs:
@@ -74,13 +78,14 @@ test-suite spec
       hspec-discover:hspec-discover
   build-depends:
       base
-    , biparsing-core
     , biparsing-file
     , biparsing-test
+    , biparsing-text
     , bytestring
     , hspec
     , hspec-expectations-lifted
     , mtl
+    , text
   mixins:
       base hiding (Prelude)
     , biparsing-test (Prelude as Biparse.Prelude)
