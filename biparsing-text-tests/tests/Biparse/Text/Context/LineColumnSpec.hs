@@ -9,24 +9,22 @@ spec = do
       (one :: IsoLocal String Char)
       ()
       ()
+      ()
       (\f -> do
           it "increments column" do
             f "ab" `shouldBe` Right ('a', Position () 1 2 "b")
 
           it "increments row" do
             f "\nb" `shouldBe` Right ('\n', Position () 2 1 "b")
-        )
-        \b -> do
-          it "prints a character" do
-            x <- b 'a'
-            x `shouldBe` ('a', "a")
+      )
+      \b -> do
+        it "prints a character" $ b 'a' `shouldReturn` ('a', "a")
 
-          it "prints newline" do
-            x <- b '\n'
-            x `shouldBe` ('\n', "\n")
+        it "prints newline" $ b '\n' `shouldReturn` ('\n', "\n")
 
   fb "UpdateStateWithSubState"
     (takeWhile (/= ':') :: IsoLocal Text Text)
+    ()
     ()
     ()
     (\f -> do
@@ -48,7 +46,7 @@ spec = do
         c `shouldSatisfy` (> 0)
     )
     \b -> do
-      prop "writes all" \t -> b t >>= (`shouldBe` (t, t))
+      prop "writes all" \t -> b t `shouldReturn` (t, t)
 
   describe "add position to error" do
     let bp :: Const UnixLC (Position () Text) (EESP () Text) IO () Text () ()

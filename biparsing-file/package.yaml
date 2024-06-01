@@ -1,0 +1,97 @@
+name: biparsing-file
+version: 0.0.0.1
+synopsis: Work biparsers directly on files.
+homepage: https://github.com/BebeSparkelSparkel/biparsing
+category: Parsing
+author: William Rusnack
+license: BSD-3-Clause
+license-file: LICENSE
+
+spec-version: 0.36.0
+
+dependencies:
+    - mtl
+    - text
+    - bytestring
+    - biparsing-text
+
+default-extensions:
+    - ImportQualifiedPost
+    - BlockArguments
+    - RankNTypes
+    - TypeApplications
+    - ScopedTypeVariables
+    - FlexibleContexts
+
+library:
+  source-dirs: src/
+  other-modules:
+    - Prelude
+  dependencies:
+    - name: base
+      mixin:
+        - hiding (Prelude)
+    - biparsing-core
+    - extra
+    - mono-traversable
+    - unliftio
+    - microlens
+    - transformers
+    - semigroupoids
+  default-extensions:
+    - StandaloneKindSignatures
+    - FlexibleInstances
+    - TypeFamilies
+    - MultiParamTypeClasses
+    - GeneralizedNewtypeDeriving
+    - DerivingStrategies
+    - PatternSynonyms
+    - StandaloneDeriving
+  ghc-options:
+    - -Werror
+    - -Weverything
+
+    - -Wno-implicit-prelude
+    - -Wno-missing-kind-signatures
+    - -Wno-missing-local-signatures
+    - -Wno-missing-safe-haskell-mode
+    - -Wno-safe
+    - -Wno-unsafe
+
+    - -Wno-unused-packages
+
+tests:
+  spec:
+    build-tools: hspec-discover
+    main: Spec.hs
+    source-dirs: tests/
+    dependencies:
+      - name: base
+        mixin:
+          - hiding (Prelude)
+      - name: biparsing-test
+        mixin:
+          - (Prelude as Biparse.Prelude)
+      - biparsing-file
+      - hspec
+      - hspec-expectations-lifted
+    default-extensions:
+      - OverloadedStrings
+    ghc-options:
+      - -Werror
+      - -Weverything
+      - -fprint-potential-instances
+
+      - -Wno-implicit-prelude
+      - -Wno-incomplete-uni-patterns
+      - -Wno-missing-deriving-strategies
+      - -Wno-missing-export-lists
+      - -Wno-missing-import-lists
+      - -Wno-missing-kind-signatures
+      - -Wno-missing-local-signatures
+      - -Wno-missing-safe-haskell-mode
+      - -Wno-orphans
+      - -Wno-safe
+      - -Wno-unsafe
+
+      - -Wno-unused-packages

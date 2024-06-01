@@ -8,17 +8,19 @@ spec = do
     (naturalBaseTen :: Iso UnixLC (FM Text) IO () Text () (Position () Text) Word)
     ()
     ()
+    ()
     (\f -> do
       naturalsForward f
       failIntegerForward f
     )
     \b -> do
       it "success" do
-        b 1   >>= (`shouldBe` (1,   "1"))
-        b 123 >>= (`shouldBe` (123, "123"))
+        b 1   `shouldReturn` (1,   "1")
+        b 123 `shouldReturn` (123, "123")
 
   fb "intBaseTen"
     (intBaseTen :: Iso UnixLC (FM Text) IO () Text () (Position () Text) Int)
+    ()
     ()
     ()
     (\f -> do
@@ -38,6 +40,7 @@ spec = do
     (eNotation :: Iso ColumnsOnly (FM Text) IO () Text () (Position () Text) Double)
     ()
     ()
+    ()
     (\f -> do
       realForward f
 
@@ -53,11 +56,13 @@ spec = do
     (realBaseTen :: Iso UnixLC (FM String) IO () String () (Position () String) Double)
     ()
     ()
+    ()
     realForward
     realBackward
 
   fb "hex"
     (hex @'LowerCase 2 :: Iso UnixLC (FM String) IO () String () (Position () String) HexWord8)
+    ()
     ()
     ()
     (\f -> do
@@ -73,8 +78,8 @@ spec = do
     )
     \b -> do
       describe "bit order" do
-        it "right" $ b 0xf  >>= (`shouldBe` (0xf,  "0f"))
-        it "left"  $ b 0xF0 >>= (`shouldBe` (0xF0, "f0"))
+        it "right" $ b 0xf  `shouldReturn` (0xf,  "0f")
+        it "left"  $ b 0xF0 `shouldReturn` (0xF0, "f0")
 
 naturalsForward :: (Show a1, Show a2, Show text, Eq a1, Eq a2, Eq text, Num a2, Monoid text, IsString t, IsString text) => (t -> Either a1 (a2, Position () text)) -> SpecWith ()
 naturalsForward f = it "naturals" do
@@ -97,11 +102,11 @@ failIntegerForward f = it "fail integer" do
 
 integerBackward :: (Show a, Show b, Eq a, Eq b, Num t, Num a, IsString b) => (t -> IO (a, b)) -> SpecWith ()
 integerBackward b = it "integer" do
-  b 0      >>= (`shouldBe` (0,    "0"))
-  b 1      >>= (`shouldBe` (1,    "1"))
-  b 123    >>= (`shouldBe` (123,  "123"))
-  b (-1)   >>= (`shouldBe` (-1,   "-1"))
-  b (-123) >>= (`shouldBe` (-123, "-123"))
+  b 0      `shouldReturn` (0,    "0")
+  b 1      `shouldReturn` (1,    "1")
+  b 123    `shouldReturn` (123,  "123")
+  b (-1)   `shouldReturn` (-1,   "-1")
+  b (-123) `shouldReturn` (-123, "-123")
 
 realForward :: (Show a, Show text, Eq a, Eq text, Monoid text, IsString t, IsString text, Fractional a) => (t -> EESP () text (a, Position () text)) -> Spec
 realForward f = do
@@ -124,18 +129,18 @@ realForward f = do
 realBackward :: (Show a, Show b, Eq a, Eq b, IsString b, Fractional t, Fractional a) => (t -> IO (a, b)) -> Spec
 realBackward b = do
   it "whole" do
-    b 1   >>= (`shouldBe` (1,   "1.0"))
-    b 123 >>= (`shouldBe` (123, "123.0"))
+    b 1   `shouldReturn` (1,   "1.0")
+    b 123 `shouldReturn` (123, "123.0")
 
   it "decimal" do
-    b (1.23)   >>= (`shouldBe` (1.23,   "1.23"))
-    b (123.45) >>= (`shouldBe` (123.45, "123.45"))
+    b (1.23)   `shouldReturn` (1.23,   "1.23")
+    b (123.45) `shouldReturn` (123.45, "123.45")
 
   it "negative" do
-    b (-1)      >>= (`shouldBe` (-1,      "-1.0"))
-    b (-123)    >>= (`shouldBe` (-123,    "-123.0"))
-    b (-1.23)   >>= (`shouldBe` (-1.23,   "-1.23"))
-    b (-123.45) >>= (`shouldBe` (-123.45, "-123.45"))
+    b (-1)      `shouldReturn` (-1,      "-1.0")
+    b (-123)    `shouldReturn` (-123,    "-123.0")
+    b (-1.23)   `shouldReturn` (-1.23,   "-1.23")
+    b (-123.45) `shouldReturn` (-123.45, "-123.45")
 
 newtype HexWord8 = HexWord8 Word deriving (Eq, Bits, Num, Integral, Real, Enum, Ord)
 instance Show HexWord8 where show = ("0x" <>) . ($ mempty) . showHex

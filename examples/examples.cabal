@@ -59,3 +59,13 @@ executable WriterState
     , mono-traversable >=1.0.17.0
     , text
   default-language: Haskell2010
+
+test-suite File
+  type: exitcode-stdio-1.0
+  main-is: File.hs
+  ghc-options: -Weverything -Wno-missing-import-lists -Wno-monomorphism-restriction -Wno-missing-deriving-strategies -Wno-missing-kind-signatures -Wno-missing-local-signatures
+  build-depends:
+      base
+    , biparsing-file
+    , biparsing-mixes
+  default-language: Haskell2010

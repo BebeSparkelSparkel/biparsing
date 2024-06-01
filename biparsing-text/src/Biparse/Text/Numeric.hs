@@ -165,7 +165,7 @@ realBaseTen =
   try do
     s <- sign
     ws <- digitsBaseTen `upon` abs
-    ds <- comap (const mempty) $ ignoreBackward
+    ds <- comap (const mempty) $ ignoreBackwardIso
       $   try (cons <$> (fromChar '.' <$ take (fromChar '.')) <*> digitsBaseTen)
       <!> pure mempty
     maybe (fail "Could not read a realBaseTen.") (pure . s) $ readMay $ fmap toChar $ toList $ ws <> ds

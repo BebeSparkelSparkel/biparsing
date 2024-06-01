@@ -13,6 +13,7 @@ spec = do
     (genericBinaryAdtIsoClass :: Iso IndexContext IO IO () ByteStringBuilder () (IndexPosition LazyByteString) ABC)
     ()
     ()
+    ()
     (\fw -> do
       it "A" $ fw (startIndex [0]) `shouldReturn` (A, IndexPosition 1 [])
       it "B" $ fw (startIndex [1,2]) `shouldReturn` (B 2, IndexPosition 2 [])

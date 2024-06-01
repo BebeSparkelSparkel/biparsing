@@ -1,14 +1,85 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 module Biparse.BiparserSpec where
 
+import Biparse.Biparser qualified as B
 import Data.Sequences qualified as MT
 
 spec :: Spec
 spec = do
+  describe "instances" do
+    it "Functor" do
+      let bp0 = pure 1 :: B.Biparser () () (FM ()) EitherString () Int
+      (+ 1) <$> bp0 `shouldBe` pure 2
+      let bp1 = pure 1 :: B.Biparser () () IO IO () Int
+      (+ 1) <$> bp1 `shouldBe` pure 2
+
+    describe "Applicative" do
+      it "<*>" do
+        let bp0 = pure 1 :: B.Biparser () () (FM ()) EitherString () Int
+        pure (+ 1) <*> bp0 `shouldBe` pure 2
+        let bp1 = pure 1 :: B.Biparser () () IO IO () Int
+        pure (+ 1) <*> bp1 `shouldBe` pure 2
+
+      it "*>" do
+        let bp0 = pure 1 :: B.Biparser () () (FM ()) EitherString () Int
+        bp0 *> pure () `shouldBe` pure ()
+        let bp1 = pure 1 :: B.Biparser () () IO IO () Int
+        bp1 *> pure () `shouldBe` pure ()
+
+    describe "Monad" do
+      it ">>=" do
+        let bp0 = pure 1 :: B.Biparser () () (FM ()) EitherString () Int
+        (bp0 >>= \x -> pure $ x + 1) `shouldBe` pure 2
+        let bp1 = pure 1 :: B.Biparser () () IO IO () Int
+        (bp1 >>= \x -> pure $ x + 1) `shouldBe` pure 2
+
+    describe "MonadFail" do
+      it "fail" do
+        let msg0 = "bp0 fail" :: String
+            bp0 = fail msg0 :: B.Biparser () () EitherString EitherString () Int
+        bp0 `shouldBe` B.Biparser (EString msg0) (\() -> EString msg0)
+
+      describe "*>" do
+        it "B.Biparser" do
+          let msg0 = "bp0 fail" :: String
+              bp0 = fail msg0 *> pure ():: B.Biparser () () EitherString EitherString () ()
+          bp0 `shouldBe` B.Biparser (EString msg0) (\() -> EString msg0)
+
+        fb "SRW.Biparser Maybe"
+          (let bp :: Biparser ColumnsOnly (Position () (Vector Char)) (FM (Vector Char)) Maybe () Text () () ()
+               bp = fail "test fail" *> bp
+           in bp)
+          ()
+          ()
+          ()
+          (\f -> do
+            it "should be 2" do
+              f "" `shouldSatisfy` errorPosition 1 1
+          )
+          \b -> do
+            it "should be 2" do
+              b () `shouldBe` Nothing
+
+        fb "SRW.Biparser"
+          (let bp :: Biparser ColumnsOnly (Position () (Vector Char)) (FM (Vector Char)) EitherString () Text () () Int
+               bp = fail "test fail" *> bp <!> pure 2
+           in bp)
+          ()
+          ()
+          ()
+          (\f -> do
+            it "should be 2" do
+              f "" `shouldBe` Right (2, Position () 1 1 "")
+          )
+          \b -> do
+            it "should be 2" do
+              b () `shouldBe` EValue (2, "")
+
   describe "one" do
     describe "Identity" do
       fb "id"
         (one :: Iso () IO IO () String () (Identity String) Char)
+        ()
         ()
         ()
         (\f -> do
@@ -26,6 +97,7 @@ spec = do
         ((,) <$> one `upon` fst <*> one `upon` snd :: Iso () IO IO () String () (Identity String) (Char,Char))
         ()
         ()
+        ()
         (\f -> do
           it "used twice" do
             x <- f "abc"
@@ -36,6 +108,7 @@ spec = do
 
     fb "LineColumn"
       (one :: Iso UnixLC (FM Text) IO () Text () (Position () Text) Char)
+      ()
       ()
       ()
       (\f -> do
@@ -53,6 +126,7 @@ spec = do
       (one :: Iso LinesOnly (FM [Text]) IO () [Text] () (Position () [Text]) Text)
       ()
       ()
+      ()
       (\f -> do
         it "empty" $ f [] `shouldSatisfy` errorPosition 1 1
 
@@ -63,6 +137,7 @@ spec = do
 
     fb "Differing parser and printer type"
       (one :: Iso UnixLC (FM ByteString) EitherString () ByteStringBuilder () (Position () ByteString) Word8)
+      ()
       ()
       ()
       (\f -> do
@@ -85,6 +160,7 @@ spec = do
       ) :: Iso () IO IO () String () (Identity String) String)
       ()
       ()
+      ()
       (\f -> do
         it "succeeds" $ f "abc" >>= (`shouldBe` ("ab", "c"))
 
@@ -103,6 +179,7 @@ spec = do
       ) :: Iso ColumnsOnly (FM String) EitherString () Text () (Position () String) String)
       ()
       ()
+      ()
       (\f -> do
         it "String" do
           f "abc" `shouldBe` Right ("abc", Position () 1 4 "")
@@ -116,6 +193,7 @@ spec = do
       (peek one :: Iso () IO IO () String () (Identity String) Char)
       ()
       ()
+      ()
       (\f -> do
         it "none consumed" do
           x <- f "abc"
@@ -127,6 +205,7 @@ spec = do
     describe "Alternative" do
       fb "Identity"
         (peek (takeUni 'x') <!> takeUni 'a' :: Iso () IO IO () String () (Identity String) Char)
+        ()
         ()
         ()
         (\f -> do
@@ -149,6 +228,7 @@ spec = do
         (peek (takeUni 'x') <!> takeUni 'a' :: Iso UnixLC (FM String) IO () String () (Position () String) Char)
         ()
         ()
+        ()
         (\f -> do
           it "take first" $ f "xa" `shouldBe` Right ('x', Position () 1 1 "xa")
 
@@ -165,7 +245,7 @@ spec = do
     let bp :: Biparser ColumnsOnly (Position () (Seq Char)) (FM (Seq Char)) IO () (Seq Char) () Char Char
         bp = try $ one <* take 'b'
         f = runForward bp
-        b = runBackward bp () ()
+        b = runBackward bp () () ()
 
     describe "forward" do
       it "success" $ f "abc" `shouldBe` Right ('a', Position () 1 3 "c")
@@ -180,12 +260,13 @@ spec = do
         it "prints correctly" $ b 'a' >>= (`shouldBe` ('a',"ab"))
 
         it "prints second if first fails (more of a test for the Biparser Alternative instance and should proabaly moved there)" do
-          x <- runBackward (setBackward bp (const empty) <!> bp) () () 'z'
+          x <- runBackward (setBackward bp (const empty) <!> bp) () () () 'z'
           x `shouldBe` ('z',"zb")
       
   describe "isNull" do
     fb "Identity"
       (isNull :: ConstU () (Identity String) Identity Identity () String () [()] Bool)
+      ()
       ()
       ()
       (\f -> do
@@ -202,6 +283,7 @@ spec = do
       (isNull :: ConstU UnixLC (Position () String) Identity Identity () String () [()] Bool)
       ()
       ()
+      ()
       (\f -> do
         it "true" $ f "" `shouldBe` Identity (True,"")
 
@@ -215,6 +297,7 @@ spec = do
   describe "breakWhen'" do
     fb "LineColumn"
       (breakWhen' $ stripPrefix "ab" :: Iso UnixLC (FM String) IO () ByteString () (Position () String) String)
+      ()
       ()
       ()
       (\f -> do
@@ -244,6 +327,7 @@ spec = do
 
     fb "Identity"
       (breakWhen' $ stripPrefix "ab" :: Iso () IO IO () String () (Identity String) String)
+      ()
       ()
       ()
       (\f -> do
@@ -276,6 +360,7 @@ spec = do
       (count $ takeElementsWhile (== 'a') :: Biparser UnixLC (Position () Text) (FM Text) IO () Text () [Char] (Natural,[Char]))
       ()
       ()
+      ()
       (\f -> do
         prop "correct count" \(NonNegative x, NonNegative y) -> let
           as :: (IsSequence a, Element a ~ Char, Index a ~ Int) => a
@@ -289,6 +374,7 @@ spec = do
 
     fb "SubStateContext" 
       (count $ takeWhile (== 'a') :: Biparser UnixLC (Position () Text) (FM Text) IO () Text () Text (Natural,Text))
+      ()
       ()
       ()
       (\f -> do

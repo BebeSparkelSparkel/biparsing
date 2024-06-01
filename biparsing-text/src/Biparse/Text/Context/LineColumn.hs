@@ -16,6 +16,7 @@ module Biparse.Text.Context.LineColumn
   , line
   , column
   , startLineColumn
+  , startLineColumn'
   , ElementToList
   , ListToElement
   ) where
@@ -60,21 +61,19 @@ instance GetSubState (Position dataId text) where
 
 instance InitSuperState (LineColumn lb) text where
   type SuperState (LineColumn lb) text = Position FilePath text
-  fromSubState = fromSubState'
+  fromSubState = startLineColumn'
 instance InitSuperState LinesOnly text where
   type SuperState LinesOnly text = Position FilePath text
-  fromSubState = fromSubState'
+  fromSubState = startLineColumn'
 instance InitSuperState ColumnsOnly text where
   type SuperState ColumnsOnly text = Position FilePath text
-  fromSubState = fromSubState'
+  fromSubState = startLineColumn'
 instance InitSuperState LineColumnUnknownBreak text where
   type SuperState LineColumnUnknownBreak text = Position FilePath text
-  fromSubState = fromSubState'
+  fromSubState = startLineColumn'
 instance InitSuperState NoUpdate text where
   type SuperState NoUpdate text = Position FilePath text
-  fromSubState = fromSubState'
-fromSubState' :: d -> text -> Position d text
-fromSubState' fp text = startLineColumn @() text & dataId .~ fp
+  fromSubState = startLineColumn'
 type instance SuperArg (Position d _) = d
 
 type CharCs text char =
@@ -138,6 +137,9 @@ instance ReplaceSubState (Position dataId a) ss (Position dataId ss) where
 
 startLineColumn :: forall d text. Default d => text -> Position d text
 startLineColumn = Position def 1 1
+
+startLineColumn' :: d -> text -> Position d text
+startLineColumn' fp text = startLineColumn @() text & dataId .~ fp
 
 instance (Default d, IsString text) => IsString (Position d text) where
   fromString = startLineColumn . fromString

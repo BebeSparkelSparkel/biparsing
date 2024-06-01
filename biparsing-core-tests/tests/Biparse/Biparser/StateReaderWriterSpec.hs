@@ -15,6 +15,7 @@ spec = do
       :: Iso LinesOnly (FM [Text]) IO () [Text] () (Position () [Text]) Word)
       ()
       ()
+      ()
       (\f -> do
         it "empty" $ f [] `shouldSatisfy` errorPosition 1 1
 
@@ -38,6 +39,7 @@ spec = do
           (naturalBaseTen' @Int)
         )
       :: Iso UnixLC (FM Text) IO () Text () (Position () Text) [Int])
+      ()
       ()
       ()
       (\f -> do
@@ -79,7 +81,7 @@ spec = do
         bp = do
           c <- askBw undefined
           cons (c2w c) <$> rest
-        b = runBackward bp 'A' ()
+        b = runBackward bp () 'A' ()
     b "cd" `shouldBe` EValue ("Acd", "cd")
 
 instance Monoid text => ChangeMonad ListToElement (EEP dataId e [text]) (EEP dataId e text) () where

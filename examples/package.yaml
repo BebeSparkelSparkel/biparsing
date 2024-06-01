@@ -32,6 +32,12 @@ executables:
     dependencies:
       - bytestring
       - extra
+  StreamConversion:
+    main: StreamConversion.hs
+    dependencies:
+      - biparsing-core
+      - mtl
+      - semigroupoids
   WriterState:
     main: WriterState.hs
     dependencies:
@@ -40,10 +46,9 @@ executables:
       - microlens-pro
       - microlens
       - text
-  StreamConversion:
-    main: StreamConversion.hs
-    dependencies:
-      - biparsing-core
-      - mtl
-      - semigroupoids
 
+tests:
+  File:
+    main: File.hs
+    dependencies:
+      - biparsing-file

@@ -14,6 +14,7 @@ spec = do
       :: Biparser () (Identity [(Int,Double)]) EitherString EitherString () [(Int,Double)] () [(Int,Double)] Double)
       ()
       ()
+      ()
       (\f -> do
         it "empty" $ f mempty `shouldSatisfy` isString
 

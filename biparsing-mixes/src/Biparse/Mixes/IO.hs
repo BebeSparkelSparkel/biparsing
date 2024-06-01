@@ -50,7 +50,7 @@ encodeEasy :: forall c ss u v.
   => BiparserEasy c ss u v
   -> u
   -> IO (AssociatedWriter ss)
-encodeEasy bp u = SRW.evalBackward bp () () u
+encodeEasy bp u = SRW.evalBackward bp () () () u
 
 -- * More General Types and Functions
 --
@@ -79,5 +79,5 @@ encode :: forall c ss r ws u v.
   -> ws
   -> u
   -> IO (AssociatedWriter ss)
-encode bp r ws u = SRW.evalBackward bp r ws u
+encode bp r ws u = SRW.evalBackward bp () r ws u
 

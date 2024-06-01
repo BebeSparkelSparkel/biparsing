@@ -21,7 +21,11 @@ spec = do
   test "int128" int128
 
 test :: (Binary b, Arbitrary b, Eq b, Show b) => String -> Iso IndexContext IO IO () ByteStringBuilder () (IndexPosition LazyByteString) b -> Spec
-test name bp = fb @IndexContext @(IndexPosition LazyByteString) @IO @IO name bp () ()
+test name bp = fb @IndexContext @(IndexPosition LazyByteString) @IO @IO name
+  bp
+  ()
+  ()
+  ()
   (\fw -> prop "same as binary" \ss -> case decodeOrFail ss of
     Right (remainder, i, x) -> fw (startIndex ss) `shouldReturn` (x, IndexPosition i remainder)
     Left _ -> fw (startIndex ss) `shouldThrow` isUserError

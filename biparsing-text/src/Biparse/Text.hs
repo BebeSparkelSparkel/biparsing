@@ -4,9 +4,10 @@ module Biparse.Text
   ( CharElement
   , char
   , string
+  , stringShow
   ) where
 
-import Biparse.General (stripPrefix)
+import Biparse.General (stripPrefix, Take, takeDi)
 
 type CharElement s char =
   ( IsChar char
@@ -58,4 +59,16 @@ string :: forall c s m n u text w.
   => text
   -> Const c s m n u
 string = stripPrefix
+
+-- | Tries matching the string @fromString $ show u@ when parsing.
+-- Tries matching @u@ when printing.
+stringShow :: forall c s m n u text char w e.
+  ( Take c s m n text char w e
+  , Eq u
+  , Show u
+  , IsString char
+  )
+  => u
+  -> Iso c m n s u
+stringShow u = takeDi (fromString $ show u) u
 

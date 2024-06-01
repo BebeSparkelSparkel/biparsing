@@ -16,27 +16,32 @@ tests:
     main: Spec.hs
     source-dirs: tests/
     dependencies:
+      - name: base
+        mixin:
+          - hiding (Prelude)
       - biparsing-core
-      - biparsing-text
       - biparsing-test
-      - mono-traversable
+      - biparsing-text
+      - bytestring
       - hspec
+      - mono-traversable
+      - mtl
     default-extensions:
-      - OverloadedStrings
-      - OverloadedLists
-      - NamedFieldPuns
-      - ImportQualifiedPost
       - BlockArguments
-      - TypeApplications
-      - DataKinds
-      - TypeFamilies
-      - FlexibleInstances
-      - MultiParamTypeClasses
-      - LambdaCase
-      - ScopedTypeVariables
       - ConstraintKinds
-      - FlexibleContexts
+      - DataKinds
       - DeriveGeneric
+      - FlexibleContexts
+      - FlexibleInstances
+      - ImportQualifiedPost
+      - LambdaCase
+      - MultiParamTypeClasses
+      - NamedFieldPuns
+      - OverloadedLists
+      - OverloadedStrings
+      - ScopedTypeVariables
+      - TypeApplications
+      - TypeFamilies
     ghc-options:
       - -Werror
       - -Weverything

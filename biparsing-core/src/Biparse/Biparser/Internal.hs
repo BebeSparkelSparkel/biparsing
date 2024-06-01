@@ -9,11 +9,12 @@ module Biparse.Biparser.Internal
   , backward
   , setBackward
   , GetContext
+  , GetState
+  , wrapContext
   , ForwardMonad
   , BackwardMonad
   , Iso
   , IsoClass(..)
-  , coerceIso
   , Unit
   , unit
   , mono
@@ -39,6 +40,7 @@ module Biparse.Biparser.Internal
   , forwardFail
   , ignoreForward
   , ignoreBackward
+  , ignoreBackwardIso
   , GetSubState(..)
   , ReplaceSubState(..)
   , SubStateLens
@@ -58,9 +60,11 @@ module Biparse.Biparser.Internal
   , splitFw
   , peek
   , try
+  , tryState
   , optionalBack
   , isNull
   , eof
+  , eofFw
   , breakWhen'
   , count
   , askBw
@@ -73,19 +77,16 @@ module Biparse.Biparser.Internal
   ) where
 
 import Biparse.Utils (headTailAlt)
-import Lens.Micro (Lens, lens)
-import Biparse.FixFail (FixFailM(fixFailM))
-import Control.Applicative qualified
 import Control.Monad.Extra (findM, whenM)
 import Control.Monad.Unrecoverable (MonadUnrecoverable, UnrecoverableError, throwUnrecoverable)
 import Control.Monad.Writer.Class (listen)
 import Control.Profunctor.FwdBwd (BwdMonad, Comap, FwdBwd, pattern FwdBwd, MapMs(mapMs), DualMap)
 import Control.Profunctor.FwdBwd qualified as FB
+import Data.Coerce (coerce)
 import Data.Either (Either)
 import Data.Functor.Identity (runIdentity)
 import Data.Profunctor (Profunctor(dimap))
-import Data.Coerce (Coercible)
-import Unsafe.Coerce (unsafeCoerce)
+import Lens.Micro (Lens, lens)
 
 -- | Product type for simultainously constructing forward and backward running programs.
 newtype Biparser context s m n u v = Biparser' {unBiparser :: FwdBwd m n u v}
@@ -104,8 +105,9 @@ setBackward (Biparser fw _) = Biparser fw
 type instance BwdMonad () (Biparser _ _ _ n) = n
 
 type GetContext :: Type -> Type
-type family GetContext bp where
-  GetContext (Biparser c _ _ _ _ _) = c
+type family GetContext bp where GetContext (Biparser c _ _ _ _ _) = c
+type GetState :: Type -> Type
+type family GetState bb where GetState (Biparser _ s _ _ _ _) =  s
 type ForwardMonad :: Type -> Type -> Type
 type family ForwardMonad bp where
   ForwardMonad (Biparser _ _ m _ _ _) = m
@@ -114,6 +116,11 @@ type BackwardMonad :: Type -> Type -> Type
 type family BackwardMonad bp where
   BackwardMonad (Biparser _ _ _ n _ _) = n
   --BackwardMonad (Biparser _ _ _ n) = n
+
+wrapContext :: forall w c s m n u v
+  .  Biparser c     s m n u v
+  -> Biparser (w c) s m n u v
+wrapContext = coerce
 
 -- * Mapping Backward
 -- Used to converte @u@ to the correct type for the biparser.
@@ -254,9 +261,6 @@ type Iso c m n a b = Biparser c a m n b b
 
 class IsoClass c m n a b where iso :: Iso c m n a b
 
-coerceIso :: (Coercible b b', Coercible b' b) => Iso c m n a b -> Iso c m n a b'
-coerceIso = unsafeCoerce
-
 -- ** Unit
 -- Unit when @u@ and @v@ are @()@
 
@@ -308,11 +312,19 @@ ignoreForward :: forall c s m n u v.
   -> Biparser c s m n u v
 ignoreForward x y = setForward y $ pure x
 
-ignoreBackward :: forall c s m n a.
+-- | Throws away the forward computation and returns 'x'. Only the backwards computation runs.
+ignoreBackward :: forall c s m n u u' v.
+  Applicative n
+  => v
+  -> Biparser c s m n u  v
+  -> Biparser c s m n u' v
+ignoreBackward x y = setBackward y $ const $ pure x
+
+ignoreBackwardIso :: forall c s m n a.
   Applicative n
   => Iso c m n s a
   -> Iso c m n s a
-ignoreBackward = flip setBackward pure
+ignoreBackwardIso = flip setBackward pure
 
 -- * SubState
 -- SubState allows for context outside of the parser and printer.
@@ -379,11 +391,6 @@ type ElementContext context state = (GetSubState state, UpdateStateWithElement c
 -- - Returns the updated state
 class UpdateStateWithNConsumed context state where
   updateStateWithNConsumed :: state -> Index (SubState state) -> state
-
-instance (Functor m, Functor n) => Functor (Biparser c s m n u) where
-  fmap f (Biparser fw' bw') = Biparser
-    (fmap f fw')
-    (fmap f . bw')
 
 -- * Atoms
 -- Must be used to construct all other biparsers that have context.
@@ -529,9 +536,15 @@ eof ::
   , GetSubState s
   , MonoFoldable (SubState s)
   ) => Const c s m n u
-eof = Biparser
-  (whenM subStateNull (fail "Expected to be at the end of input but there is still more"))
-  (const $ pure ())
+eof = Biparser eofFw $ const $ pure ()
+
+eofFw ::
+  ( MonadState s m
+  , MonadFail m
+  , GetSubState s
+  , MonoFoldable (SubState s)
+  ) => m ()
+eofFw = whenM subStateNull (fail "Expected to be at the end of input but there is still more")
 
 subStateNull :: (MonadState s m, GetSubState s, MonoFoldable (SubState s)) => m Bool
 subStateNull = gets $ null . getSubState
@@ -625,6 +638,18 @@ resetState p (Biparser fw bw) = Biparser
 
 -- * Biparser Instances
 
+deriving instance (Default u, Show (m v), Show (n v)) => Show (Biparser c s m n u v)
+
+deriving instance (Default u, Eq (m v), Eq (n v)) => Eq (Biparser c s m n u v)
+
+deriving instance (Functor m, Functor n) => Functor (Biparser c s m n u)
+
+deriving instance (Applicative m, Applicative n) => Applicative (Biparser c s m n u)
+
+deriving instance (Monad m, Monad n) => Monad (Biparser c s m n u)
+
+deriving instance (MonadFail m, MonadFail n) => MonadFail (Biparser c s m n u)
+
 deriving instance Monad n => Comap () (Biparser c s m n)
 
 deriving instance (Functor m, Functor n) => DualMap (Biparser c s m n u)
@@ -635,33 +660,8 @@ instance (MonadUnrecoverable m, MonadUnrecoverable n, UnrecoverableError m ~ Unr
   type UnrecoverableError (Biparser c s m n u) = UnrecoverableError (FwdBwd m n u)
   throwUnrecoverable = Biparser' . throwUnrecoverable
 
-instance (Applicative m, Applicative n) => Applicative (Biparser c s m n u) where
-  pure v = Biparser (pure v) (const $ pure v)
-  Biparser fw bw <*> Biparser fw' bw' = Biparser
-    (fw <*> fw')
-    (\u -> bw u <*> bw' u)
-
-instance (Control.Applicative.Alternative m, Control.Applicative.Alternative n) => Control.Applicative.Alternative (Biparser c s m n u) where
-  empty = Biparser Control.Applicative.empty (const Control.Applicative.empty)
-  Biparser fw bw <|> Biparser fw' bw' =
-    Biparser (fw Control.Applicative.<|> fw') (\u -> bw u Control.Applicative.<|> bw' u)
-
 instance (Alt m, Alt n) => Alt (Biparser c s m n u) where
-  Biparser fw bw <!> Biparser fw' bw' =
-    Biparser (fw <!> fw') (\u -> bw u <!> bw' u)
+  Biparser' x <!> Biparser' y = Biparser' $ x <!> y
 
-instance (Monad m, Monad n) => Monad (Biparser c s m n u) where
-  pu >>= kw = Biparser fw bw
-    where
-    fw = forward pu >>= forward . kw
-    bw u = backward pu u >>= ($ u) . backward . kw
-
-instance (MonadFail m, MonadFail n) => MonadFail (Biparser c s m n u) where
-  fail x = Biparser (fail x) (const $ fail x)
-
-instance (Functor m, Functor n) => Profunctor (Biparser c s m n) where
-  dimap f g (Biparser fw bw) = Biparser (g <$> fw) (fmap g . bw . f)
-
-instance (FixFailM m m', FixFailM n n') => FixFailM (Biparser c s m n u) (Biparser c s m' n' u) where
-  fixFailM x (Biparser fw bw) = Biparser (fixFailM x fw) (fixFailM x . bw)
+deriving instance (Functor m, Functor n) => Profunctor (Biparser c s m n)
 

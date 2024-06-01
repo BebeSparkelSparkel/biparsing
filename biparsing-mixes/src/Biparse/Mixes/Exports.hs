@@ -30,6 +30,9 @@ module Biparse.Mixes.Exports
   , module System.IO
   , module Text.Show
   , module Control.Applicative
+  , module Data.Semigroup
+  , module Data.Monoid
+  , module Data.Bool
   ) where
 
 import Biparse.Biparser hiding (Biparser, Iso, Unit, Const, ConstU)
@@ -61,5 +64,7 @@ import GHC.Enum (succ, pred)
 import Biparse.Biparser.StateReaderWriter (zoom, zoomWrite, zoomOne)
 import System.IO (FilePath)
 import Text.Show (Show, show, ShowS)
-import Control.Applicative (pure)
-
+import Control.Applicative (pure, (*>), (<*), (<*>))
+import Data.Semigroup (Semigroup((<>)))
+import Data.Monoid (Monoid(mempty))
+import Data.Bool (Bool, (&&), (||))

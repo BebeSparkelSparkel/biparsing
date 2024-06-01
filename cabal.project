@@ -1,2 +1,10 @@
 packages:
   */*.cabal
+  
+  ../mtl/mtl.cabal
+
+--source-repository-package
+--  type: git
+--  location: https://github.com/bebeSparkelSparkel/mtl.git
+--  tag: a40942d1769ac78598b2798ddf3e5888fcc15b2b
+
