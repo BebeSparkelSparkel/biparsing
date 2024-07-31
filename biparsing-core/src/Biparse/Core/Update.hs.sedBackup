@@ -1,0 +1,12 @@
+{-# LANGUAGE NoImplicitPrelude #-}
+module Biparse.Core.Update (
+UpdateStateWithSubString(..),
+UpdateStateWithElement(..),
+UpdateStateWithIndex(..),
+) where
+
+class UpdateStateWithSubString state subString where updateStateWithSubString :: subString -> state -> state
+
+class UpdateStateWithElement state element where updateStateWithElement :: element -> state -> state
+
+class UpdateStateWithIndex state index where updateStateWithIndex :: index -> state -> state

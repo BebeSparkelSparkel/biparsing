@@ -17,7 +17,6 @@ library:
     - name: base
       mixin:
         - hiding (Prelude)
-        #- (Prelude as BasePrelude, Data.Function, Data.Monoid, Control.Applicative, Control.Monad, Data.Functor, Data.Proxy, GHC.TypeLits, Text.Printf, Data.Maybe, Data.String, Data.Bool, Data.Coerce, Data.Either, Data.Eq, Data.Ord, Text.Show, Data.Functor.Identity, Data.Kind, Data.List, Data.Bifunctor, Data.Int, Data.Traversable, Data.Tuple, GHC.Enum, GHC.Num, GHC.Real, Numeric.Natural, GHC.Generics, GHC.Err, System.IO, Unsafe.Coerce, Data.List.NonEmpty, Data.IORef, GHC.IO, System.IO.Unsafe, GHC.Exts)
     - containers
     - data-default
     - data-diverse
@@ -27,11 +26,12 @@ library:
     - microlens-mtl
     - microlens-pro
     - microlens-th
-    - mono-traversable >= 1.0.17.0
     - mtl >= 2.3
     - profunctors
+    - profunctor-monad
     - semigroupoids
     - transformers >= 0.6.1.1
+    - mono-traversable
 
     # remove dependencies after Data.EqElement is removed
     - text >= 2.1.1

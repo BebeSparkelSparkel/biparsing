@@ -18,29 +18,35 @@ library:
       mixin:
         - hiding (Prelude)
     - biparsing-core
+    - biparsing-state
+    - biparsing-combinators
     - mtl
-    - mono-traversable
     - semigroupoids
     - safe
     - microlens
     - microlens-th
     - data-default
+    - profunctors
+    - mutable-containers
+    - mono-traversable
+    - extra
   default-extensions:
-    - ImportQualifiedPost
-    - PatternSynonyms
-    - RankNTypes
-    - TypeApplications
-    - ScopedTypeVariables
-    - ConstraintKinds
-    - TypeFamilies
-    - FlexibleContexts
     - BlockArguments
-    - LambdaCase
-    - StandaloneKindSignatures
-    - FlexibleInstances
+    - ConstraintKinds
     - DataKinds
-    - MultiParamTypeClasses
     - DeriveFunctor
+    - FlexibleContexts
+    - FlexibleInstances
+    - ImportQualifiedPost
+    - LambdaCase
+    - MultiParamTypeClasses
+    - PatternSynonyms
+    - QuantifiedConstraints
+    - RankNTypes
+    - ScopedTypeVariables
+    - StandaloneKindSignatures
+    - TypeApplications
+    - TypeFamilies
   ghc-options:
     - -Werror
     - -Weverything

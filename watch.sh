@@ -10,7 +10,7 @@ packageFiles() {
 }
 
 cabalAndHaskellFiles() {
-  find $searchDir -name '*.cabal' -or -name 'cabal.project*' -or -name '*.hs' 
+  find $searchDir -path '*dist-newstyle*' -prune -or '(' -name '*cabal*' -or -name '[A-Za-z]*.hs' ')'
 }
 
 hpackWatch() {

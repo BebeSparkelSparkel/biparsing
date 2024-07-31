@@ -20,7 +20,6 @@ library
       Biparse.AssociatedWriter
       Biparse.Mixes.Either
       Biparse.Mixes.Exports
-      Biparse.Mixes.IO
       Biparse.Mixes.SubStates
   other-modules:
       Prelude
@@ -44,11 +43,15 @@ library
   ghc-options: -Werror -Weverything -Wno-implicit-prelude -Wno-missing-deriving-strategies -Wno-missing-kind-signatures -Wno-missing-local-signatures -Wno-missing-safe-haskell-mode -Wno-safe -Wno-unsafe -Wno-unused-packages
   build-depends:
       base
+    , biparsing-combinators
+    , biparsing-control
     , biparsing-core
+    , biparsing-state
     , biparsing-text
     , bytestring
+    , data-default
+    , extra
     , microlens
-    , mono-traversable >=1.0.17.0
     , mtl
     , semigroupoids
     , text >=2.1.1

@@ -1,257 +1,255 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE CPP #-}
+{-# LANGUAGE MultiWayIf #-}
+{-# LANGUAGE FunctionalDependencies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
-module Biparse.Text.Numeric
-  ( NaturalConstraints
-  , naturalBaseTen
-  , charToDigitMay
-  , charToDigit
-  , naturalBaseTen'
-  , IntConstraints
-  , intBaseTen
-  , eNotation
-  , RealConstrints
-  , realBaseTen
-  , hex
-  , CharCase(..)
-  , digitsHexList
-  , capitalHexList
-  , lowerHexList
-  ) where
+#include "MachDeps.h"
+module Biparse.Text.Numeric (
+naturalBaseTen,
+intBaseTen,
+--eNotation,
+--realBaseTen,
+hex,
+CharCase(..),
+digitsHexList,
+capitalHexList,
+lowerHexList,
+) where
 
-import Biparse.General (take, optional, takeTri, rest)
-import Biparse.Text (CharElement)
+import Biparse.General (takeTri)
 import Data.Bits (Bits, zeroBits, shift, shiftR, (.&.))
-import Data.Char (isDigit)
-import Data.Int (Int8, Int16, Int32, Int64, Int)
+import Data.Int (Int8, Int16, Int32, Int64)
 import Data.Tuple (swap)
 import Data.Word (Word, Word8, Word16, Word32, Word64)
-import GHC.Float (Float, Double)
-import GHC.Num ((*), negate, Integer, abs)
-import GHC.Real (Fractional, (^^), Integral)
+--import GHC.Float (Float, Double)
+import GHC.Num ((*), (-), negate, abs)
+import GHC.Real (Integral, fromIntegral, div, mod)
 import Numeric (showHex)
-import Safe (readMay, indexMay)
-import Data.Sequences qualified
-import Data.Ix (Ix, index)
+import Data.Ix (Ix, index, inRange)
 import Data.List (lookup)
 import GHC.Num (Num((+)))
-import Text.Read (Read)
 import Numeric.Natural (Natural)
-import Data.Maybe (Maybe(Nothing))
+import Biparse.IsoClass (IsoClass(iso))
+import Biparse.Core.Classes (OneFwd(oneFwd), Diverge(diverge), UnfoldlExactN(unfoldlExactN))
+import Data.Tuple.Extra ((&&&))
 
-instance NaturalConstraints c s m n Word   text char w => IsoClass c m n s Word   where iso = naturalBaseTen
-instance NaturalConstraints c s m n Word8  text char w => IsoClass c m n s Word8  where iso = naturalBaseTen
-instance NaturalConstraints c s m n Word16 text char w => IsoClass c m n s Word16 where iso = naturalBaseTen
-instance NaturalConstraints c s m n Word32 text char w => IsoClass c m n s Word32 where iso = naturalBaseTen
-instance NaturalConstraints c s m n Word64 text char w => IsoClass c m n s Word64 where iso = naturalBaseTen
-
-type NaturalConstraints c s m n number text char w =
-  ( CharElement s char
-  , Ix char
-  , IsSequence text
-  , MonadState s m
-  , MonadFail m
-  , MonadWriter w n
-  , MonadFail n
-  , SubStateContext c s
-  , Enum number
+naturalBaseTen :: forall p f b number i. NaturalBaseTen p f b number i => Iso p number
+naturalBaseTen = naturalLimitedBaseTen maxBound
+type NaturalBaseTen p f b number i =
+  ( Diverge (p number) f b number
+  , MonadFail f
+  , OneFwd i f
+  , Try f
+  , Alt f
+  , UnfoldlExactN b i
+  , Monad b
   , Show number
-  , Show text
-  , ConvertSequence c text w n
-  , ContextualStateTransformerPLEASEREMOVESUFFIX c text m
-  , text ~ SubState s
+  , Integral number
+  , Bounded number
+  , NumberOfDigits number
+  , i ~ Item' p
+  , Show i
+  , Ix i
+  , Enum i
+  , IsChar i
   )
+instance NaturalBaseTen p f b Word   i => IsoClass p Word   where iso = naturalBaseTen
+instance NaturalBaseTen p f b Word8  i => IsoClass p Word8  where iso = naturalBaseTen
+instance NaturalBaseTen p f b Word16 i => IsoClass p Word16 where iso = naturalBaseTen
+instance NaturalBaseTen p f b Word32 i => IsoClass p Word32 where iso = naturalBaseTen
+instance NaturalBaseTen p f b Word64 i => IsoClass p Word64 where iso = naturalBaseTen
 
-naturalBaseTen :: forall c s m n number text char w.
-  NaturalConstraints c s m n number text char w
-  => Iso c m n s number
-naturalBaseTen = do
-  ds <- digitsBaseTen
-  if null ds
-  then do
-    cs <- peek $ Data.Sequences.take 20 <$> rest `upon` const mempty
-    fail $ "Could not parse " <> show cs <> " to a base 10 natural."
-  else pure $ toEnum $ foldl' (\x c -> x * 10 + charToDigit c) 0 ds
-
-charToDigitMay :: (Ix char, IsChar char) => char -> Maybe Int
-charToDigitMay = indexMay digitRange
-
-charToDigit :: (Ix char, IsChar char) => char -> Int
-charToDigit = index digitRange
-
-digitRange :: IsChar char => (char, char)
-digitRange = (fromChar '0', fromChar '9')
-
-naturalBaseTen' :: forall number c s m n text char w.
-  NaturalConstraints c s m n number text char w
-  => Iso c m n s number
-naturalBaseTen' = naturalBaseTen
-
-instance IntConstraints c s m n Int   text char w e => IsoClass c m n s Int   where iso = intBaseTen
-instance IntConstraints c s m n Int8  text char w e => IsoClass c m n s Int8  where iso = intBaseTen
-instance IntConstraints c s m n Int16 text char w e => IsoClass c m n s Int16 where iso = intBaseTen
-instance IntConstraints c s m n Int32 text char w e => IsoClass c m n s Int32 where iso = intBaseTen
-instance IntConstraints c s m n Int64 text char w e => IsoClass c m n s Int64 where iso = intBaseTen
-
-type IntConstraints c s m n number text char w e =
-  ( NaturalConstraints c s m n number text char w
-  -- m
-  , MonadError e m
-  , Alt m
-  -- n
-  , Alt n
-  -- number
-  , Num number
-  , Ord number
+naturalLimitedBaseTen :: forall p f b number i.
+  ( Diverge (p number) f b number
+  , MonadFail f
+  , OneFwd i f
+  , Try f
+  , Alt f
+  , UnfoldlExactN b i
+  , Monad b
   , Show number
-  -- context
-  , ElementContext c s
-  -- w
-  , ConvertSequence c text w n
-  , ConvertElement c char w n
+  , Integral number
+  , NumberOfDigits number
+  , i ~ Item' p
+  , Show i
+  , Ix i
+  , Enum i
+  , IsChar i
   )
+  => number
+  -> Iso p number
+naturalLimitedBaseTen limit = diverge @(p number) @f @b @number
+  do
+    x <- getDigit
+    fw x
+  \n -> do
+    _ <- unfoldlExactN (numDigits n) ((`div` 10) &&& toEnum . (+ fromEnum zero) . fromIntegral . (`mod` 10)) n
+    pure n
+  where
+  fw x = Just <$> getDigit <!> pure Nothing >>= maybe (pure x) \d -> if limit - x > d
+    then fw $ 10 * x + d
+    else fail $ "Exceeded limit of " <> show limit
+  getDigit = try do
+    c <- oneFwd
+    if inRange range c
+    then pure $ fromIntegral $ index range c
+    else fail $ show c <> " is not a digit."
+  range = (zero, fromChar '9')
+  zero :: Item' p
+  zero = fromChar '0'
 
-intBaseTen :: forall c s m n number text char w e.
-  IntConstraints c s m n number text char w e
-  => Iso c m n s number
+intBaseTen :: forall p f b m number i. IntBaseTen p f b m number i => Iso p number
 intBaseTen = do
   s <- sign
   n <- naturalBaseTen `upon` abs
   pure $ s n
-
-type RealConstrints c s m n number text char w e =
-  ( NaturalConstraints c s m n number text char w
-  -- m
-  , Alt m
-  , MonadError e m
-  -- n
-  , Alt n
-  -- number
-  , Num number
-  , Ord number
-  , Show number
-  , Read number
-  -- context
-  , ElementContext c s
-  , ContextualStateTransformerPLEASEREMOVESUFFIX c text m
-  -- text
-  , Show text
-  , text ~ SubState s
-  -- w
-  , ConvertSequence c text w n
-  , ConvertElement c char w n
+type IntBaseTen p f b m number i =
+  ( Sign p m number i
+  , NaturalBaseTen p f b number i
+  , Monad (p number)
   )
+instance IntBaseTen p f b m Int   i => IsoClass p Int   where iso = intBaseTen
+instance IntBaseTen p f b m Int8  i => IsoClass p Int8  where iso = intBaseTen
+instance IntBaseTen p f b m Int16 i => IsoClass p Int16 where iso = intBaseTen
+instance IntBaseTen p f b m Int32 i => IsoClass p Int32 where iso = intBaseTen
+instance IntBaseTen p f b m Int64 i => IsoClass p Int64 where iso = intBaseTen
 
-instance RealConstrints c s m n Float  text char w e => IsoClass c m n s Float  where iso = realBaseTen
-instance RealConstrints c s m n Double text char w e => IsoClass c m n s Double where iso = realBaseTen
+---- | Only wirtes digits and not powers of 10.
+--eNotation :: forall p f b m number i.
+--  ( Diverge (p Int) f b Int
+--  , forall u. MonadFail (p u)
+--  , forall u. Alt (p u)
+--  , forall u. Try (p u)
+--  , Profunctor p
+--  , One p
+--  , Colift p m
+--  , MonadFail m
+--  , MonadFail f
+--  , OneFwd i f
+--  , Try f
+--  , Alt f
+--  , UnfoldlExactN b i
+--  , Monad b
+--  , Fractional number
+--  , i ~ Item' p
+--  , Show i
+--  , Ix i
+--  , Enum i
+--  , IsChar i
+--  ) => Iso p number
+--eNotation = do
+--  digits <- realBaseTen
+--  power :: Maybe Int <- comap (const Nothing) $ optional do
+--    take (fromChar 'E') <!> take (fromChar 'e')
+--    intBaseTen
+--  pure $ maybe id ((*) . (10 ^^)) power $ digits
+--
+--realBaseTen :: forall p number.
+--  ()
+--  => Iso p number
+--realBaseTen =
+--  try do
+--    s <- sign
+--    ws <- digitsBaseTen `upon` abs
+--    ds <- comap (const mempty) $ ignoreBackwardIso
+--      $   try (cons <$> (fromChar '.' <$ take (fromChar '.')) <*> digitsBaseTen)
+--      <!> pure mempty
+--    maybe (fail "Could not read a realBaseTen.") (pure . s) $ readMay $ fmap toChar $ toList $ ws <> ds
+--  <!> do
+--    --cs <- peek $ Data.Sequences.take 20 <$> rest `upon` const mempty
+--    --fail $ "Could not parse " <> show cs <> " to a base 10 real."
+--    fail $ "Could not parse a base 10 real."
+--instance () => IsoClass p Float  where iso = realBaseTen
+--instance () => IsoClass p Double where iso = realBaseTen
 
--- | Only wirtes digits and not powers of 10.
-eNotation :: forall c s m n number text char w e.
-  ( RealConstrints c s m n number text char w e
-  , Fractional number
-  ) => Iso c m n s number
-eNotation = do
-  digits <- realBaseTen
-  power :: Maybe Integer <- comap (const Nothing) $ optional do
-    take (fromChar 'E') <!> take (fromChar 'e')
-    intBaseTen
-  pure $ maybe id ((*) . (10 ^^)) power $ digits
+class NumberOfDigits number where numDigits :: number -> Int
+#if WORD_SIZE_IN_BITS == 64
+instance NumberOfDigits Word   where numDigits = numDigitsWord64
+instance NumberOfDigits Int    where numDigits = numDigitsWord64 @Word64 . intToWord
+#elif WORD_SIZE_IN_BITS == 32
+instance NumberOfDigits Word   where numDigits = numDigitsWord32
+instance NumberOfDigits Int    where numDigits = numDigitsWord32 @Word32 . intToWord
+#endif
+instance NumberOfDigits Word8  where numDigits = numDigitsWord8
+instance NumberOfDigits Word16 where numDigits = numDigitsWord16
+instance NumberOfDigits Word32 where numDigits = numDigitsWord32
+instance NumberOfDigits Word64 where numDigits = numDigitsWord64
+instance NumberOfDigits Int8   where numDigits = numDigitsWord8  @Word8  . intToWord
+instance NumberOfDigits Int16  where numDigits = numDigitsWord16 @Word16 . intToWord
+instance NumberOfDigits Int32  where numDigits = numDigitsWord32 @Word32 . intToWord
+instance NumberOfDigits Int64  where numDigits = numDigitsInt64  @Word64 . intToWord
+intToWord :: (Integral a, Num b) => a -> b
+intToWord = fromIntegral . abs
+numDigitsWord64 :: forall a. (Num a, Ord a) => a -> Int
+numDigitsWord64 x = if
+  | x >= 10000000000000000000 -> 20
+  | otherwise -> numDigitsInt64 x
+numDigitsInt64 :: forall a. (Num a, Ord a) => a -> Int
+numDigitsInt64 x = if
+  | x >= 1000000000000000000 -> 19
+  | x >= 100000000000000000 -> 18
+  | x >= 10000000000000000 -> 17
+  | x >= 1000000000000000 -> 16
+  | x >= 100000000000000 -> 15
+  | x >= 10000000000000 -> 14
+  | x >= 1000000000000 -> 13
+  | x >= 100000000000 -> 12
+  | x >= 10000000000 -> 11
+  | otherwise -> numDigitsWord32 x
+numDigitsWord32 :: forall a. (Num a, Ord a) => a -> Int
+numDigitsWord32 x = if
+  | x >= 1000000000 -> 10
+  | x >= 100000000 -> 9
+  | x >= 10000000 -> 8
+  | x >= 1000000 -> 7
+  | x >= 100000 -> 6
+  | otherwise -> numDigitsWord16 x
+numDigitsWord16 :: forall a. (Num a, Ord a) => a -> Int
+numDigitsWord16 x = if
+  | x >= 10000 -> 5
+  | x >= 1000 -> 4
+  | otherwise -> numDigitsWord8 x
+numDigitsWord8 :: forall a. (Num a, Ord a) => a -> Int
+numDigitsWord8 x = if
+  | x >= 100 -> 3
+  | x >= 10 -> 2
+  | otherwise -> 1
 
-realBaseTen :: forall c s m n number text char w e.
-  RealConstrints c s m n number text char w e
-  => Iso c m n s number
-realBaseTen =
-  try do
-    s <- sign
-    ws <- digitsBaseTen `upon` abs
-    ds <- comap (const mempty) $ ignoreBackwardIso
-      $   try (cons <$> (fromChar '.' <$ take (fromChar '.')) <*> digitsBaseTen)
-      <!> pure mempty
-    maybe (fail "Could not read a realBaseTen.") (pure . s) $ readMay $ fmap toChar $ toList $ ws <> ds
-  <!> do
-    cs <- peek $ Data.Sequences.take 20 <$> rest `upon` const mempty
-    fail $ "Could not parse " <> show cs <> " to a base 10 real."
-
--- DEV NOTE: show should not be used
-digitsBaseTen :: forall c m n s u text char w.
-  ( CharElement s char
-  , Show u
-  , IsSequence text
-  , MonadState s m
-  , MonadWriter w n
-  , ConvertSequence c text w n
-  , SubStateContext c s
-  , ContextualStateTransformerPLEASEREMOVESUFFIX c text m
-  , text ~ SubState s
-  ) => Biparser c s m n u text
-digitsBaseTen = split (state @c $ span $ isDigit . toChar) `upon` fromList . fmap fromChar . show
-
-data Sign = Positive | Negative | Zero deriving (Show, Eq)
-deduceSign :: forall number.
-  ( Ord number
-  , Num number
-  )
-  => number
-  -> Sign
-deduceSign x
-  | x < 0 = Negative
-  | x > 0 = Positive
-  | otherwise = Zero
-
-sign :: forall c s m n number text char w e.
-  ( MonadState s m
+sign :: forall p m number i. Sign p m number i => Biparser p number (number -> number)
+sign = comap (< 0) $ takeTri (fromChar '-') True negate <!> pure id
+type Sign p m number i =
+  ( MonadFail (p Bool)
+  , Alt (p Bool)
+  , Try (p Bool)
+  , Profunctor p
+  , One i p
+  , Colift p m
   , MonadFail m
-  , Alt m
-  , MonadError e m
-  -- n
-  , MonadWriter w n
-  , MonadFail n
-  , Alt n
-  -- number
-  , Num number
   , Ord number
-  -- text
-  , IsSequence text
-  , CharElement s char
-  -- w
-  , ConvertElement c char w n
-  -- context
-  , ElementContext c s
-  -- assignments
-  , text ~ SubState s
-  ) => Biparser c s m n number (number -> number)
-sign = comap deduceSign $ takeTri (fromChar '-') Negative negate <!> pure id
+  , Num number
+  , IsChar i
+  , Eq i
+  , Show i
+  )
 
 -- | Consume n hex characters lower or upper case. Print n hex characters with a case decided by 'charCase'.
-hex :: forall (charCase :: CharCase) c m n a number text char w.
-  -- m
-  ( MonadState a m
+hex :: forall (charCase :: CharCase) p m number i.
+  ( forall u. MonadFail (p u)
+  , One i p
+  , Colift p m
   , MonadFail m
-  , Alt m
-  -- n
-  , MonadWriter w n
-  , MonadFail n
-  -- text
-  , IsSequence text
-  -- w
-  , ConvertElement c char w n
-  -- char
-  , CharElement a char
-  -- number
   , Bits number
   , Integral number
   , Show number
-  -- context
-  , GetSubState a
-  , UpdateStateWithElement c a
   , HexCharMap charCase
-  -- assignments
-  , text ~ SubState a
-  , char ~ SubElement a
+  , Ord i
+  , IsChar i
+  , Show i
   )
   => Natural
-  -> Iso c m n a number
+  -> Iso p number
 hex = hex' . fromEnum
   where
   hex' = \case

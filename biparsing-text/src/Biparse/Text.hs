@@ -1,74 +1,57 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE OverloadedStrings #-}
 module Biparse.Text
-  ( CharElement
-  , char
+  ( char
   , string
   , stringShow
   ) where
 
-import Biparse.General (stripPrefix, Take, takeDi)
+import Biparse.General (stripPrefix, takeDi, Length, EqualityWrapper, StripPrefixEqualityCheck)
 
-type CharElement s char =
-  ( IsChar char
+char :: forall p u char.
+  ( Profunctor p
+  , One char p
+  , MonadFail (p u)
+  , IsChar char
   , Show char
   , Eq char
-  , Ord char
-  , SubElement s ~ char
-  )
-
-char :: forall w c s m n u text char.
-  ( IsSequence text
-  , ElementContext c s
-  , CharElement s char
-  , ConvertElement c char w n
-  -- m
-  , MonadState s m
-  , MonadFail m
-  , Alt m
-  -- n
-  , MonadWriter w n
-  , MonadFail n
-  -- assignments
-  , text ~ SubState s
   )
   => Char
-  -> Biparser c s m n u ()
+  -> Const p u
 char c = do
   let c' = fromChar @char c
-  c'' <- one `upon` const c'
+  c'' <- one `uponConst` c'
   unless (c' == c'') $ fail $ "Did not find expected character " <> show c <> " and instead found " <> show c''
 
-string :: forall c s m n u text w.
-  -- m
-  ( MonadState s m
-  , MonadFail m
-  -- n
-  , MonadWriter w n
-  -- text
-  , EqElement text
+string :: forall p u text.
+  ( Profunctor p
+  , Try (p u)
+  , BiN p
+  , MonadFail (p u)
+  , Length text
   , Show text
-  , ConvertSequence c text w n
-  -- w
-  -- context
-  , SubStateContext c s
-  -- assignments
-  , ContextualStateTransformerPLEASEREMOVESUFFIX c text m
-  , text ~ SubState s
+  , Applicative (EqualityWrapper (StripPrefixEqualityCheck p))
+  , Eq (EqualityWrapper (StripPrefixEqualityCheck p) text)
   )
   => text
-  -> Const c s m n u
+  -> Const p u
 string = stripPrefix
 
 -- | Tries matching the string @fromString $ show u@ when parsing.
 -- Tries matching @u@ when printing.
-stringShow :: forall c s m n u text char w e.
-  ( Take c s m n text char w e
+stringShow :: forall p m u char.
+  ( IsString char
+  , Show char
+  , Eq char
+  , One char p
+  , Try (p u)
+  , MonadFail (p u)
+  , Colift p m
+  , MonadFail m
   , Eq u
   , Show u
-  , IsString char
   )
   => u
-  -> Iso c m n s u
+  -> Iso p u
 stringShow u = takeDi (fromString $ show u) u
 

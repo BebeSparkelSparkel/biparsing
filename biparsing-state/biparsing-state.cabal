@@ -1,0 +1,50 @@
+cabal-version: 2.2
+
+-- This file has been generated from package.yaml by hpack version 0.36.0.
+--
+-- see: https://github.com/sol/hpack
+
+name:           biparsing-state
+version:        0.0.0.1
+synopsis:       Positional types for stateful forward parsing.
+category:       Parsing
+homepage:       https://github.com/BebeSparkelSparkel/biparsing
+author:         William Rusnack
+maintainer:     William Rusnack
+license:        BSD-3-Clause
+license-file:   LICENSE
+build-type:     Simple
+
+library
+  exposed-modules:
+      Biparse.State.Index
+      Biparse.State.Lenses
+      Prelude
+  hs-source-dirs:
+      src/
+  default-extensions:
+      BlockArguments
+      ConstraintKinds
+      DataKinds
+      FlexibleContexts
+      FlexibleInstances
+      GeneralizedNewtypeDeriving
+      ImportQualifiedPost
+      KindSignatures
+      MultiParamTypeClasses
+      ScopedTypeVariables
+      StandaloneDeriving
+      TypeApplications
+      TypeFamilies
+  ghc-options: -Werror -Weverything -Wno-implicit-prelude -Wno-missing-deriving-strategies -Wno-missing-kind-signatures -Wno-missing-local-signatures -Wno-missing-safe-haskell-mode -Wno-safe -Wno-unsafe -Wno-unused-packages
+  build-depends:
+      base
+    , biparsing-core
+    , data-default
+    , microlens
+    , microlens-th
+    , mono-traversable
+    , transformers
+  mixins:
+      base hiding (Prelude)
+  default-language: Haskell2010

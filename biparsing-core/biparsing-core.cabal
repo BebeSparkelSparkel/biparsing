@@ -17,30 +17,14 @@ build-type:     Simple
 
 library
   exposed-modules:
-      Biparse.AlternativeAttributes
-      Biparse.Biparser
-      Biparse.Biparser.Coerce
-      Biparse.Biparser.Internal
-      Biparse.Biparser.StateReaderWriter
-      Biparse.Constructor
-      Biparse.Context.Index
-      Biparse.General
-      Biparse.List
-      Biparse.Polarize
-      Biparse.Unordered
-      Biparse.Utils
-      Control.Monad.ChangeMonad
-      Control.Monad.EitherString
-      Control.Monad.MonadProgenitor
-      Control.Monad.StateError
-      Control.Monad.Trans.State.Selectable
-      Control.Monad.Trans.Writer.Selectable
-      Control.Monad.TransformerBaseMonad
-      Control.Monad.UndefinedBackwards
-      Control.Monad.Unrecoverable
-      Control.Profunctor.FwdBwd
-      Data.Convert
-      Data.EqElement
+      Biparse.Core.Aliases
+      Biparse.Core.Classes
+      Biparse.Core.Classes.Backward
+      Biparse.Core.Classes.Bidirectional
+      Biparse.Core.Classes.Forward
+      Biparse.Core.Comap
+      Biparse.Core.Update
+      Profunctor.Colift
   other-modules:
       Prelude
   hs-source-dirs:
@@ -85,8 +69,9 @@ library
     , microlens-mtl
     , microlens-pro
     , microlens-th
-    , mono-traversable >=1.0.17.0
+    , mono-traversable
     , mtl >=2.3
+    , profunctor-monad
     , profunctors
     , semigroupoids
     , split

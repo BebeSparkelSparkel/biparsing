@@ -23,13 +23,17 @@ library:
         - hiding (Prelude)
     - biparsing-core
     - biparsing-text
+    - biparsing-state
+    - biparsing-control
+    - biparsing-combinators
     - bytestring
     - text >= 2.1.1
-    - mono-traversable >= 1.0.17.0
     - transformers >= 0.6.1.1
     - mtl
     - semigroupoids
     - microlens
+    - extra
+    - data-default
   default-extensions:
     - DataKinds
     - MultiParamTypeClasses

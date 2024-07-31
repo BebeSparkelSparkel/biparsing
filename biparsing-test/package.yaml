@@ -17,24 +17,24 @@ library:
       mixin:
         - hiding (Prelude)
     - QuickCheck
-    - safe
+    - biparsing-combinators
+    - biparsing-control
     - biparsing-core
-    - biparsing-core
+    - biparsing-state
     - biparsing-text
     - bytestring
     - containers
     - data-default
     - hspec
-    - mono-traversable
+    - hspec-core
     - microlens
+    - mono-traversable
     - mtl
+    - profunctors
     - quickcheck-instances
+    - safe
     - semigroupoids
     - text >= 2.1.1
     - transformers
     - vector
-  ghc-options:
-    - -Werror
-    - -Weverything
-
-    - -Wno-unused-packages
+    - temporary

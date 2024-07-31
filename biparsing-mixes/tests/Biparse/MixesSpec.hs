@@ -3,7 +3,7 @@
 module Biparse.MixesSpec where
 
 import Language.Haskell.TH
-import Biparse.Mixes.IO qualified
+--import Biparse.Mixes.IO qualified
 import Biparse.Mixes.Either qualified
 import Biparse.Mixes.Exports
 
@@ -12,8 +12,8 @@ spec = $(
   let
       monads :: [String]
       monads =
-        [ "IO"
-        , "Either"
+        --[ "IO"
+        [ "Either"
         ]
       contexts :: [String]
       contexts =

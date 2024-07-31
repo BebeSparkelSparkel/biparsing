@@ -20,22 +20,27 @@ library
       Prelude
   hs-source-dirs:
       ./
-  ghc-options: -Werror -Weverything -Wno-unused-packages
   build-depends:
       QuickCheck
     , base
+    , biparsing-combinators
+    , biparsing-control
     , biparsing-core
+    , biparsing-state
     , biparsing-text
     , bytestring
     , containers
     , data-default
     , hspec
+    , hspec-core
     , microlens
     , mono-traversable
     , mtl
+    , profunctors
     , quickcheck-instances
     , safe
     , semigroupoids
+    , temporary
     , text >=2.1.1
     , transformers
     , vector

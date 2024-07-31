@@ -41,7 +41,6 @@ library
   build-depends:
       base
     , biparsing-core
-    , mono-traversable
     , mtl
     , semigroupoids
     , wide-word

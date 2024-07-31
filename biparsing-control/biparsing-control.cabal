@@ -1,0 +1,59 @@
+cabal-version: 2.2
+
+-- This file has been generated from package.yaml by hpack version 0.36.0.
+--
+-- see: https://github.com/sol/hpack
+
+name: biparsing-control
+version: 0.0.0.1
+synopsis: Controling Monads and Profunctors for biparsing.
+category: Parsing
+homepage: https://github.com/BebeSparkelSparkel/biparsing
+author: William Rusnack
+maintainer: William Rusnack
+license: BSD-3-Clause
+license-file: LICENSE
+build-type: Simple
+
+library
+  exposed-modules:
+    Biparse.Control.Bwd
+    Biparse.Control.EitherString
+    Biparse.Control.File
+    Biparse.Control.Fwd
+    Biparse.Control.StateError
+  other-modules:
+    Prelude
+  hs-source-dirs:
+    src/
+  default-extensions:
+    BlockArguments
+    DeriveFunctor
+    DerivingVia
+    FlexibleContexts
+    FlexibleInstances
+    FunctionalDependencies
+    GeneralizedNewtypeDeriving
+    ImportQualifiedPost
+    LambdaCase
+    MultiParamTypeClasses
+    PatternSynonyms
+    ScopedTypeVariables
+    StandaloneDeriving
+    TypeFamilies
+    UndecidableInstances
+  build-depends:
+    base,
+    biparsing-core,
+    biparsing-state,
+    bytestring,
+    data-default,
+    exceptions,
+    mono-traversable,
+    mtl,
+    profunctors,
+    semigroupoids,
+    text
+  mixins:
+    base hiding (Prelude)
+  default-language: Haskell2010

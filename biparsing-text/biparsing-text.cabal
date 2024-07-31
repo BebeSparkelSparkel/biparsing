@@ -18,38 +18,44 @@ build-type:     Simple
 library
   exposed-modules:
       Biparse.Text
-      Biparse.Text.Context.LineColumn
       Biparse.Text.LineBreak
       Biparse.Text.Numeric
+      Biparse.Text.State.LineColumn
   other-modules:
       Prelude
   hs-source-dirs:
       src/
   default-extensions:
-      ImportQualifiedPost
-      PatternSynonyms
-      RankNTypes
-      TypeApplications
-      ScopedTypeVariables
-      ConstraintKinds
-      TypeFamilies
-      FlexibleContexts
       BlockArguments
-      LambdaCase
-      StandaloneKindSignatures
-      FlexibleInstances
+      ConstraintKinds
       DataKinds
-      MultiParamTypeClasses
       DeriveFunctor
+      FlexibleContexts
+      FlexibleInstances
+      ImportQualifiedPost
+      LambdaCase
+      MultiParamTypeClasses
+      PatternSynonyms
+      QuantifiedConstraints
+      RankNTypes
+      ScopedTypeVariables
+      StandaloneKindSignatures
+      TypeApplications
+      TypeFamilies
   ghc-options: -Werror -Weverything -Wno-implicit-prelude -Wno-missing-deriving-strategies -Wno-missing-kind-signatures -Wno-missing-local-signatures -Wno-missing-safe-haskell-mode -Wno-safe -Wno-unsafe -Wno-unused-packages
   build-depends:
       base
+    , biparsing-combinators
     , biparsing-core
+    , biparsing-state
     , data-default
+    , extra
     , microlens
     , microlens-th
     , mono-traversable
     , mtl
+    , mutable-containers
+    , profunctors
     , safe
     , semigroupoids
   mixins:

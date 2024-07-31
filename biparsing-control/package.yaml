@@ -1,0 +1,45 @@
+name: biparsing-control
+version: 0.0.0.1
+synopsis: Controling Monads and Profunctors for biparsing.
+homepage: https://github.com/BebeSparkelSparkel/biparsing
+category: Parsing
+author: William Rusnack
+license: BSD-3-Clause
+license-file: LICENSE
+
+spec-version: 0.36.0
+
+library:
+  source-dirs: src/
+  other-modules:
+    - Prelude
+  dependencies:
+    - name: base
+      mixin:
+        - hiding (Prelude)
+    - semigroupoids
+    - data-default
+    - mtl
+    - biparsing-core
+    - biparsing-state
+    - profunctors
+    - mono-traversable
+    - text
+    - bytestring
+    - exceptions
+  default-extensions:
+    - BlockArguments
+    - DeriveFunctor
+    - DerivingVia
+    - FlexibleContexts
+    - FlexibleInstances
+    - FunctionalDependencies
+    - GeneralizedNewtypeDeriving
+    - ImportQualifiedPost
+    - LambdaCase
+    - MultiParamTypeClasses
+    - PatternSynonyms
+    - ScopedTypeVariables
+    - StandaloneDeriving
+    - TypeFamilies
+    - UndecidableInstances
