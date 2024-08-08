@@ -36,6 +36,7 @@ test-suite spec
     TypeFamilies
 
   ghc-options:
+    -- -fplugin=Effectful.Plugin
     -Werror
     -Weverything
     -Wno-implicit-prelude
@@ -62,6 +63,7 @@ test-suite spec
     biparsing-text,
     hspec,
     mono-traversable,
+    --overloaded-chars,
 
   mixins:
     base hiding (Prelude)

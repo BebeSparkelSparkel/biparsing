@@ -27,6 +27,8 @@ library:
     - text
     - bytestring
     - exceptions
+    - monad-control
+    - transformers
   default-extensions:
     - BlockArguments
     - DeriveFunctor

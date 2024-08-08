@@ -21,7 +21,6 @@ library
     Biparse.Control.EitherString
     Biparse.Control.File
     Biparse.Control.Fwd
-    Biparse.Control.StateError
   other-modules:
     Prelude
   hs-source-dirs:
@@ -49,11 +48,13 @@ library
     bytestring,
     data-default,
     exceptions,
+    monad-control,
     mono-traversable,
     mtl,
     profunctors,
     semigroupoids,
-    text
+    text,
+    transformers
   mixins:
     base hiding (Prelude)
   default-language: Haskell2010

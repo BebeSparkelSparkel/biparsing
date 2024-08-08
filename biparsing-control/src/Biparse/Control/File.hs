@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE DataKinds #-}
@@ -7,13 +8,15 @@ module Biparse.Control.File (
 FileT,
 runFileT,
 OpenFrom,
+OpenWith,
 OpenFile(..),
 IOMode(..),
-UpdateState(..),
+MonadFileGetChar,
+--UpdateState(..),
 ) where
 
 import System.IO qualified
-import System.IO (FilePath, Handle, IOMode(ReadMode,WriteMode), IO, hClose, hGetPosn, hSetPosn)
+import System.IO (FilePath, Handle, IOMode(ReadMode,WriteMode), IO, hClose, hGetPosn, hSetPosn, hGetBuf, hPutBuf)
 import Data.Text.IO qualified
 import Data.Text.Lazy.IO qualified
 import Data.Text (StrictText)
@@ -23,31 +26,51 @@ import Data.ByteString (ByteString)
 import Data.ByteString.Lazy qualified
 import Data.ByteString.Builder qualified
 import Control.Monad.IO.Class (MonadIO(liftIO))
-import Control.Monad.Catch (MonadThrow, MonadCatch, MonadMask, finally)
+import Control.Monad.Catch (MonadThrow, MonadCatch, MonadMask, finally, onError)
 import Control.Monad.Identity (IdentityT)
+import Control.Monad.Trans.Control (MonadTransControl(StT,liftWith,restoreT), liftThrough)
 
-import Control.Monad.Reader (MonadReader, asks, ReaderT(ReaderT,runReaderT), LiftingReader(LiftingReader))
+import Control.Monad.Reader (MonadReader(ask), asks, ReaderT(ReaderT,runReaderT), LiftingReader(LiftingReader))
 import Control.Monad.Writer.Class (MonadWriter)
 import Control.Monad.State.Class (MonadState(get,put), modify)
 import Biparse.Core.Update (UpdateStateWithElement(updateStateWithElement))
 import Data.Kind (Constraint)
+import Data.Tuple (curry)
+import Data.Word (Word8)
+import Foreign (allocaBytes, sizeOf, poke)
+import Foreign qualified
+import System.IO.Error (ioError, eofErrorType, mkIOError)
 
-newtype FileT text m a = FileT (ReaderT (FilePath, Handle) m a)
-  deriving (Functor, Applicative, Monad, MonadFail, MonadIO)
+newtype FileT text m a = FileT' (ReaderT (FilePath, Handle) m a)
+  deriving (Functor, Applicative, Monad, MonadFail, MonadIO, MonadTrans, MonadThrow, MonadCatch, MonadMask)
   deriving (MonadReader r) via LiftingReader (ReaderT (FilePath, Handle)) m
 deriving instance MonadWriter w m => MonadWriter w (FileT text m)
 deriving instance MonadState s m => MonadState s (FileT text m)
 deriving instance MonadError e m => MonadError e (FileT text m)
-instance Alt m => Alt (FileT text m) where FileT x <!> FileT y = FileT $ x <!> y
+instance Alt m => Alt (FileT text m) where FileT' x <!> FileT' y = FileT' $ x <!> y
+instance MonadTransControl (FileT text) where
+  type StT (FileT text) a = a
+  liftWith f = FileT \fp h -> f \x -> unFileT x fp h
+  restoreT = FileT' . ReaderT . const
+
+unFileT :: FileT text m a -> FilePath -> Handle -> m a
+unFileT (FileT x) = x
+
+pattern FileT :: (FilePath -> Handle -> m a) -> FileT text m a
+pattern FileT x <- FileT' (ReaderT (curry -> x)) where
+  FileT x = FileT' $ ReaderT $ uncurry x
 
 getHandle :: Monad m => FileT text m Handle
-getHandle = FileT $ asks snd
+getHandle = FileT' $ asks snd
+
+askFile :: Monad m => FileT text m (FilePath, Handle)
+askFile = FileT' ask
 
 runFileT :: forall text m a. (MonadMask m, MonadIO m, OpenFrom text) => FileT text m a -> FilePath -> IOMode -> m a
 runFileT (FileT x) fp mode = do
   h <- liftIO $ openFile @(OpenWith text) fp mode
   finally
-    (runReaderT x (fp,h))
+    (x fp h)
     (liftIO $ hClose h)
 
 type OpenFrom text = OpenFile (OpenWith text)
@@ -67,9 +90,18 @@ instance OpenFile Character where openFile = System.IO.openFile
 instance OpenFile Binary where openFile = System.IO.openBinaryFile
 
 getChar :: forall text m char. (MonadFileGetChar char, MonadIO m) => FileT text m char
-getChar = liftIO . hGetChar =<< getHandle
-class MonadFileGetChar char where hGetChar :: Handle -> IO char
-instance MonadFileGetChar Char where hGetChar = System.IO.hGetChar
+getChar = liftIO . uncurry hGetChar =<< askFile
+{-# WARNING hGetChar, hPutChar "This is hella slow please fix" #-} 
+class MonadFileGetChar char where hGetChar :: FilePath -> Handle -> IO char
+instance MonadFileGetChar Char where hGetChar = const System.IO.hGetChar
+instance MonadFileGetChar Word8 where
+  hGetChar fp h = allocaBytes s \p -> do
+    c <- hGetBuf h p s 
+    if c == s
+      then Foreign.peek p
+      else liftIO $ ioError $ mkIOError eofErrorType "hGetChar" (pure h) (pure fp)
+    where
+    s = sizeOf @Word8 0
 
 putChar :: (MonadFilePutChar char, MonadIO m) => char -> FileT text m ()
 putChar c = do
@@ -77,41 +109,28 @@ putChar c = do
   liftIO $ hPutChar h c
 class MonadFilePutChar char where hPutChar :: Handle -> char -> IO ()
 instance MonadFilePutChar Char where hPutChar = System.IO.hPutChar
+instance MonadFilePutChar Word8 where
+  hPutChar h c = allocaBytes s \p -> do
+    poke p c
+    hPutBuf h p s
+    where
+    s = sizeOf @Word8 0
 
-newtype UpdateState m a = UpdateState {runUpdateState :: m a}
-  deriving (Functor, Applicative, Monad, MonadFail, MonadIO, MonadThrow, MonadCatch, MonadMask, Peek)
-deriving instance MonadState s m => MonadState s (UpdateState m)
-deriving instance MonadError e m => MonadError e (UpdateState m)
-instance Alt m => Alt (UpdateState m) where UpdateState x <!> UpdateState y = UpdateState $ x <!> y
-
-instance (MonadFileGetChar char, Element text ~ char) => OneFwd char (FileT text IO) where
-  oneFwd = getChar
-
-instance (MonadFilePutChar char, MonadIO m, Element text ~ char) => OneBwd char (FileT text m) where
-  oneBwd = putChar
-
-instance (UpdateStateWithElement s char, MonadFileGetChar char, Element text ~ char, MonadState s m, MonadIO m) => OneFwd char (FileT text (UpdateState m)) where
+instance (UpdateStateWithElement s char, MonadFileGetChar char, Element text ~ char, MonadState s m, MonadIO m) => OneFwd char (FileT text m) where
   oneFwd = do
     c <- getChar
     modify $ updateStateWithElement c
     return c
 
--- WRONG!!!
---instance (Peek m, MonadIO m) => Peek (FileT text m) where
---  peek (FileT (ReaderT x)) = FileT $ ReaderT \r@(_,h) -> do
---    p <- liftIO $ hGetPosn h
---    y <- peek $ x r
---    liftIO $ hSetPosn p
---    return y
+instance (MonadFilePutChar char, MonadIO m, Element text ~ char) => OneBwd char (FileT text m) where
+  oneBwd = putChar
 
-instance (MonadState s m, MonadError e m, MonadState s m, MonadIO m) => Try (FileT text (UpdateState m)) where
+instance (MonadIO m, MonadMask m, Peek m) => Peek (FileT text m) where
+  peek x = do
+    p <- liftIO . hGetPosn =<< getHandle
+    finally (liftThrough peek x) $ liftIO $ hSetPosn p
+
+instance (MonadIO m, MonadMask m, Try m) => Try (FileT text m) where
   try x = do
     p <- liftIO . hGetPosn =<< getHandle
-    s <- get
-    catchError x \e -> do
-      liftIO $ hSetPosn p
-      put s
-      throwError e
-
-
-
+    onError (liftThrough try x) $ liftIO $ hSetPosn p

@@ -56,7 +56,7 @@ library
       TypeApplications
       TypeFamilies
       TypeOperators
-  ghc-options: -Werror -Weverything -Wno-implicit-prelude -Wno-missing-deriving-strategies -Wno-missing-kind-signatures -Wno-missing-local-signatures -Wno-missing-safe-haskell-mode -Wno-safe -Wno-unsafe -Wno-unused-packages
+  ghc-options: -Werror -Weverything -Wno-implicit-prelude -Wno-missing-deriving-strategies -Wno-missing-kind-signatures -Wno-missing-local-signatures -Wno-missing-safe-haskell-mode -Wno-safe -Wno-unsafe -Wno-name-shadowing -Wno-unused-packages
   build-depends:
       base
     , bytestring
@@ -69,8 +69,9 @@ library
     , microlens-mtl
     , microlens-pro
     , microlens-th
+    , monad-control
     , mono-traversable
-    , mtl >=2.3
+    , mtl >=2.3.1
     , profunctor-monad
     , profunctors
     , semigroupoids

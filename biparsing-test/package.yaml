@@ -38,3 +38,5 @@ library:
     - transformers
     - vector
     - temporary
+    - exceptions
+    - monad-control

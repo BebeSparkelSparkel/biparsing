@@ -26,12 +26,13 @@ library:
     - microlens-mtl
     - microlens-pro
     - microlens-th
-    - mtl >= 2.3
+    - mtl >= 2.3.1
     - profunctors
     - profunctor-monad
     - semigroupoids
     - transformers >= 0.6.1.1
     - mono-traversable
+    - monad-control
 
     # remove dependencies after Data.EqElement is removed
     - text >= 2.1.1
@@ -76,5 +77,6 @@ library:
     - -Wno-missing-safe-haskell-mode
     - -Wno-safe
     - -Wno-unsafe
+    - -Wno-name-shadowing
 
     - -Wno-unused-packages

@@ -31,9 +31,11 @@ library
     , bytestring
     , containers
     , data-default
+    , exceptions
     , hspec
     , hspec-core
     , microlens
+    , monad-control
     , mono-traversable
     , mtl
     , profunctors

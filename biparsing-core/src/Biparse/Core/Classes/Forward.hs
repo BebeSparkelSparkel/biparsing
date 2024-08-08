@@ -2,35 +2,44 @@
 module Biparse.Core.Classes.Forward (
 OneFwd(..),
 oneFwd',
+StateSeq(StateSeq),
 OnlyFwd(..),
 Peek(..),
 Try(..),
-try',
 Null(..),
 ) where
 
-import Control.Monad.State (StateT, MonadState(get,put))
 import Data.Sequences (IsSequence(uncons))
 import Data.MonoTraversable (Element)
 import Biparse.Core.Update (UpdateStateWithElement(updateStateWithElement))
+import Biparse.Core.Aliases (LazyStateT, StrictStateT, CPSWriterT, pattern CPSWriterT, LazyWriterT, StrictWriterT, CPSRWST, pattern CPSRWST, LazyRWST, StrictRWST)
 
 class OneFwd a m | m -> a where oneFwd :: m a
-
-instance (a ~ Element seq, UpdateStateWithElement s a, IsSequence seq, MonadFail m) => OneFwd a (StateT (s, seq) m) where
-  oneFwd = oneFwd'
+deriving instance OneFwd a m => OneFwd a (IdentityT m)
+instance (OneFwd a m, Monad m, Monoid w) => OneFwd a (LazyWriterT w m) where oneFwd = lift oneFwd
+instance (a ~ Element seq, UpdateStateWithElement s a, IsSequence seq, MonadFail m) => OneFwd a (LazyStateT (StateSeq s seq) m) where oneFwd = oneFwd'
+instance (a ~ Element seq, UpdateStateWithElement s a, IsSequence seq, MonadFail m) => OneFwd a (StrictStateT (StateSeq s seq) m) where oneFwd = oneFwd'
+instance (a ~ Element seq, UpdateStateWithElement s a, IsSequence seq, MonadFail m, Monoid w) => OneFwd a (CPSRWST r w (StateSeq s seq) m) where oneFwd = oneFwd'
+instance (a ~ Element seq, UpdateStateWithElement s a, IsSequence seq, MonadFail m, Monoid w) => OneFwd a (LazyRWST r w (StateSeq s seq) m) where oneFwd = oneFwd'
+instance (a ~ Element seq, UpdateStateWithElement s a, IsSequence seq, MonadFail m, Monoid w) => OneFwd a (StrictRWST r w (StateSeq s seq) m) where oneFwd = oneFwd'
 
 oneFwd' ::
   ( IsSequence seq
-  , MonadState (s, seq) m
+  , MonadState (StateSeq s seq) m
   , MonadFail m
   , UpdateStateWithElement s a
   , a ~ Element seq
   ) => m a
 oneFwd' = do
-  (s, xs) <- get
+  StateSeq s xs <- get
   (x, xs') <- maybe (fail "Unexpected end of input.") pure $ uncons xs
-  put (updateStateWithElement x s, xs')
+  put $ StateSeq (updateStateWithElement x s) xs'
   return x
+
+newtype StateSeq s seq = StateSeq' (s, seq) deriving (Show, Eq)
+pattern StateSeq :: s -> seq -> StateSeq s seq
+pattern StateSeq s seq = StateSeq' (s, seq)
+instance (Default s, IsString seq) => IsString (StateSeq s seq) where fromString = StateSeq def . fromString
 
 -- * Forward and Backward Divergence
 
@@ -63,14 +72,23 @@ class Peek m where peek :: m v -> m v
 --peek (Biparser fw bw) = Biparser
 --  (get @s >>= \s -> fw <* put s)
 --  bw
-instance Monad m => Peek (StateT s m) where
-  peek x = do
-    s <- get
-    y <- x
-    put s
-    return y
-instance Peek IO where
-  peek = id
+instance Peek IO where peek = id
+instance Peek Maybe where peek = id
+instance Peek Identity where peek = id
+instance (Peek m, Monad m) => Peek (IdentityT m) where peek = liftThrough peek
+instance (Peek m, Monad m) => Peek (ReaderT r m) where peek = liftThrough peek
+instance (Peek m, Monad m, Monoid w) => Peek (CPSWriterT w m) where
+  peek (CPSWriterT x) = CPSWriterT $ peek x
+instance (Peek m, Monad m, Monoid w) => Peek (LazyWriterT w m) where peek = liftThrough peek
+instance (Peek m, Monad m, Monoid w) => Peek (StrictWriterT w m) where peek = liftThrough peek
+instance (Peek m, Monad m) => Peek (LazyStateT s m) where peek = peekState
+instance (Peek m, Monad m) => Peek (StrictStateT s m) where peek = peekState
+instance (Peek m, Monad m, Monoid w) => Peek (CPSRWST r w s m) where
+  peek (CPSRWST x) = CPSRWST \r s -> peek $ x r s
+instance (Peek m, Monad m, Monoid w) => Peek (LazyRWST r w s m) where peek = peekState
+instance (Peek m, Monad m, Monoid w) => Peek (StrictRWST r w s m) where peek = peekState
+peekState :: (MonadState s (t m), MonadTransControl t, Peek m, Monad m) => t m a -> t m a
+peekState x = get >>= \s -> liftThrough peek x <* put s
 
 -- | Allows trying a forward. If the forward fails the state is returned to the value it was before running.
 class Try m where try :: m v -> m v
@@ -92,13 +110,29 @@ class Try m where try :: m v -> m v
 --tryState fw = do
 --  s <- get @s
 --  catchError fw \e -> put s *> throwError e
-instance MonadError e m => Try (StateT s m) where
-  try = try'
-
-try' :: (MonadState s m, MonadError e m) => m b -> m b
-try' x = do
+instance Try IO where try = id
+instance (Try m, Monad m) => Try (IdentityT m) where try = liftThrough try
+instance (Try m, Monad m) => Try (ReaderT r m) where try = liftThrough try
+instance (Try m, Monad m, Monoid w) => Try (CPSWriterT w m) where
+  try (CPSWriterT x) = CPSWriterT $ try x
+instance (Try m, Monad m, Monoid w) => Try (LazyWriterT w m) where try = liftThrough try
+instance (Try m, Monad m, Monoid w) => Try (StrictWriterT w m) where try = liftThrough try
+instance (MonadError e m, Try m) => Try (LazyStateT   s m) where try = tryError
+instance (MonadError e m, Try m) => Try (StrictStateT s m) where try = tryError
+instance (Try m, MonadError e m, Monoid w) => Try (CPSRWST    r w s m) where
+  try (CPSRWST x) = CPSRWST \r s -> try $ x r s
+instance (MonadError e m, Monoid w, Try m) => Try (LazyRWST   r w s m) where try = tryError
+instance (MonadError e m, Monoid w, Try m) => Try (StrictRWST r w s m) where try = tryError
+tryError :: forall s t (m :: Type -> Type) e b.
+  ( MonadTransControl t
+  , MonadState s (t m)
+  , MonadError e (t m)
+  , Monad m
+  , Try m
+  ) => t m b -> t m b
+tryError x = do
   s <- get
-  catchError x \e -> do
+  catchError (liftThrough try x) \e -> do
     put s
     throwError e
 

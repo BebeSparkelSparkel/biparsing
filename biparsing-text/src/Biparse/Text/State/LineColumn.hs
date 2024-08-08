@@ -1,13 +1,9 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TupleSections #-}
 module Biparse.Text.State.LineColumn (
-LineColumn,
-UnixLC,
-WindowsLC,
 LinesOnly,
 ColumnsOnly,
-  --, LineColumnUnknownBreak
-  --, NoUpdate
+NoUpdate,
 Position(Position),
 dataId,
 line,
@@ -24,16 +20,10 @@ import Lens.Micro ((+~))
 
 
 -- * Contexts
-data LineBreakType = Unix | Windows
 
-type UnixLC = LineColumn 'Unix
-type WindowsLC = LineColumn 'Windows
-
-data LineColumn (lineBreak :: LineBreakType)
 data LinesOnly
 data ColumnsOnly
---data LineColumnUnknownBreak
---data NoUpdate
+data NoUpdate
 
 -- * Position state
 
@@ -48,13 +38,13 @@ $(makeLensesFor [("_line","line"),("_column","column")] ''Position)
 instance Default dataId => Default (Position context dataId) where
   def = Position def 1 1
 
-instance (Eq char, IsChar char) => UpdateStateWithElement (Position UnixLC dataId) char where
+instance (Eq char, IsChar char) => UpdateStateWithElement (Position () dataId) char where
   updateStateWithElement c =
     if c == fromChar '\n'
     then (line %~ succ) . (column .~ 1)
     else column %~ succ
 
-instance UpdateStateWithElement (Position () dataId) a where
+instance UpdateStateWithElement (Position NoUpdate dataId) a where
   updateStateWithElement = const id
 
 instance UpdateStateWithElement (Position LinesOnly dataId) a where
