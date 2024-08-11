@@ -44,6 +44,7 @@ run,
 ConstructParameter,
 TestParameters(..),
 Direction(..),
+WhichDirection,
 Forward,
 Backward,
 Read,
@@ -52,8 +53,10 @@ ShowStM',
 EqStM',
 ShouldFailQ,
 RunBase(BaseMonad, StM'),
-MakeForwardResult,
-MakeBackwardResult,
+MakeIsoResult,
+MakeForwardWriterResult,
+MakeForwardStateResult,
+MakeForwardRWSResult,
 MakeResult(..),
 --RunBackward(..),
 --MakeBackwardResult(..),
@@ -65,8 +68,10 @@ shouldReturn,
 ShouldFailQ,
 ShouldFail,
 shouldFail,
+ForwardOnly(..),
 ) where
 
+import Biparse.Control.Except as Export
 import Biparse.Comap as Export
 import Biparse.Control.Bwd as Export
 import Biparse.Control.File as Export (FileT, OpenFile(openFile), OpenFrom, MonadFileGetChar)
@@ -176,35 +181,37 @@ import Control.Monad.Trans.RWS.Lazy qualified
 import Control.Monad.Trans.RWS.Strict qualified
 import Control.Monad.Trans.Control
 
-run :: forall d p r s u v a.
-  ( RunBase (TestParameters d r s a) (p u)
-  , ConstructParameter a (TestParameters d r s a)
-  ) => Biparser p u v -> FilePath -> a -> BaseResult (p u) v
-run bp fp x = runBase @(TestParameters d r s a) bp $ constructParameter fp x
+run :: forall p r s u v a.
+  ( RunBase (TestParameters r s u a) (p u)
+  , ConstructParameter u a (TestParameters r s u a)
+  ) => Biparser p u v -> FilePath -> u -> a -> BaseResult (p u) v
+run bp fp u x = runBase @(TestParameters r s u a) bp $ constructParameter fp u x
 
-class ConstructParameter a b where constructParameter :: FilePath -> a -> b
-instance (ConstructParameter a r, ConstructParameter a s) => ConstructParameter a (TestParameters d r s a) where
-  constructParameter filePath parameter = TestParameters {read = constructParameter filePath parameter, state = constructParameter filePath parameter, filePath, parameter}
-instance (ConstructParameter String s, IsString text) => ConstructParameter String (StateSeq s text) where
-  constructParameter filePath string = StateSeq (constructParameter filePath string) (fromString string)
-instance IsString dataId => ConstructParameter a (Position context dataId) where
-  constructParameter filePath _ = (def :: Position context ()) & dataId .~ fromString filePath
-instance IsString dataId => ConstructParameter a (IndexPosition dataId) where
-  constructParameter filePath _ = (def :: IndexPosition ()) & dataId .~ fromString filePath
-instance ConstructParameter a () where
-  constructParameter _ _ = ()
+class ConstructParameter u a b where constructParameter :: FilePath -> u -> a -> b
+instance (ConstructParameter u a r, ConstructParameter u a s) => ConstructParameter u a (TestParameters r s u a) where
+  constructParameter filePath u parameter = TestParameters {read = constructParameter filePath u parameter, state = constructParameter filePath u parameter, u, filePath, parameter}
+instance (ConstructParameter u String s, IsString text) => ConstructParameter u String (StateSeq s text) where
+  constructParameter filePath u string = StateSeq (constructParameter filePath u string) (fromString string)
+instance IsString dataId => ConstructParameter u a (Position context dataId) where
+  constructParameter filePath _ _ = (def :: Position context ()) & dataId .~ fromString filePath
+instance IsString dataId => ConstructParameter u a (IndexPosition dataId) where
+  constructParameter filePath _ _ = (def :: IndexPosition ()) & dataId .~ fromString filePath
+instance ConstructParameter u a () where
+  constructParameter _ _ _ = ()
 
-type BaseResult m a = BaseMonad m (StM' m a)
---newtype BaseResult m a = BaseResult {unBaseResult :: BaseMonad m (StM' m a)}
-
-data TestParameters (direction :: Direction) read state a = TestParameters
+data TestParameters read state u a = TestParameters
   { filePath :: FilePath
   , read :: read
   , state :: state
+  , u :: u
   , parameter :: a
   }
 
 data Direction = Forward | Backward
+type WhichDirection :: (Type -> Type -> Type) -> Direction
+type family WhichDirection p
+type instance WhichDirection (Fwd _) = 'Forward
+type instance WhichDirection (Bwd _) = 'Backward
 data Forward a
 type instance Element (Forward text) = Element text
 type instance OpenWith (Forward text) = OpenWith text
@@ -215,6 +222,7 @@ type instance OpenWith (Backward text) = OpenWith text
 type Read :: (Type -> Type) -> Type
 type family Read m
 type instance Read (Fwd m u) = Read m
+type instance Read (Bwd m u) = Read m
 type instance Read (FileT text m) = Read m
 type instance Read (IdentityT m) = Read m
 type instance Read (ReaderT r m) = r
@@ -223,11 +231,13 @@ type instance Read (LazyStateT _ m) = Read m
 type instance Read (LazyRWST r _ _ _) = r
 type instance Read IO = ()
 type instance Read Maybe = ()
+type instance Read (Except _) = ()
 type instance Read Identity = ()
 
 type State :: (Type -> Type) -> Type
 type family State m
 type instance State (Fwd m u) = State m
+type instance State (Bwd m u) = State m
 type instance State (FileT text m) = State m
 type instance State (IdentityT m) = State m
 type instance State (ReaderT _ m) = State m
@@ -236,6 +246,7 @@ type instance State (LazyStateT s _) = s
 type instance State (LazyRWST _ _ s _) = s
 type instance State IO = ()
 type instance State Maybe = ()
+type instance State (Except _) = ()
 type instance State Identity = ()
 
 -- | Quantified Constraint Trick: https://blog.poisson.chat/posts/2022-09-21-quantified-constraint-trick.html
@@ -247,11 +258,15 @@ class ShouldReturn (BaseMonad (p u)) => ShouldReturnQ p u
 instance ShouldReturn (BaseMonad (p u)) => ShouldReturnQ p u
 class ShouldFail (BaseMonad (p u)) => ShouldFailQ p u
 instance ShouldFail (BaseMonad (p u)) => ShouldFailQ p u
-class MakeResult (Position () FilePath -> IndexPosition FilePath -> String -> a -> StM' m v) => MakeForwardResult m a v
-instance MakeResult (Position () FilePath -> IndexPosition FilePath -> String -> a -> StM' m v) => MakeForwardResult m a v
-class MakeResult (String -> u -> StM' m v) => MakeBackwardResult u m v
-instance MakeResult (String -> u -> StM' m v) => MakeBackwardResult u m v
+class MakeResult d (Position () FilePath -> IndexPosition FilePath -> String -> String -> u -> StM' (p u) u) => MakeIsoResult d p u
+instance MakeResult d (Position () FilePath -> IndexPosition FilePath -> String -> String -> u -> StM' (p u) u) => MakeIsoResult d p u
+class MakeResult d (Position () FilePath -> IndexPosition FilePath -> String -> String -> v -> StM' m ((v, w), s)) => MakeForwardWriterResult d m v w s
+class MakeResult d (Position () FilePath -> IndexPosition FilePath -> String -> String -> v -> StM' m (v, s)) => MakeForwardStateResult d m v s
+class MakeResult d (Position () FilePath -> IndexPosition FilePath -> String -> String -> v -> StM' m (v, s, w)) => MakeForwardRWSResult d m v w s
+--class MakeResult (String -> u -> StM' m v) => MakeBackwardResult u m v
+--instance MakeResult (String -> u -> StM' m v) => MakeBackwardResult u m v
 
+type BaseResult m a = BaseMonad m (StM' m a)
 class RunBase b m where
   type BaseMonad m :: Type -> Type
   type StM' m a :: Type
@@ -260,17 +275,17 @@ instance RunBase b m => RunBase b (Fwd m u) where
   type BaseMonad (Fwd m _) = BaseMonad m
   type StM' (Fwd m _) a = StM' m a
   runBase x b = runBase (runFwd x) b
-instance RunBase (TestParameters d r s u) m => RunBase (TestParameters d r s u) (Bwd m u) where
+instance RunBase (TestParameters r s u a) m => RunBase (TestParameters r s u a) (Bwd m u) where
   type BaseMonad (Bwd m _) = BaseMonad m
   type StM' (Bwd m _) a = StM' m a
-  runBase x b@(TestParameters {parameter = u}) = runBase (runBwd x u) b
+  runBase x b@(TestParameters {u}) = runBase (runBwd x u) b
 instance
   ( OpenFrom text
   , MonadIO m
   , MonadMask m
-  , RunBase (TestParameters 'Forward r s String) m
+  , RunBase (TestParameters r s u String) m
   , BaseMonad m ~ IO
-  ) => RunBase (TestParameters 'Forward r s String) (FileT (Forward text) m) where
+  ) => RunBase (TestParameters r s u String) (FileT (Forward text) m) where
   type BaseMonad (FileT _ _) = IO
   type StM' (FileT (Forward _) m) a = StM' m a
   runBase x b@(TestParameters {filePath, parameter = string}) = withSystemTempFile filePath \fp h -> do
@@ -280,10 +295,10 @@ instance
   ( OpenFrom text
   , MonadIO m
   , MonadMask m
-  , RunBase (TestParameters 'Backward r s u) m
+  , RunBase (TestParameters r s u a) m
   , BaseMonad m ~ IO
   , IsString text
-  ) => RunBase (TestParameters 'Backward r s u) (FileT (Backward text) m) where
+  ) => RunBase (TestParameters r s u a) (FileT (Backward text) m) where
   type BaseMonad (FileT _ _) = IO
   type StM' (FileT (Backward text) m) a = (StM' m a, text)
   runBase x b@(TestParameters {filePath, parameter = string}) = withSystemTempFile filePath \fp h -> do
@@ -295,19 +310,19 @@ instance RunBase b m => RunBase b (IdentityT m) where
   type BaseMonad (IdentityT m) = BaseMonad m
   type StM' (IdentityT m) a = StM' m a
   runBase x b = runBase (runIdentityT x) b
-instance RunBase (TestParameters d r s a) m => RunBase (TestParameters d r s a) (ReaderT r m) where
+instance RunBase (TestParameters r s u a) m => RunBase (TestParameters r s u a) (ReaderT r m) where
   type BaseMonad (ReaderT _ m) = BaseMonad m
   type StM' (ReaderT _ m) a = StM' m a
   runBase x b@(TestParameters {read}) = runBase (runReaderT x read) b
-instance RunBase (TestParameters d r s a) m => RunBase (TestParameters d r s a) (LazyWriterT w m) where
+instance RunBase (TestParameters r s u a) m => RunBase (TestParameters r s u a) (LazyWriterT w m) where
   type BaseMonad (LazyWriterT _ m) = BaseMonad m
   type StM' (LazyWriterT w m) a = StM' m (a, w)
   runBase x b = runBase (Control.Monad.Trans.Writer.Lazy.runWriterT x) b
-instance RunBase (TestParameters d r s a) m => RunBase (TestParameters d r s a) (LazyStateT s m) where
+instance RunBase (TestParameters r s u a) m => RunBase (TestParameters r s u a) (LazyStateT s m) where
   type BaseMonad (LazyStateT s m) = BaseMonad m
   type StM' (LazyStateT s m) a = StM' m (a, s)
   runBase x b@(TestParameters {state}) = runBase (Control.Monad.Trans.State.Lazy.runStateT x state) b
-instance RunBase (TestParameters d r s a) m => RunBase (TestParameters d r s a) (LazyRWST r w s m) where
+instance RunBase (TestParameters r s u a) m => RunBase (TestParameters r s u a) (LazyRWST r w s m) where
   type BaseMonad (LazyRWST _ _ _ m) = BaseMonad m
   type StM' (LazyRWST _ w s m) a = StM' m (a, s, w)
   runBase x b@(TestParameters {read, state}) = runBase (Control.Monad.Trans.RWS.Lazy.runRWST x read state) b
@@ -319,35 +334,48 @@ instance RunBase b Maybe where
   type BaseMonad Maybe = Maybe
   type StM' Maybe a = a
   runBase = const
+instance RunBase b (Except e) where
+  type BaseMonad (Except e) = Except e
+  type StM' (Except _) a = a
+  runBase = const
 
-class MakeResult a where makeResult :: a
-instance MakeResult (p -> i -> str -> v -> v) where
-  makeResult _ _ _ x = x
-instance MakeResult (p -> i -> str -> v -> (v, p)) where
-  makeResult p _ _ x = (x, p)
-instance MakeResult (p -> i -> str -> v -> (v, i)) where
-  makeResult _ i _ x = (x, i)
-instance (IsString text, IsString dataId) => MakeResult (Position () FilePath -> i -> String -> v -> (v, StateSeq (Position context dataId) text)) where
-  makeResult p _ s x = (x, StateSeq (coerce $ p & dataId %~ fromString @dataId) (fromString s))
-instance (IsString text, IsString dataId) => MakeResult (p -> IndexPosition FilePath -> String -> v -> (v, StateSeq (IndexPosition dataId) text)) where
-  makeResult _ i s x = (x, (StateSeq (coerce $ i & dataId %~ fromString @dataId) (fromString s)))
-instance IsString text => MakeResult (p -> i -> String -> v -> (v, StateSeq () text)) where
-  makeResult _ i s x = (x, (StateSeq () (fromString s)))
-instance MakeResult (p -> i -> str -> v -> v) => MakeResult (p -> i -> str -> v -> (v, ())) where
-  makeResult p i s v = (makeResult p i s v, ())
-instance MakeResult (p -> i -> str -> v -> (v, s)) => MakeResult (p -> i -> str -> v -> ((v, ()), s)) where
-  makeResult p i s v = first (, ()) $ makeResult p i s v
-instance MakeResult (p -> i -> str -> v -> (v, s)) => MakeResult (p -> i -> str -> v -> (v, s, ())) where
-  makeResult p i s v = makeResult p i s v & \(v, s) -> (v, s, ())
+class MakeResult (direction :: Direction) a where makeResult :: a
+instance MakeResult 'Forward (p -> i -> ss -> ws -> v -> v) where
+  makeResult _ _ _ _ x = x
+instance MakeResult 'Forward (p -> i -> ss -> ws -> v -> (v, p)) where
+  makeResult p _ _ _ x = (x, p)
+instance MakeResult 'Forward (p -> i -> ss -> ws -> v -> (v, i)) where
+  makeResult _ i _ _ x = (x, i)
+instance (IsString text, IsString dataId) => MakeResult 'Forward (Position () FilePath -> i -> String -> ws -> v -> (v, StateSeq (Position context dataId) text)) where
+  makeResult p _ s _ x = (x, StateSeq (coerce $ p & dataId %~ fromString @dataId) (fromString s))
+instance (IsString text, IsString dataId) => MakeResult 'Forward (p -> IndexPosition FilePath -> String -> ws -> v -> (v, StateSeq (IndexPosition dataId) text)) where
+  makeResult _ i s _ x = (x, (StateSeq (coerce $ i & dataId %~ fromString @dataId) (fromString s)))
+instance IsString text => MakeResult 'Forward (p -> i -> String -> ws -> v -> (v, StateSeq () text)) where
+  makeResult _ i s _ x = (x, (StateSeq () (fromString s)))
+instance MakeResult 'Forward (p -> i -> ss -> ws -> v -> v) => MakeResult 'Forward (p -> i -> ss -> ws -> v -> (v, ())) where
+  makeResult p i s w v = (makeResult @'Forward p i s w v, ())
+instance MakeResult 'Forward (p -> i -> ss -> ws -> v -> (v, s)) => MakeResult 'Forward (p -> i -> ss -> ws -> v -> ((v, ()), s)) where
+  makeResult p i s w v = first (, ()) $ makeResult @'Forward p i s w v
+instance MakeResult 'Forward (p -> i -> ss -> ws -> v -> (v, s)) => MakeResult 'Forward (p -> i -> ss -> ws -> v -> (v, s, ())) where
+  makeResult p i s w v = makeResult @'Forward p i s w v & \(v, s) -> (v, s, ())
 
-instance IsString text => MakeResult (String -> v -> (v, text)) where
-  makeResult s v = (v, fromString s)
-instance MakeResult (s -> v -> (v, text)) => MakeResult (s -> v -> (v, (), text)) where
-  makeResult s v = makeResult s v & \(x, y) -> (x, (), y)
-instance MakeResult (s -> v -> (v, text)) => MakeResult (s -> v -> ((v, ()), text)) where
-  makeResult s v = first (, ()) $ makeResult s v
-instance MakeResult (s -> v -> (v, text)) => MakeResult (s -> v -> ((v, (), ()), text)) where
-  makeResult s v = makeResult s v & \(x, y) -> ((x, (), ()), y)
+instance MakeResult 'Backward (ws -> v -> a) => MakeResult 'Backward (p -> i -> ss -> ws -> v -> a) where
+  makeResult _ _ _ w v = makeResult @'Backward w v
+instance IsString w => MakeResult 'Backward (String -> v -> (v, w)) where
+  makeResult w v = (v, fromString w)
+instance MakeResult d (a -> b -> (b, c)) => MakeResult d (a -> b -> (b, (), c)) where
+  makeResult x y = insertUnit $ makeResult @d x y
+instance MakeResult d (a -> b -> (b, c)) => MakeResult d (a -> b -> ((b, ()), c)) where
+  makeResult x y = insertUnit $ makeResult @d x y
+instance MakeResult d (a -> b -> (b, c)) => MakeResult d (a -> b -> ((b, (), ()), c)) where
+  makeResult x y = insertUnit $ makeResult @d x y
+
+class InsertUnit a b | b -> a where insertUnit :: a -> b
+--instance InsertUnit a (a, ()) where insertUnit = (, ())
+--instance InsertUnit a (a, (), ()) where insertUnit = (, (), ())
+instance InsertUnit (a, b) ((a, ()), b) where insertUnit = first (, ())
+instance InsertUnit (a, b) (a, (), b) where insertUnit (x, y) = (x, (), y)
+instance InsertUnit (a, b) ((a, (), ()), b) where insertUnit = first (, (), ())
 
 instance IsChar Word8 where
   fromChar = c2w
@@ -360,10 +388,16 @@ instance Eq ByteStringBuilder where x == y = Data.ByteString.Builder.toLazyByteS
 
 shouldReturn :: (ShouldReturn m, HasCallStack, Show a, Eq a) => m a -> a -> Expectation
 shouldReturn x y = shouldReturn' x y
-class ShouldReturn m where shouldReturn' :: (HasCallStack, Show a, Eq a) => m a -> a -> Expectation
-instance ShouldReturn IO where shouldReturn' x y = Test.Hspec.shouldReturn x y
-instance Show a => ShouldReturn (Either a) where shouldReturn' x y = either (fail . ("Expected Right but received " <>) . show . Left @_ @()) (`shouldBe` y) x
-instance ShouldReturn Maybe where shouldReturn' = maybe (const $ fail "Expected Just but received Nothing") shouldBe
+class ShouldReturn m where
+  shouldReturn' :: (HasCallStack, Show a, Eq a) => m a -> a -> Expectation
+instance ShouldReturn IO where
+  shouldReturn' x y = Test.Hspec.shouldReturn x y
+--instance Show a => ShouldReturn (Either a) where
+--  shouldReturn' x y = either (fail . ("Expected Right but received " <>) . show . Left @_ @()) (`shouldBe` y) x
+instance ShouldReturn Maybe where
+  shouldReturn' = maybe (const $ fail "Expected Just but received: Nothing") shouldBe
+instance Show e => ShouldReturn (Except e) where
+  shouldReturn' = except (\e -> const $ fail $ "Expected success but received: " <> show e) shouldBe
 
 instance IsList ByteStringBuilder where
   type Item ByteStringBuilder = Word8
@@ -387,9 +421,13 @@ class ShouldFail m where shouldFail :: Show a => m a -> Expectation
 instance ShouldFail IO where shouldFail = (`shouldThrow` anyException)
 instance ShouldFail Maybe where shouldFail = (`shouldSatisfy` isNothing)
 --instance (Show a, Show b) => ShouldFail (Either a b) where shouldFail = (`shouldSatisfy` isLeft)
+instance Show e => ShouldFail (Except e) where shouldFail = (`shouldSatisfy` isException)
 
 instance MonadState () IO where
   get = pure ()
   put = const $ pure ()
 instance UpdateStateWithElement () char where updateStateWithElement = const id
 
+class ForwardOnly (d :: Direction) where forwardOnly :: Applicative m => m () -> m ()
+instance ForwardOnly 'Forward where forwardOnly = id
+instance ForwardOnly 'Backward where forwardOnly = const (pure ())

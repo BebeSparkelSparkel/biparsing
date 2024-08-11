@@ -18,7 +18,7 @@ build-type: Simple
 library
   exposed-modules:
     Biparse.Control.Bwd
-    Biparse.Control.EitherString
+    Biparse.Control.Except
     Biparse.Control.File
     Biparse.Control.Fwd
   other-modules:
