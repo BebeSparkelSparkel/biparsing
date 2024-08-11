@@ -1,7 +1,7 @@
 module Prelude (module Export) where
 
 import Control.Applicative as Export (Applicative(pure, (<*>)), (<*))
-import Control.Monad as Export (Monad((>>=),return), MonadFail(fail), (>=>))
+import Control.Monad as Export (Monad((>>=),return), MonadFail(fail), (>=>), (=<<))
 import Control.Monad.Error.Class as Export (MonadError(throwError,catchError))
 import Control.Monad.Reader as Export (ReaderT)
 import Control.Monad.State.Class as Export (MonadState(get,put))
@@ -25,3 +25,4 @@ import Data.String as Export (IsString(fromString))
 import GHC.IO as Export (IO)
 import Profunctor.Colift as Export (Colift(colift))
 import Text.Show as Export (Show(show))
+import Data.Either as Export (Either)

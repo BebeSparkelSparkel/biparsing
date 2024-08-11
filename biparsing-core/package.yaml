@@ -33,12 +33,8 @@ library:
     - transformers >= 0.6.1.1
     - mono-traversable
     - monad-control
+    - exceptions
 
-    # remove dependencies after Data.EqElement is removed
-    - text >= 2.1.1
-    - bytestring
-    - split
-    - stringsearch
   default-extensions:
     - AllowAmbiguousTypes
     - BlockArguments

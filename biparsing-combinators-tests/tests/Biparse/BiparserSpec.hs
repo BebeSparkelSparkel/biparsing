@@ -121,6 +121,10 @@ specForwardsImpure :: forall text m w r s char.
   , Eq s
   , Typeable s
   , Peek m
+  , Try m
+  , OnError m
+  , Alt m
+  , MonadFail m
   , forall v. MakeForwardResult m v v
   , forall v. MakeForwardResult m v (v, w)
   , forall v. MakeForwardResult m v (v, s)
@@ -183,6 +187,9 @@ specForwardsPure :: forall text m r w s char.
   , forall v. MakeForwardResult m v ((v, w), StateSeq s text)
   , forall v. MakeForwardResult m v (v, StateSeq s text, w)
   , Peek m
+  , Alt m
+  , Try m
+  , OnError m
   ) => Spec
 specForwardsPure = do
   specForward @(Fwd (LazyStateT (StateSeq s text)   m))
@@ -210,11 +217,15 @@ specForward :: forall (p :: Type -> Type -> Type) r s char.
   , Eq char
   , IsChar char
   , forall u. ShouldFailQ p u
+  , forall u. Try (p u)
+  , forall u. Alt (p u)
+  , forall u. MonadFail (p u)
   ) => Spec
 specForward = describe (show $ typeRep @p) do
+  let runForward :: forall u v. Biparser p u v -> FilePath -> String -> BaseMonad (p u) (StM' (p u) v)
+      runForward = run @'Forward @p @r @s
   describe "one" do
-    let f :: FilePath -> String -> BaseMonad (Biparser p char) (StM' (Biparser p char) char)
-        f fp str = run @'Forward @p @r @s oneBP fp str
+    let f = runForward oneBP
     it "success" let
       fp = "one-success-forward.test"
       in f fp "abc" `shouldReturn` makeResult
@@ -227,7 +238,7 @@ specForward = describe (show $ typeRep @p) do
       in shouldFail $ f fp mempty
   describe "peek" do
     describe "peek one" do
-      let f = run @'Forward @p @r @s peekOneBP
+      let f = runForward peekOneBP
       it "success" let
         fp = "peek-one-success-forward.test"
         in f fp "abc" `shouldReturn` makeResult
@@ -240,31 +251,31 @@ specForward = describe (show $ typeRep @p) do
         in shouldFail $ f fp ""
     it "peek tuple" let
       fp = "peek-tuple-forward.test"
-      f = run @'Forward @p @r @s peekTupleBP fp
+      f = runForward peekTupleBP fp
       in f "abc" `shouldReturn` makeResult
           (Position @() fp 1 2)
           (IndexPosition fp 1)
           "bc"
           (fromChar @char 'a', fromChar @char 'a')
---    describe "peek alt" do
---      let f = run @'Forward @p peekAltBP . (() ,)
---      it "take" let
---        fp = "peek-alt-take-forward.test"
---        in f fp "xa" `shouldReturn` makeResult
---            (Position @() fp 1 1)
---            (IndexPosition fp 0)
---            "xa"
---            'x'
---      it "take fail" let
---        fp = "peek-alt-take-fail-forward.test"
---        in f fp "ab" `shouldReturn` makeResult
---            (Position @() fp 1 2)
---            (IndexPosition fp 1)
---            "b"
---            'a'
---      it "no match" let
---        fp = "peek-alt-no-match-forward.test"
---        in shouldFail $ f fp "b"
+    describe "peek alt" do
+      let f = runForward peekAltBP
+      it "take" let
+        fp = "peek-alt-take-forward.test"
+        in f fp "xa" `shouldReturn` makeResult
+            (Position @() fp 1 1)
+            (IndexPosition fp 0)
+            "xa"
+            (fromChar @char 'x')
+      it "take fail" let
+        fp = "peek-alt-take-fail-forward.test"
+        in f fp "ab" `shouldReturn` makeResult
+            (Position @() fp 1 2)
+            (IndexPosition fp 1)
+            "b"
+            (fromChar @char 'a')
+      it "no match" let
+        fp = "peek-alt-no-match-forward.test"
+        in shouldFail $ f fp "b"
 
 specBackward :: forall (p :: Type -> Type -> Type) char r s.
   ( One char p

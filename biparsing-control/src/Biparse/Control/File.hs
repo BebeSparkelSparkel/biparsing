@@ -26,7 +26,7 @@ import Data.ByteString (ByteString)
 import Data.ByteString.Lazy qualified
 import Data.ByteString.Builder qualified
 import Control.Monad.IO.Class (MonadIO(liftIO))
-import Control.Monad.Catch (MonadThrow, MonadCatch, MonadMask, finally, onError)
+import Control.Monad.Catch (MonadThrow, MonadCatch, MonadMask, finally)
 import Control.Monad.Identity (IdentityT)
 import Control.Monad.Trans.Control (MonadTransControl(StT,liftWith,restoreT), liftThrough)
 
@@ -130,7 +130,10 @@ instance (MonadIO m, MonadMask m, Peek m) => Peek (FileT text m) where
     p <- liftIO . hGetPosn =<< getHandle
     finally (liftThrough peek x) $ liftIO $ hSetPosn p
 
-instance (MonadIO m, MonadMask m, Try m) => Try (FileT text m) where
+instance (MonadIO m, MonadMask m, Try m, OnError m) => Try (FileT text m) where
   try x = do
     p <- liftIO . hGetPosn =<< getHandle
     onError (liftThrough try x) $ liftIO $ hSetPosn p
+
+instance OnError m => OnError (FileT text m) where
+  onError (FileT x) (FileT y) = FileT \fp h -> onError (x fp h) (y fp h)

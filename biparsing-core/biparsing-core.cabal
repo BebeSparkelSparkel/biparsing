@@ -59,10 +59,10 @@ library
   ghc-options: -Werror -Weverything -Wno-implicit-prelude -Wno-missing-deriving-strategies -Wno-missing-kind-signatures -Wno-missing-local-signatures -Wno-missing-safe-haskell-mode -Wno-safe -Wno-unsafe -Wno-name-shadowing -Wno-unused-packages
   build-depends:
       base
-    , bytestring
     , containers
     , data-default
     , data-diverse
+    , exceptions
     , extra
     , hvect
     , microlens
@@ -75,9 +75,6 @@ library
     , profunctor-monad
     , profunctors
     , semigroupoids
-    , split
-    , stringsearch
-    , text >=2.1.1
     , transformers >=0.6.1.1
   mixins:
       base hiding (Prelude)
