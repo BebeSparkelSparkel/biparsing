@@ -1,160 +1,15 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE QuantifiedConstraints #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-monomorphism-restriction #-}
 
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
-module Biparse.BiparserSpec where
+module Biparse.Core.ClassesSpec (spec) where
 
 spec :: Spec
-spec = do
-  describe "forwards" do
-    describe "impure" do
-      specBi @(Fwd (FileT (Forward String) IO))
-      specBi @(Fwd (FileT (Forward String) (IdentityT IO)))
-      specBi @(Fwd (FileT (Forward String) (ReaderT   () IO)))
-      specBi @(Fwd (FileT (Forward String) (LazyWriterT   () IO)))
-      specBi @(Fwd (FileT (Forward String) (LazyStateT   ()   IO)))
-      specBi @(Fwd (FileT (Forward String) (LazyRWST   () () ()   IO)))
-
-      specBi @(Fwd (FileT (Forward Text) IO))
-      specBi @(Fwd (FileT (Forward Text) (IdentityT IO)))
-      specBi @(Fwd (FileT (Forward Text) (ReaderT   () IO)))
-      specBi @(Fwd (FileT (Forward Text) (LazyWriterT   () IO)))
-      specBi @(Fwd (FileT (Forward Text) (LazyStateT   ()   IO)))
-      specBi @(Fwd (FileT (Forward Text) (LazyRWST   () () ()   IO)))
-
-      specBi @(Fwd (FileT (Forward ByteString) IO))
-      specBi @(Fwd (FileT (Forward ByteString) (IdentityT IO)))
-      specBi @(Fwd (FileT (Forward ByteString) (ReaderT   () IO)))
-      specBi @(Fwd (FileT (Forward ByteString) (LazyWriterT   () IO)))
-      specBi @(Fwd (FileT (Forward ByteString) (LazyStateT   ()   IO)))
-      specBi @(Fwd (FileT (Forward ByteString) (LazyRWST   () () ()   IO)))
-
-    describe "pure" do
-      specBi @(Fwd (LazyStateT (StateSeq () String) IO))
-      specBi @(Fwd (LazyWriterT () (LazyStateT (StateSeq () String) IO)))
-      specBi @(Fwd (LazyRWST () () (StateSeq () String) IO))
-      specBi @(Fwd (LazyStateT (StateSeq () Text) IO))
-      specBi @(Fwd (LazyWriterT () (LazyStateT (StateSeq () Text) IO)))
-      specBi @(Fwd (LazyRWST () () (StateSeq () Text) IO))
-      specBi @(Fwd (LazyStateT (StateSeq () ByteString) IO))
-      specBi @(Fwd (LazyWriterT () (LazyStateT (StateSeq () ByteString) IO)))
-      specBi @(Fwd (LazyRWST () () (StateSeq () ByteString) IO))
-      specBi @(Fwd (LazyStateT (StateSeq () String) Maybe))
-      specBi @(Fwd (LazyWriterT () (LazyStateT (StateSeq () String) Maybe)))
-      specBi @(Fwd (LazyRWST () () (StateSeq () String) Maybe))
-      specBi @(Fwd (LazyStateT (StateSeq () Text) Maybe))
-      specBi @(Fwd (LazyWriterT () (LazyStateT (StateSeq () Text) Maybe)))
-      specBi @(Fwd (LazyRWST () () (StateSeq () Text) Maybe))
-      specBi @(Fwd (LazyStateT (StateSeq () ByteString) Maybe))
-      specBi @(Fwd (LazyWriterT () (LazyStateT (StateSeq () ByteString) Maybe)))
-      specBi @(Fwd (LazyRWST () () (StateSeq () ByteString) Maybe))
-      specBi @(Fwd (LazyStateT (StateSeq () String) (Except String)))
-      specBi @(Fwd (LazyWriterT () (LazyStateT (StateSeq () String) (Except String))))
-      specBi @(Fwd (LazyRWST () () (StateSeq () String) (Except String)))
-      specBi @(Fwd (LazyStateT (StateSeq () Text) (Except String)))
-      specBi @(Fwd (LazyWriterT () (LazyStateT (StateSeq () Text) (Except String))))
-      specBi @(Fwd (LazyRWST () () (StateSeq () Text) (Except String)))
-      specBi @(Fwd (LazyStateT (StateSeq () ByteString) (Except String)))
-      specBi @(Fwd (LazyWriterT () (LazyStateT (StateSeq () ByteString) (Except String))))
-      specBi @(Fwd (LazyRWST () () (StateSeq () ByteString) (Except String)))
-
-      specBi @(Fwd (LazyStateT (StateSeq (Position () ()) String) IO))
-      specBi @(Fwd (LazyWriterT () (LazyStateT (StateSeq (Position () ()) String) IO)))
-      specBi @(Fwd (LazyRWST () () (StateSeq (Position () ()) String) IO))
-      specBi @(Fwd (LazyStateT (StateSeq (Position () ()) Text) IO))
-      specBi @(Fwd (LazyWriterT () (LazyStateT (StateSeq (Position () ()) Text) IO)))
-      specBi @(Fwd (LazyRWST () () (StateSeq (Position () ()) Text) IO))
-      specBi @(Fwd (LazyStateT (StateSeq (Position () ()) ByteString) IO))
-      specBi @(Fwd (LazyWriterT () (LazyStateT (StateSeq (Position () ()) ByteString) IO)))
-      specBi @(Fwd (LazyRWST () () (StateSeq (Position () ()) ByteString) IO))
-      specBi @(Fwd (LazyStateT (StateSeq (Position () ()) String) Maybe))
-      specBi @(Fwd (LazyWriterT () (LazyStateT (StateSeq (Position () ()) String) Maybe)))
-      specBi @(Fwd (LazyRWST () () (StateSeq (Position () ()) String) Maybe))
-      specBi @(Fwd (LazyStateT (StateSeq (Position () ()) Text) Maybe))
-      specBi @(Fwd (LazyWriterT () (LazyStateT (StateSeq (Position () ()) Text) Maybe)))
-      specBi @(Fwd (LazyRWST () () (StateSeq (Position () ()) Text) Maybe))
-      specBi @(Fwd (LazyStateT (StateSeq (Position () ()) ByteString) Maybe))
-      specBi @(Fwd (LazyWriterT () (LazyStateT (StateSeq (Position () ()) ByteString) Maybe)))
-      specBi @(Fwd (LazyRWST () () (StateSeq (Position () ()) ByteString) Maybe))
-      specBi @(Fwd (LazyStateT (StateSeq (Position () ()) String) (Except String)))
-      specBi @(Fwd (LazyWriterT () (LazyStateT (StateSeq (Position () ()) String) (Except String))))
-      specBi @(Fwd (LazyRWST () () (StateSeq (Position () ()) String) (Except String)))
-      specBi @(Fwd (LazyStateT (StateSeq (Position () ()) Text) (Except String)))
-      specBi @(Fwd (LazyWriterT () (LazyStateT (StateSeq (Position () ()) Text) (Except String))))
-      specBi @(Fwd (LazyRWST () () (StateSeq (Position () ()) Text) (Except String)))
-      specBi @(Fwd (LazyStateT (StateSeq (Position () ()) ByteString) (Except String)))
-      specBi @(Fwd (LazyWriterT () (LazyStateT (StateSeq (Position () ()) ByteString) (Except String))))
-      specBi @(Fwd (LazyRWST () () (StateSeq (Position () ()) ByteString) (Except String)))
-
-      specBi @(Fwd (LazyStateT (StateSeq (IndexPosition ()) String) IO))
-      specBi @(Fwd (LazyWriterT () (LazyStateT (StateSeq (IndexPosition ()) String) IO)))
-      specBi @(Fwd (LazyRWST () () (StateSeq (IndexPosition ()) String) IO))
-      specBi @(Fwd (LazyStateT (StateSeq (IndexPosition ()) Text) IO))
-      specBi @(Fwd (LazyWriterT () (LazyStateT (StateSeq (IndexPosition ()) Text) IO)))
-      specBi @(Fwd (LazyRWST () () (StateSeq (IndexPosition ()) Text) IO))
-      specBi @(Fwd (LazyStateT (StateSeq (IndexPosition ()) ByteString) IO))
-      specBi @(Fwd (LazyWriterT () (LazyStateT (StateSeq (IndexPosition ()) ByteString) IO)))
-      specBi @(Fwd (LazyRWST () () (StateSeq (IndexPosition ()) ByteString) IO))
-      specBi @(Fwd (LazyStateT (StateSeq (IndexPosition ()) String) Maybe))
-      specBi @(Fwd (LazyWriterT () (LazyStateT (StateSeq (IndexPosition ()) String) Maybe)))
-      specBi @(Fwd (LazyRWST () () (StateSeq (IndexPosition ()) String) Maybe))
-      specBi @(Fwd (LazyStateT (StateSeq (IndexPosition ()) Text) Maybe))
-      specBi @(Fwd (LazyWriterT () (LazyStateT (StateSeq (IndexPosition ()) Text) Maybe)))
-      specBi @(Fwd (LazyRWST () () (StateSeq (IndexPosition ()) Text) Maybe))
-      specBi @(Fwd (LazyStateT (StateSeq (IndexPosition ()) ByteString) Maybe))
-      specBi @(Fwd (LazyWriterT () (LazyStateT (StateSeq (IndexPosition ()) ByteString) Maybe)))
-      specBi @(Fwd (LazyRWST () () (StateSeq (IndexPosition ()) ByteString) Maybe))
-      specBi @(Fwd (LazyStateT (StateSeq (IndexPosition ()) String) (Except String)))
-      specBi @(Fwd (LazyWriterT () (LazyStateT (StateSeq (IndexPosition ()) String) (Except String))))
-      specBi @(Fwd (LazyRWST () () (StateSeq (IndexPosition ()) String) (Except String)))
-      specBi @(Fwd (LazyStateT (StateSeq (IndexPosition ()) Text) (Except String)))
-      specBi @(Fwd (LazyWriterT () (LazyStateT (StateSeq (IndexPosition ()) Text) (Except String))))
-      specBi @(Fwd (LazyRWST () () (StateSeq (IndexPosition ()) Text) (Except String)))
-      specBi @(Fwd (LazyStateT (StateSeq (IndexPosition ()) ByteString) (Except String)))
-      specBi @(Fwd (LazyWriterT () (LazyStateT (StateSeq (IndexPosition ()) ByteString) (Except String))))
-      specBi @(Fwd (LazyRWST () () (StateSeq (IndexPosition ()) ByteString) (Except String)))
-
-  describe "backward" do
-    focus $ specBi @(Bwd (FileT (Backward String) IO))
-    specBi @(Bwd (FileT (Backward Text) IO))
-    specBi @(Bwd (FileT (Backward ByteString) IO))
-
-    specBi @(Bwd (FileT (Backward String) (IdentityT IO)))
-    specBi @(Bwd (FileT (Backward Text) (IdentityT IO)))
-    specBi @(Bwd (FileT (Backward ByteString) (IdentityT IO)))
-
-    specBi @(Bwd (FileT (Backward String) (ReaderT () IO)))
-    specBi @(Bwd (FileT (Backward Text) (ReaderT () IO)))
-    specBi @(Bwd (FileT (Backward ByteString) (ReaderT () IO)))
-
-    specBi @(Bwd (FileT (Backward String) (LazyWriterT () IO)))
-    specBi @(Bwd (FileT (Backward Text) (LazyWriterT () IO)))
-    specBi @(Bwd (FileT (Backward ByteString) (LazyWriterT () IO)))
-
-    specBi @(Bwd (FileT (Backward String) (LazyStateT () IO)))
-    specBi @(Bwd (FileT (Backward Text) (LazyStateT () IO)))
-    specBi @(Bwd (FileT (Backward ByteString) (LazyStateT () IO)))
-
-    specBi @(Bwd (FileT (Backward String) (LazyRWST () () () IO)))
-    specBi @(Bwd (FileT (Backward Text) (LazyRWST () () () IO)))
-    specBi @(Bwd (FileT (Backward ByteString) (LazyRWST () () () IO)))
-
-    focus $ specBi @(Bwd (LazyWriterT String IO))
-    specBi @(Bwd (LazyRWST () String () IO))
-    specBi @(Bwd (LazyWriterT String Maybe))
-    specBi @(Bwd (LazyRWST () String () Maybe))
-
-    specBi @(Bwd (LazyWriterT Text IO))
-    specBi @(Bwd (LazyRWST () Text () IO))
-    specBi @(Bwd (LazyWriterT Text Maybe))
-    specBi @(Bwd (LazyRWST () Text () Maybe))
-
-    specBi @(Bwd (LazyWriterT ByteString IO))
-    specBi @(Bwd (LazyRWST () ByteString () IO))
-    specBi @(Bwd (LazyWriterT ByteString Maybe))
-    specBi @(Bwd (LazyRWST () ByteString () Maybe))
+spec = runAllTests @TestSuite testSuite
 
 oneBP :: One a p => Iso p a
 oneBP = one
@@ -168,100 +23,9 @@ peekTupleBP = (,) <$> peek one `upon` fst <*> one `upon` snd
 peekAltBP :: (Peek (p char), Try (p char), Alt (p char), MonadFail (p char), One char p, Show char, Eq char, IsChar char) => Iso p char
 peekAltBP = peek (takeUni (fromChar 'x')) <!> takeUni (fromChar 'a')
 
---specForwardsImpure :: forall text m r w s char.
---  ( Element text ~ char
---  , OpenFrom text
---  , Typeable text
---  , Show text
---  , Eq text
---  , IsString text
---  , IsSequence text
---  , MonadIO m
---  , MonadIO (BaseMonad m)
---  , forall a. Show a => ShowStM' m a
---  , forall a. Eq a => EqStM' m a
---  , MonadMask m
---  , MonadMask (BaseMonad m)
---  , OneFwd char (FileT text m)
---  , ShouldReturn (BaseMonad m)
---  , Typeable m
---  , BaseMonad m ~ IO
-----  , r ~ Read m
-----  , s ~ State m
---  , MonadState s m
---  , UpdateStateWithElement s char
---  , Show char
---  , Eq char
---  , IsChar char
---  , MonadFileGetChar char
---  , Typeable r
---  , Show w
---  , Eq w
---  , Monoid w
---  , Typeable w
---  , Show s
---  , Eq s
---  , Typeable s
---  , Peek m
---  , Try m
---  , OnError m
---  , Alt m
---  , MonadFail m
---  , forall u. RunBase (TestParameters r s u String) m
---  , forall u. ConstructParameter u String r
---  , forall u. ConstructParameter u String s
---  ) => Spec
---specForwardsImpure = do
---  specForward @(Fwd (FileT (Forward text) m)) @r @s
---  specForward @(Fwd (FileT (Forward text) (IdentityT m))) @r @s
---  specForward @(Fwd (FileT (Forward text) (ReaderT   r m))) @r @s
---  specForward @(Fwd (FileT (Forward text) (LazyWriterT   w m))) @r @s
---  specForward @(Fwd (FileT (Forward text) (LazyStateT   s   m))) @r @s
---  specForward @(Fwd (FileT (Forward text) (LazyRWST   r w s   m))) @r @s
---
---specForwardsPure :: forall text m r w s char.
---  ( Element text ~ char
---  , OpenFrom text
---  , Typeable text
---  , Show text
---  , Eq text
---  , IsString text
---  , IsSequence text
---  , MonadFail m
---  , ShouldReturn (BaseMonad m)
---  , Typeable m
---  , forall a. Show a => ShowStM' m a
---  , forall a. Eq a => EqStM' m a
---  , Show char
---  , Eq char
---  , IsChar char
---  , Show s
---  , Eq s
---  , forall u. ConstructParameter u String (TestParameters r (StateSeq s text) u String)
---  , Typeable s
---  , UpdateStateWithElement s char
---  , Show w
---  , Eq w
---  , Typeable w
---  , Monoid w
---  , Typeable r
---  , ShouldFail (BaseMonad m)
---  , Peek m
---  , Alt m
---  , Try m
---  , OnError m
-----  , r ~ Read m
---  , forall u. RunBase (TestParameters r s u String) (LazyStateT (StateSeq s text) m)
---  , forall u. RunBase (TestParameters r s u String) (LazyRWST r w (StateSeq s text) m)
---  , forall u. ConstructParameter u String r
---  , forall u. ConstructParameter u String s
---  ) => Spec
---specForwardsPure = do
---  specForward @(Fwd (LazyStateT (StateSeq s text)   m)) @r @s
---  specForward @(Fwd (LazyWriterT w (LazyStateT (StateSeq s text)   m))) @r @s
---  specForward @(Fwd (LazyRWST   r w (StateSeq s text)   m)) @r @s
-
-specBi :: forall (p :: Type -> Type -> Type) r s char direction.
+type TestSuite :: (Type -> Type -> Type) -> Constraint
+class TestSuite p where testSuite :: Proxy p -> Spec
+instance
   ( One char p
   , Profunctor p
   , forall u. ShouldReturnQ p u
@@ -284,72 +48,72 @@ specBi :: forall (p :: Type -> Type -> Type) r s char direction.
   , forall u. MakeIsoResult direction p u
   , ForwardOnly direction
   , direction ~ WhichDirection p
-  ) => Spec
-specBi = describe (show $ typeRep @p) do
-  let runForward :: forall u v. Biparser p u v -> FilePath -> u -> String -> BaseMonad (p u) (StM' (p u) v)
-      runForward = run @p @r @s
-  describe "one" do
-    let f = runForward oneBP
-    it "success" let
-      fp = "one-success-forward.test"
-      u = fromChar @char 'a'
-      in f fp u "abc" `shouldReturn` makeResult @direction
-          (Position @() fp 1 2)
-          (IndexPosition fp 1)
-          "bc"
-          "a"
-          u
-    forwardOnly @direction $ it "none to take" let
-      fp = "one-none-to-take-forward.test"
-      in shouldFail $ f fp undefined ""
-  describe "peek" do
-    describe "peek one" do
-      let f = runForward peekOneBP
+  ) => TestSuite p where
+  testSuite _ = describe (show $ typeRep @p) do
+    let runForward :: forall u v. Biparser p u v -> FilePath -> u -> String -> BaseMonad (p u) (StM' (p u) v)
+        runForward = run @p @r @s
+    describe "one" do
+      let f = runForward oneBP
       it "success" let
-        fp = "peek-one-success-forward.test"
+        fp = "one-success-forward.test"
         u = fromChar @char 'a'
         in f fp u "abc" `shouldReturn` makeResult @direction
-            (Position @() fp 1 1)
-            (IndexPosition fp 0)
-            "abc"
-            "a"
-            u
-      forwardOnly @direction $ it "fail" let
-        fp = "peek-one-fail-forward.test"
-        in shouldFail $ f fp undefined ""
-    it "peek tuple" let
-      fp = "peek-tuple-forward.test"
-      f = runForward peekTupleBP fp
-      u = (fromChar @char 'a', fromChar @char 'a')
-      in f u "abc" `shouldReturn` makeResult @direction
-          (Position @() fp 1 2)
-          (IndexPosition fp 1)
-          "bc"
-          "aa"
-          u
-    describe "peek alt" do
-      let f = runForward peekAltBP
-      it "take" let
-        fp = "peek-alt-take-forward.test"
-        u = fromChar @char 'x'
-        in f fp u "xa" `shouldReturn` makeResult @direction
-            (Position @() fp 1 1)
-            (IndexPosition fp 0)
-            "xa"
-            "x"
-            u
-      it "take fail" let
-        fp = "peek-alt-take-fail-forward.test"
-        u = fromChar @char 'a'
-        in f fp u "ab" `shouldReturn` makeResult @direction
             (Position @() fp 1 2)
             (IndexPosition fp 1)
-            "b"
+            "bc"
             "a"
             u
-      it "no match" let
-        fp = "peek-alt-no-match-forward.test"
-        in shouldFail $ f fp (fromChar @char 'b') "b"
+      forwardOnly @direction $ it "none to take" let
+        fp = "one-none-to-take-forward.test"
+        in shouldFail $ f fp undefined ""
+    describe "peek" do
+      describe "peek one" do
+        let f = runForward peekOneBP
+        it "success" let
+          fp = "peek-one-success-forward.test"
+          u = fromChar @char 'a'
+          in f fp u "abc" `shouldReturn` makeResult @direction
+              (Position @() fp 1 1)
+              (IndexPosition fp 0)
+              "abc"
+              "a"
+              u
+        forwardOnly @direction $ it "fail" let
+          fp = "peek-one-fail-forward.test"
+          in shouldFail $ f fp undefined ""
+      it "peek tuple" let
+        fp = "peek-tuple-forward.test"
+        f = runForward peekTupleBP fp
+        u = (fromChar @char 'a', fromChar @char 'a')
+        in f u "abc" `shouldReturn` makeResult @direction
+            (Position @() fp 1 2)
+            (IndexPosition fp 1)
+            "bc"
+            "aa"
+            u
+      describe "peek alt" do
+        let f = runForward peekAltBP
+        it "take" let
+          fp = "peek-alt-take-forward.test"
+          u = fromChar @char 'x'
+          in f fp u "xa" `shouldReturn` makeResult @direction
+              (Position @() fp 1 1)
+              (IndexPosition fp 0)
+              "xa"
+              "x"
+              u
+        it "take fail" let
+          fp = "peek-alt-take-fail-forward.test"
+          u = fromChar @char 'a'
+          in f fp u "ab" `shouldReturn` makeResult @direction
+              (Position @() fp 1 2)
+              (IndexPosition fp 1)
+              "b"
+              "a"
+              u
+        it "no match" let
+          fp = "peek-alt-no-match-forward.test"
+          in shouldFail $ f fp (fromChar @char 'b') "b"
 
 --specBackward :: forall (p :: Type -> Type -> Type) char r s.
 --  ( One char p
