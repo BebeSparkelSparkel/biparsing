@@ -32,6 +32,7 @@ library
     , containers
     , data-default
     , exceptions
+    , first-class-families
     , hspec
     , hspec-core
     , microlens

@@ -40,3 +40,4 @@ library:
     - temporary
     - exceptions
     - monad-control
+    - first-class-families

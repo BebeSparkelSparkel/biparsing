@@ -18,6 +18,7 @@ import Control.Monad.Catch qualified
 
 class OneFwd a m | m -> a where oneFwd :: m a
 deriving instance OneFwd a m => OneFwd a (IdentityT m)
+instance (OneFwd a m, Monad m) => OneFwd a (ReaderT r m) where oneFwd = lift oneFwd
 instance (OneFwd a m, Monad m, Monoid w) => OneFwd a (LazyWriterT w m) where oneFwd = lift oneFwd
 instance (a ~ Element seq, UpdateStateWithElement s a, IsSequence seq, MonadFail m) => OneFwd a (LazyStateT (StateSeq s seq) m) where oneFwd = oneFwd'
 --instance (a ~ Element seq, UpdateStateWithElement s a, IsSequence seq, MonadFail m) => OneFwd a (StrictStateT (StateSeq s seq) m) where oneFwd = oneFwd'
