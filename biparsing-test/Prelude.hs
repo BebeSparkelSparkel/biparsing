@@ -447,7 +447,6 @@ instance (cs a, KnownTypeableList cs l) => KnownTypeableList cs (a ': l) where
     knownTypeableList = SCons
 
 type Strings = '[String, Text, ByteString]
-type Transformers = '[IdentityT, ReaderT (), LazyWriterT (), LazyStateT (), LazyRWST () () ()]
 
 type Combinations :: [x] -> [y] -> [(x,y)] -> [(x,y)]
 type family Combinations xs ys zs where
@@ -459,7 +458,8 @@ type family Associate x ys zs where
   Associate x (y ': ys) zs = '(x, y) ': Associate x ys zs
   Associate _ '[] zs = zs
 
-type StringsAndTransformers = Combinations Strings Transformers '[]
+type FileTransformers r w s = '[IdentityT, ReaderT r, LazyWriterT w, LazyStateT s, LazyRWST r w s]
+type FileStringsAndTransformers r w s = Combinations Strings (FileTransformers r w s) '[]
 
 type String' = Type
 type Read' = Type
@@ -469,10 +469,10 @@ type MonadK = Type -> Type
 type TransformerK = MonadK -> Type -> Type
 type ProfunctorK = Type -> Type -> Type
 
-type ForwardFileProfunctors :: Exp [ProfunctorK]
-type ForwardFileProfunctors =
-  Eval (Map FileForwardIO Strings) ++
-  Eval (Map (Uncurry FileForwardT) StringsAndTransformers)
+type ForwardFileProfunctors :: Read' -> Write' -> State' -> Exp [ProfunctorK]
+type ForwardFileProfunctors r w s =
+  Map FileForwardIO Strings ^++^
+  Map (Uncurry FileForwardT) (FileStringsAndTransformers r w s)
 data FileForwardIO :: String' -> Exp ProfunctorK
 type instance Eval (FileForwardIO str) = Fwd (FileT 'ReadMode str IO)
 data FileForwardT :: String' -> TransformerK -> Exp ProfunctorK
@@ -480,7 +480,7 @@ type instance Eval (FileForwardT str t) = Fwd (FileT 'ReadMode str (t IO))
 
 type ForwardStateProfunctors :: Exp [ProfunctorK] -- [(Type, (Type -> TransformerK, (MonadK, Type)))]
 type ForwardStateProfunctors = Map StateForward (Combinations States (Combinations StateTransformers (Combinations Monads Strings '[]) '[]) '[])
-data StateForward :: (State', ((State' -> TransformerK), (MonadK, String'))) -> Exp ProfunctorK
+data StateForward :: (State', (State' -> TransformerK, (MonadK, String'))) -> Exp ProfunctorK
 type instance Eval (StateForward '(s, '(stateT, '(m, str)))) = Fwd (stateT (StateSeq s str) m)
 type States :: [State']
 type States = '[(), Position () (), IndexPosition ()]
@@ -490,25 +490,54 @@ type Monads :: [MonadK]
 type Monads = '[IO, Maybe, Except String]
 
 type ForwardRWSProfunctors :: Read' -> Write' -> Exp [ProfunctorK]
-type ForwardRWSProfunctors r w = Map RWSForward (Combinations States (Combinations (RWSTransformers r w) (Combinations Monads Strings '[]) '[]) '[])
-data RWSForward :: (State', (State' -> MonadK -> Exp MonadK, (MonadK, String'))) -> Exp ProfunctorK
-type instance Eval (RWSForward '(s, '(f, '(m, str)))) = Fwd (Eval (f (StateSeq s str) m))
-
-type RWSTransformers :: Read' -> Write' -> [State' -> MonadK -> Exp MonadK]
-type RWSTransformers r w = '[Pure2 (LazyRWST r w), StackedRWST LazyWriterT LazyStateT r w]
-
+type ForwardRWSProfunctors r w = Map (RWSForward r w) (Combinations States (Combinations RWSTransformers (Combinations Monads Strings '[]) '[]) '[])
+data RWSForward :: Read' -> Write' -> (State', (Read' -> Write' -> State' -> MonadK -> Exp MonadK, (MonadK, String'))) -> Exp ProfunctorK
+type instance Eval (RWSForward r w '(s, '(f, '(m, str)))) = Fwd (Eval (f r w (StateSeq s str) m))
+type RWSTransformers :: [Read' -> Write' -> State' -> MonadK -> Exp MonadK]
+type RWSTransformers = '[Pure4 LazyRWST, StackedRWST LazyWriterT LazyStateT]
 data StackedRWST :: (Write' -> TransformerK) -> (State' -> TransformerK) -> Read' -> Write' -> State' -> MonadK -> Exp MonadK
 type instance Eval (StackedRWST writerT stateT r w s m) = ReaderT r (writerT w (stateT s m))
+
+type BackwardFileProfunctors :: Read' -> Write' -> State' -> Exp [ProfunctorK]
+type BackwardFileProfunctors r w s =
+  Map FileBackwardIO Strings ^++^
+  Map (Uncurry FileBackwardsT) (FileStringsAndTransformers r w s)
+data FileBackwardIO :: String' -> Exp ProfunctorK
+type instance Eval (FileBackwardIO str) = Bwd (FileT 'AppendMode str IO)
+data FileBackwardsT :: String' -> TransformerK -> Exp ProfunctorK
+type instance Eval (FileBackwardsT str t) = Fwd (FileT 'AppendMode str (t IO))
+
+type BackwardWriterProfunctors :: Exp [ProfunctorK]
+type BackwardWriterProfunctors = Map WriteBackward (Combinations Writers (Combinations WriterTransformers Monads '[]) '[])
+data WriteBackward :: (Write', (Write' -> TransformerK, MonadK)) -> Exp ProfunctorK
+type instance Eval (WriteBackward '(w, '(writerT, m))) = Bwd (writerT w m)
+type WriterTransformers :: [Write' -> TransformerK]
+type WriterTransformers = '[LazyWriterT]
+type Writers = Eval (
+  Strings ++
+  '[ByteStringBuilder, TextBuilder]
+  )
+
+type BackwardRWSProfunctors :: Read' -> State' -> Exp [ProfunctorK]
+type BackwardRWSProfunctors r s = Map (RWSBackward r s) (Combinations Writers (Combinations RWSTransformers Monads '[]) '[])
+data RWSBackward :: Read' -> State' -> (Write', (Read' -> Write' -> State' -> MonadK -> Exp MonadK, MonadK)) -> Exp ProfunctorK
+type instance Eval (RWSBackward r s '(w, '(f, m))) = Bwd (Eval (f r w s m))
 
 infixr 5 ^++^
 data (^++^) :: Exp [a] -> Exp [a] -> Exp [a]
 type instance Eval (xs ^++^ ys) = Eval (LiftM2 (++) xs ys)
 
-type Profunctors :: [ProfunctorK]
-type Profunctors = Eval (
-  ForwardFileProfunctors ^++^
+data Pure4 :: (a -> b -> c -> d -> e) -> a -> b -> c -> d -> Exp e
+type instance Eval (Pure4 f w x y z) = f w x y z
+
+type Profunctors :: Read' -> Write' -> State'-> Read' -> Write' -> State'-> [ProfunctorK]
+type Profunctors rf wf sf rb wb sb = Eval (
+  ForwardFileProfunctors rf wf sf ^++^
   ForwardStateProfunctors ^++^
-  ForwardRWSProfunctors () () ^++^
+  ForwardRWSProfunctors rf wf ^++^
+  BackwardFileProfunctors rb wb sb ^++^
+  BackwardWriterProfunctors ^++^
+  BackwardRWSProfunctors rb sb ^++^
   Pure '[]
   )
 
@@ -536,131 +565,131 @@ type LeftOvers =
   --Fwd (FileT 'ReadMode ByteString (LazyRWST   () () ()   IO)),
 
   --Fwd (LazyStateT (StateSeq () String) IO),
-  Fwd (LazyWriterT () (LazyStateT (StateSeq () String) IO)),
+  --Fwd (LazyWriterT () (LazyStateT (StateSeq () String) IO)),
   --Fwd (LazyRWST () () (StateSeq () String) IO),
   --Fwd (LazyStateT (StateSeq () Text) IO),
-  Fwd (LazyWriterT () (LazyStateT (StateSeq () Text) IO)),
+  --Fwd (LazyWriterT () (LazyStateT (StateSeq () Text) IO)),
   --Fwd (LazyRWST () () (StateSeq () Text) IO),
   --Fwd (LazyStateT (StateSeq () ByteString) IO),
-  Fwd (LazyWriterT () (LazyStateT (StateSeq () ByteString) IO)),
+  --Fwd (LazyWriterT () (LazyStateT (StateSeq () ByteString) IO)),
   --Fwd (LazyRWST () () (StateSeq () ByteString) IO),
   --Fwd (LazyStateT (StateSeq () String) Maybe),
-  Fwd (LazyWriterT () (LazyStateT (StateSeq () String) Maybe)),
+  --Fwd (LazyWriterT () (LazyStateT (StateSeq () String) Maybe)),
   --Fwd (LazyRWST () () (StateSeq () String) Maybe),
   --Fwd (LazyStateT (StateSeq () Text) Maybe),
-  Fwd (LazyWriterT () (LazyStateT (StateSeq () Text) Maybe)),
+  --Fwd (LazyWriterT () (LazyStateT (StateSeq () Text) Maybe)),
   --Fwd (LazyRWST () () (StateSeq () Text) Maybe),
   --Fwd (LazyStateT (StateSeq () ByteString) Maybe),
-  Fwd (LazyWriterT () (LazyStateT (StateSeq () ByteString) Maybe)),
+  --Fwd (LazyWriterT () (LazyStateT (StateSeq () ByteString) Maybe)),
   --Fwd (LazyRWST () () (StateSeq () ByteString) Maybe),
   --Fwd (LazyStateT (StateSeq () String) (Except String)),
-  Fwd (LazyWriterT () (LazyStateT (StateSeq () String) (Except String))),
+  --Fwd (LazyWriterT () (LazyStateT (StateSeq () String) (Except String))),
   --Fwd (LazyRWST () () (StateSeq () String) (Except String)),
   --Fwd (LazyStateT (StateSeq () Text) (Except String)),
-  Fwd (LazyWriterT () (LazyStateT (StateSeq () Text) (Except String))),
+  --Fwd (LazyWriterT () (LazyStateT (StateSeq () Text) (Except String))),
   --Fwd (LazyRWST () () (StateSeq () Text) (Except String)),
   --Fwd (LazyStateT (StateSeq () ByteString) (Except String)),
-  Fwd (LazyWriterT () (LazyStateT (StateSeq () ByteString) (Except String))),
+  --Fwd (LazyWriterT () (LazyStateT (StateSeq () ByteString) (Except String))),
   --Fwd (LazyRWST () () (StateSeq () ByteString) (Except String)),
 
   --Fwd (LazyStateT (StateSeq (Position () ()) String) IO),
-  Fwd (LazyWriterT () (LazyStateT (StateSeq (Position () ()) String) IO)),
+  --Fwd (LazyWriterT () (LazyStateT (StateSeq (Position () ()) String) IO)),
   --Fwd (LazyRWST () () (StateSeq (Position () ()) String) IO),
   --Fwd (LazyStateT (StateSeq (Position () ()) Text) IO),
-  Fwd (LazyWriterT () (LazyStateT (StateSeq (Position () ()) Text) IO)),
+  --Fwd (LazyWriterT () (LazyStateT (StateSeq (Position () ()) Text) IO)),
   --Fwd (LazyRWST () () (StateSeq (Position () ()) Text) IO),
   --Fwd (LazyStateT (StateSeq (Position () ()) ByteString) IO),
-  Fwd (LazyWriterT () (LazyStateT (StateSeq (Position () ()) ByteString) IO)),
+  --Fwd (LazyWriterT () (LazyStateT (StateSeq (Position () ()) ByteString) IO)),
   --Fwd (LazyRWST () () (StateSeq (Position () ()) ByteString) IO),
   --Fwd (LazyStateT (StateSeq (Position () ()) String) Maybe),
-  Fwd (LazyWriterT () (LazyStateT (StateSeq (Position () ()) String) Maybe)),
+  --Fwd (LazyWriterT () (LazyStateT (StateSeq (Position () ()) String) Maybe)),
   --Fwd (LazyRWST () () (StateSeq (Position () ()) String) Maybe),
   --Fwd (LazyStateT (StateSeq (Position () ()) Text) Maybe),
-  Fwd (LazyWriterT () (LazyStateT (StateSeq (Position () ()) Text) Maybe)),
+  --Fwd (LazyWriterT () (LazyStateT (StateSeq (Position () ()) Text) Maybe)),
   --Fwd (LazyRWST () () (StateSeq (Position () ()) Text) Maybe),
   --Fwd (LazyStateT (StateSeq (Position () ()) ByteString) Maybe),
-  Fwd (LazyWriterT () (LazyStateT (StateSeq (Position () ()) ByteString) Maybe)),
+  --Fwd (LazyWriterT () (LazyStateT (StateSeq (Position () ()) ByteString) Maybe)),
   --Fwd (LazyRWST () () (StateSeq (Position () ()) ByteString) Maybe),
   --Fwd (LazyStateT (StateSeq (Position () ()) String) (Except String)),
-  Fwd (LazyWriterT () (LazyStateT (StateSeq (Position () ()) String) (Except String))),
+  --Fwd (LazyWriterT () (LazyStateT (StateSeq (Position () ()) String) (Except String))),
   --Fwd (LazyRWST () () (StateSeq (Position () ()) String) (Except String)),
   --Fwd (LazyStateT (StateSeq (Position () ()) Text) (Except String)),
-  Fwd (LazyWriterT () (LazyStateT (StateSeq (Position () ()) Text) (Except String))),
+  --Fwd (LazyWriterT () (LazyStateT (StateSeq (Position () ()) Text) (Except String))),
   --Fwd (LazyRWST () () (StateSeq (Position () ()) Text) (Except String)),
   --Fwd (LazyStateT (StateSeq (Position () ()) ByteString) (Except String)),
-  Fwd (LazyWriterT () (LazyStateT (StateSeq (Position () ()) ByteString) (Except String))),
+  --Fwd (LazyWriterT () (LazyStateT (StateSeq (Position () ()) ByteString) (Except String))),
   --Fwd (LazyRWST () () (StateSeq (Position () ()) ByteString) (Except String)),
 
   --Fwd (LazyStateT (StateSeq (IndexPosition ()) String) IO),
-  Fwd (LazyWriterT () (LazyStateT (StateSeq (IndexPosition ()) String) IO)),
+  --Fwd (LazyWriterT () (LazyStateT (StateSeq (IndexPosition ()) String) IO)),
   --Fwd (LazyRWST () () (StateSeq (IndexPosition ()) String) IO),
   --Fwd (LazyStateT (StateSeq (IndexPosition ()) Text) IO),
-  Fwd (LazyWriterT () (LazyStateT (StateSeq (IndexPosition ()) Text) IO)),
+  --Fwd (LazyWriterT () (LazyStateT (StateSeq (IndexPosition ()) Text) IO)),
   --Fwd (LazyRWST () () (StateSeq (IndexPosition ()) Text) IO),
   --Fwd (LazyStateT (StateSeq (IndexPosition ()) ByteString) IO),
-  Fwd (LazyWriterT () (LazyStateT (StateSeq (IndexPosition ()) ByteString) IO)),
+  --Fwd (LazyWriterT () (LazyStateT (StateSeq (IndexPosition ()) ByteString) IO)),
   --Fwd (LazyRWST () () (StateSeq (IndexPosition ()) ByteString) IO),
   --Fwd (LazyStateT (StateSeq (IndexPosition ()) String) Maybe),
-  Fwd (LazyWriterT () (LazyStateT (StateSeq (IndexPosition ()) String) Maybe)),
+  --Fwd (LazyWriterT () (LazyStateT (StateSeq (IndexPosition ()) String) Maybe)),
   --Fwd (LazyRWST () () (StateSeq (IndexPosition ()) String) Maybe),
   --Fwd (LazyStateT (StateSeq (IndexPosition ()) Text) Maybe),
-  Fwd (LazyWriterT () (LazyStateT (StateSeq (IndexPosition ()) Text) Maybe)),
+  --Fwd (LazyWriterT () (LazyStateT (StateSeq (IndexPosition ()) Text) Maybe)),
   --Fwd (LazyRWST () () (StateSeq (IndexPosition ()) Text) Maybe),
   --Fwd (LazyStateT (StateSeq (IndexPosition ()) ByteString) Maybe),
-  Fwd (LazyWriterT () (LazyStateT (StateSeq (IndexPosition ()) ByteString) Maybe)),
+  --Fwd (LazyWriterT () (LazyStateT (StateSeq (IndexPosition ()) ByteString) Maybe)),
   --Fwd (LazyRWST () () (StateSeq (IndexPosition ()) ByteString) Maybe),
   --Fwd (LazyStateT (StateSeq (IndexPosition ()) String) (Except String)),
-  Fwd (LazyWriterT () (LazyStateT (StateSeq (IndexPosition ()) String) (Except String))),
+  --Fwd (LazyWriterT () (LazyStateT (StateSeq (IndexPosition ()) String) (Except String))),
   --Fwd (LazyRWST () () (StateSeq (IndexPosition ()) String) (Except String)),
   --Fwd (LazyStateT (StateSeq (IndexPosition ()) Text) (Except String)),
-  Fwd (LazyWriterT () (LazyStateT (StateSeq (IndexPosition ()) Text) (Except String))),
+  --Fwd (LazyWriterT () (LazyStateT (StateSeq (IndexPosition ()) Text) (Except String))),
   --Fwd (LazyRWST () () (StateSeq (IndexPosition ()) Text) (Except String)),
   --Fwd (LazyStateT (StateSeq (IndexPosition ()) ByteString) (Except String)),
-  Fwd (LazyWriterT () (LazyStateT (StateSeq (IndexPosition ()) ByteString) (Except String))),
+  --Fwd (LazyWriterT () (LazyStateT (StateSeq (IndexPosition ()) ByteString) (Except String))),
   --Fwd (LazyRWST () () (StateSeq (IndexPosition ()) ByteString) (Except String)),
 
-  Bwd (FileT 'AppendMode String IO),
-  Bwd (FileT 'AppendMode Text IO),
-  Bwd (FileT 'AppendMode ByteString IO),
+  --Bwd (FileT 'AppendMode String IO),
+  --Bwd (FileT 'AppendMode Text IO),
+  --Bwd (FileT 'AppendMode ByteString IO),
 
-  Bwd (FileT 'AppendMode String (IdentityT IO)),
-  Bwd (FileT 'AppendMode Text (IdentityT IO)),
-  Bwd (FileT 'AppendMode ByteString (IdentityT IO)),
+  --Bwd (FileT 'AppendMode String (IdentityT IO)),
+  --Bwd (FileT 'AppendMode Text (IdentityT IO)),
+  --Bwd (FileT 'AppendMode ByteString (IdentityT IO)),
 
-  Bwd (FileT 'AppendMode String (ReaderT () IO)),
-  Bwd (FileT 'AppendMode Text (ReaderT () IO)),
-  Bwd (FileT 'AppendMode ByteString (ReaderT () IO)),
+  --Bwd (FileT 'AppendMode String (ReaderT () IO)),
+  --Bwd (FileT 'AppendMode Text (ReaderT () IO)),
+  --Bwd (FileT 'AppendMode ByteString (ReaderT () IO)),
 
-  Bwd (FileT 'AppendMode String (LazyWriterT () IO)),
-  Bwd (FileT 'AppendMode Text (LazyWriterT () IO)),
-  Bwd (FileT 'AppendMode ByteString (LazyWriterT () IO)),
+  --Bwd (FileT 'AppendMode String (LazyWriterT () IO)),
+  --Bwd (FileT 'AppendMode Text (LazyWriterT () IO)),
+  --Bwd (FileT 'AppendMode ByteString (LazyWriterT () IO)),
 
-  Bwd (FileT 'AppendMode String (LazyStateT () IO)),
-  Bwd (FileT 'AppendMode Text (LazyStateT () IO)),
-  Bwd (FileT 'AppendMode ByteString (LazyStateT () IO)),
+  --Bwd (FileT 'AppendMode String (LazyStateT () IO)),
+  --Bwd (FileT 'AppendMode Text (LazyStateT () IO)),
+  --Bwd (FileT 'AppendMode ByteString (LazyStateT () IO)),
 
-  Bwd (FileT 'AppendMode String (LazyRWST () () () IO)),
-  Bwd (FileT 'AppendMode Text (LazyRWST () () () IO)),
-  Bwd (FileT 'AppendMode ByteString (LazyRWST () () () IO)),
+  --Bwd (FileT 'AppendMode String (LazyRWST () () () IO)),
+  --Bwd (FileT 'AppendMode Text (LazyRWST () () () IO)),
+  --Bwd (FileT 'AppendMode ByteString (LazyRWST () () () IO)),
 
-  Bwd (LazyWriterT String IO),
-  Bwd (LazyRWST () String () IO),
-  Bwd (LazyWriterT String Maybe),
-  Bwd (LazyRWST () String () Maybe),
+  --Bwd (LazyWriterT String IO),
+  --Bwd (LazyRWST () String () IO),
+  --Bwd (LazyWriterT String Maybe),
+  --Bwd (LazyRWST () String () Maybe),
 
-  Bwd (LazyWriterT Text IO),
-  Bwd (LazyRWST () Text () IO),
-  Bwd (LazyWriterT Text Maybe),
-  Bwd (LazyRWST () Text () Maybe),
+  --Bwd (LazyWriterT Text IO),
+  --Bwd (LazyRWST () Text () IO),
+  --Bwd (LazyWriterT Text Maybe),
+  --Bwd (LazyRWST () Text () Maybe),
 
-  Bwd (LazyWriterT ByteString IO),
-  Bwd (LazyRWST () ByteString () IO),
-  Bwd (LazyWriterT ByteString Maybe),
-  Bwd (LazyRWST () ByteString () Maybe)
+  --Bwd (LazyWriterT ByteString IO),
+  --Bwd (LazyRWST () ByteString () IO),
+  --Bwd (LazyWriterT ByteString Maybe),
+  --Bwd (LazyRWST () ByteString () Maybe)
   ]
 
-runAllTests :: forall cs. KnownTypeableList cs Profunctors => (forall p. cs p => Proxy p -> Spec) -> Spec
-runAllTests = runAllTests' @cs @Profunctors
+runAllTests :: forall rf wf sf rb wb sb cs. KnownTypeableList cs (Profunctors rf wf sf rb wb sb) => (forall p. cs p => Proxy p -> Spec) -> Spec
+runAllTests = runAllTests' @cs @(Profunctors rf wf sf rb wb sb)
 
 runAllTests' :: forall cs l. KnownTypeableList cs l => (forall p. cs p => Proxy p -> Spec) -> Spec
 runAllTests' testSuite = case knownTypeableList @cs @l of

@@ -9,7 +9,7 @@
 module Biparse.Core.ClassesSpec (spec) where
 
 spec :: Spec
-spec = runAllTests @TestSuite testSuite
+spec = runAllTests @() @() @() @() @() @() @TestSuite testSuite
 
 oneBP :: One a p => Iso p a
 oneBP = one
