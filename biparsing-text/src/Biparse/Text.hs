@@ -46,7 +46,7 @@ stringShow :: forall p m u char.
   , One char p
   , Try (p u)
   , MonadFail (p u)
-  , Colift p m
+  , ComapM p m
   , MonadFail m
   , Eq u
   , Show u

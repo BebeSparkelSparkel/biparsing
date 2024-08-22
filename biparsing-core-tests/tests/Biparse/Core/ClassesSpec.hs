@@ -20,8 +20,8 @@ peekOneBP = peek one
 peekTupleBP :: (One a p, Peek (p a), Profunctor p, forall u. Applicative (p u)) => Iso p (a,a)
 peekTupleBP = (,) <$> peek one `upon` fst <*> one `upon` snd
 
-peekAltBP :: (Peek (p char), Try (p char), Alt (p char), MonadFail (p char), One char p, Show char, Eq char, IsChar char) => Iso p char
-peekAltBP = peek (takeUni (fromChar 'x')) <!> takeUni (fromChar 'a')
+peekAltBP :: (Peek (p char), Try (p char), Alternative (p char), MonadFail (p char), One char p, Show char, Eq char, IsChar char) => Iso p char
+peekAltBP = peek (takeUni (fromChar 'x')) <|> takeUni (fromChar 'a')
 
 type TestSuite :: (Type -> Type -> Type) -> Constraint
 class TestSuite p where testSuite :: Proxy p -> Spec
@@ -43,11 +43,11 @@ instance
   , IsChar char
   , forall u. ShouldFailQ p u
   , forall u. Try (p u)
-  , forall u. Alt (p u)
+  , forall u. Alternative (p u)
   , forall u. MonadFail (p u)
   , forall u. MakeIsoResult direction p u
   , ForwardOnly direction
-  , direction ~ WhichDirection p
+  , direction ~ WhichDirection (p ())
   ) => TestSuite p where
   testSuite _ = describe (show $ typeRep @p) do
     let runForward :: forall u v. Biparser p u v -> FilePath -> u -> String -> BaseMonad (p u) (StM' (p u) v)
@@ -210,9 +210,9 @@ instance
 --      \b -> do
 --        it "prints char" $ b 'a' >>= (`shouldBe` ('a',"a"))
 --
---    describe "Alt" do
---      let bp :: (Peek (p char), Try (p char), Alt (p char), MonadFail (p char), One char p) => Iso p char
---          bp = peek (takeUni 'x') <!> takeUni 'a'
+--    describe "Alternative" do
+--      let bp :: (Peek (p char), Try (p char), Alternative (p char), MonadFail (p char), One char p) => Iso p char
+--          bp = peek (takeUni 'x') <|> takeUni 'a'
 --
 --      fb @(FMIO UnixLC Text) @(BMIO Text) "Identity"
 --        (bp,bp)
@@ -260,7 +260,7 @@ instance
 --      it "success" $ f "abc" `shouldBe` Right ('a', (Position () 1 3, "c"))
 --      
 --      it "does not consume state in failed attempt" do
---        run @(FM UnixLC Text) (bp <!> takeUni 'c') () "cde" `shouldBe` Right ('c', (Position () 1 2, "de"))
+--        run @(FM UnixLC Text) (bp <|> takeUni 'c') () "cde" `shouldBe` Right ('c', (Position () 1 2, "de"))
 --
 --      it "fails if no alternate" do
 --        f "" `shouldSatisfy` errorPosition 1 1
@@ -269,7 +269,7 @@ instance
 --        it "prints correctly" $ b 'a' >>= (`shouldBe` ('a',"ab"))
 --
 ----        it "prints second if first fails (more of a test for the Biparser Alternative instance and should proabaly moved there)" do
-----          x <- runBackward (setBackward bp (const empty) <!> bp) () () () 'z'
+----          x <- runBackward (setBackward bp (const empty) <|> bp) () () () 'z'
 ----          x `shouldBe` ('z',"zb")
 --      
 ----  describe "isNull" do

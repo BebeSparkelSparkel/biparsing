@@ -42,7 +42,7 @@ type NaturalBaseTen p f b number i =
   , MonadFail f
   , OneFwd i f
   , Try f
-  , Alt f
+  , Alternative f
   , UnfoldlExactN b i
   , Monad b
   , Show number
@@ -66,7 +66,7 @@ naturalLimitedBaseTen :: forall p f b number i.
   , MonadFail f
   , OneFwd i f
   , Try f
-  , Alt f
+  , Alternative f
   , UnfoldlExactN b i
   , Monad b
   , Show number
@@ -88,7 +88,7 @@ naturalLimitedBaseTen limit = diverge @(p number) @f @b @number
     _ <- unfoldlExactN (numDigits n) ((`div` 10) &&& toEnum . (+ fromEnum zero) . fromIntegral . (`mod` 10)) n
     pure n
   where
-  fw x = Just <$> getDigit <!> pure Nothing >>= maybe (pure x) \d -> if limit - x > d
+  fw x = Just <$> getDigit <|> pure Nothing >>= maybe (pure x) \d -> if limit - x > d
     then fw $ 10 * x + d
     else fail $ "Exceeded limit of " <> show limit
   getDigit = try do
@@ -120,16 +120,16 @@ instance IntBaseTen p f b m Int64 i => IsoClass p Int64 where iso = intBaseTen
 --eNotation :: forall p f b m number i.
 --  ( Diverge (p Int) f b Int
 --  , forall u. MonadFail (p u)
---  , forall u. Alt (p u)
+--  , forall u. Alternative (p u)
 --  , forall u. Try (p u)
 --  , Profunctor p
 --  , One p
---  , Colift p m
+--  , ComapM p m
 --  , MonadFail m
 --  , MonadFail f
 --  , OneFwd i f
 --  , Try f
---  , Alt f
+--  , Alternative f
 --  , UnfoldlExactN b i
 --  , Monad b
 --  , Fractional number
@@ -142,7 +142,7 @@ instance IntBaseTen p f b m Int64 i => IsoClass p Int64 where iso = intBaseTen
 --eNotation = do
 --  digits <- realBaseTen
 --  power :: Maybe Int <- comap (const Nothing) $ optional do
---    take (fromChar 'E') <!> take (fromChar 'e')
+--    take (fromChar 'E') <|> take (fromChar 'e')
 --    intBaseTen
 --  pure $ maybe id ((*) . (10 ^^)) power $ digits
 --
@@ -155,9 +155,9 @@ instance IntBaseTen p f b m Int64 i => IsoClass p Int64 where iso = intBaseTen
 --    ws <- digitsBaseTen `upon` abs
 --    ds <- comap (const mempty) $ ignoreBackwardIso
 --      $   try (cons <$> (fromChar '.' <$ take (fromChar '.')) <*> digitsBaseTen)
---      <!> pure mempty
+--      <|> pure mempty
 --    maybe (fail "Could not read a realBaseTen.") (pure . s) $ readMay $ fmap toChar $ toList $ ws <> ds
---  <!> do
+--  <|> do
 --    --cs <- peek $ Data.Sequences.take 20 <$> rest `upon` const mempty
 --    --fail $ "Could not parse " <> show cs <> " to a base 10 real."
 --    fail $ "Could not parse a base 10 real."
@@ -218,14 +218,14 @@ numDigitsWord8 x = if
   | otherwise -> 1
 
 sign :: forall p m number i. Sign p m number i => Biparser p number (number -> number)
-sign = comap (< 0) $ takeTri (fromChar '-') True negate <!> pure id
+sign = comap (< 0) $ takeTri (fromChar '-') True negate <|> pure id
 type Sign p m number i =
   ( MonadFail (p Bool)
-  , Alt (p Bool)
+  , Alternative (p Bool)
   , Try (p Bool)
   , Profunctor p
   , One i p
-  , Colift p m
+  , ComapM p m
   , MonadFail m
   , Ord number
   , Num number
@@ -238,7 +238,7 @@ type Sign p m number i =
 hex :: forall (charCase :: CharCase) p m number i.
   ( forall u. MonadFail (p u)
   , One i p
-  , Colift p m
+  , ComapM p m
   , MonadFail m
   , Bits number
   , Integral number

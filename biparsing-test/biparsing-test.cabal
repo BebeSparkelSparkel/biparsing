@@ -42,7 +42,6 @@ library
     , profunctors
     , quickcheck-instances
     , safe
-    , semigroupoids
     , temporary
     , text >=2.1.1
     , transformers

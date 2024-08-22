@@ -84,7 +84,7 @@ zoom = undefined
 --zoomOne :: forall is c' mProgenitor w m' c s s' m n r ws u v i.
 --  -- m
 --  ( Monad m
---  , Alt m
+--  , Alternative m
 --  , ChangeMonad is m' m ()
 --  --, ChangeFunction is m' m ~ ()
 --  , MonadFail (StateErrorT i s m)

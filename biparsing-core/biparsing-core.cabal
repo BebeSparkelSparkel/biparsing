@@ -18,13 +18,14 @@ build-type:     Simple
 library
   exposed-modules:
       Biparse.Core.Aliases
+      Biparse.Core.Alternative
       Biparse.Core.Classes
       Biparse.Core.Classes.Backward
       Biparse.Core.Classes.Bidirectional
       Biparse.Core.Classes.Forward
       Biparse.Core.Comap
+      Biparse.Core.Direction
       Biparse.Core.Update
-      Profunctor.Colift
   other-modules:
       Prelude
   hs-source-dirs:
@@ -56,7 +57,7 @@ library
       TypeApplications
       TypeFamilies
       TypeOperators
-  ghc-options: -Werror -Weverything -Wno-implicit-prelude -Wno-missing-deriving-strategies -Wno-missing-kind-signatures -Wno-missing-local-signatures -Wno-missing-safe-haskell-mode -Wno-safe -Wno-unsafe -Wno-name-shadowing -Wno-unused-packages
+  ghc-options: -Weverything -Wno-implicit-prelude -Wno-missing-deriving-strategies -Wno-missing-kind-signatures -Wno-missing-local-signatures -Wno-missing-safe-haskell-mode -Wno-safe -Wno-unsafe -Wno-name-shadowing -Wno-unused-packages
   build-depends:
       base
     , containers
@@ -74,7 +75,6 @@ library
     , mtl >=2.3.1
     , profunctor-monad
     , profunctors
-    , semigroupoids
     , transformers >=0.6.1.1
   mixins:
       base hiding (Prelude)

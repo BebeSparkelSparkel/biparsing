@@ -9,7 +9,7 @@ module Biparse.AlternativeAttributes
   , AA
   , A
   , a
-  , (<!>>)
+  , (<|>>)
   , runAtt
   , totalAtt
   , failAtt
@@ -48,9 +48,9 @@ totalAtt (AA x) (A f) = AA $ f x
 failAtt :: MonadFail m => AA '[] (m a)
 failAtt = AA $ fail "failAtt"
 
-infixr 9 <!>>
-(<!>>) :: forall {k} (a :: k) (as :: [k]) f b. Alt f => A a (f b) -> AA as (f b) -> AA (a : as) (f b)
-A x <!>> AA y = AA $ x <!> y
+infixr 9 <|>>
+(<|>>) :: forall {k} (a :: k) (as :: [k]) f b. Alternative f => A a (f b) -> AA as (f b) -> AA (a : as) (f b)
+A x <|>> AA y = AA $ x <|> y
 
 type HasAll required implemented = Complement required implemented ~ '[]
 

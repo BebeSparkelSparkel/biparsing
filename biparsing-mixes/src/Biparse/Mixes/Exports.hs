@@ -10,7 +10,7 @@ import Biparse.State.LineColumn as Export
 --import Biparse.Text.LineBreak as Export
 import Biparse.Text.Numeric as Export
 import Control.Monad.RWS.Class as Export
-import Data.Functor.Alt as Export (Alt, (<!>))
+import Biparse.Core.Alternative as Export
 import Data.Function as Export (($), (.), id, const)
 import Data.Functor as Export ((<$), (<$>))
 import Data.Tuple as Export (fst, snd)

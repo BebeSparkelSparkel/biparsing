@@ -42,7 +42,6 @@ library
       base
     , biparsing-core
     , mtl
-    , semigroupoids
     , wide-word
   mixins:
       base hiding (Prelude)

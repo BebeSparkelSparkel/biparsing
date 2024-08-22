@@ -1,6 +1,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 module Biparse.Core.Classes.Backward (
 OneBwd(..),
+PutBwd(..),
 UnfoldlExactN(..),
 ) where
 
@@ -9,8 +10,13 @@ import Biparse.Core.Aliases (LazyWriterT, LazyRWST)
 import Control.Monad.Writer (tell)
 
 class OneBwd a m | m -> a where oneBwd :: a -> m ()
+instance (OneBwd a m, Monad m) => OneBwd a (ReaderT r m) where oneBwd = lift . oneBwd
 instance (Monad m, MonoPointed w, Monoid w, Element w ~ a) => OneBwd a (LazyWriterT w m) where oneBwd = tell . opoint
 instance (Monad m, MonoPointed w, Monoid w, Element w ~ a) => OneBwd a (LazyRWST r w s m) where oneBwd = tell . opoint
+
+class PutBwd a m | m -> a where putBwd :: a -> m ()
+instance (Monad m, Monoid w) => PutBwd w (LazyWriterT w m)  where putBwd = tell
+instance (Monad m, Monoid w) => PutBwd w (LazyRWST r w s m) where putBwd = tell
 
 class UnfoldlExactN m a | m -> a where
   unfoldlExactN :: Int -> (b -> (b, a)) -> b -> m b

@@ -55,9 +55,7 @@ library
     , mono-traversable
     , mtl
     , mutable-containers
-    , profunctors
     , safe
-    , semigroupoids
   mixins:
       base hiding (Prelude)
   default-language: Haskell2010

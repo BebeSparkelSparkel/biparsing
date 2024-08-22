@@ -1,48 +1,24 @@
 {-# OPTIONS_GHC -Wno-missing-import-lists #-}
-module Prelude
-  ( module Data.Functor
-  , module Control.Monad
-  , module Data.Sequences
-  , module Biparse.Biparser
-  , module Biparse.General
-  , module Control.Monad.Fail
-  , module Control.Monad.Writer.Class
-  , module Control.Monad.State.Class
-  , module Data.Functor.Alt
-  , module Control.Monad.Error.Class
-  , module Data.Eq
-  , module GHC.Enum
-  , module Data.Int
-  , module Text.Show
-  , module Data.Function
-  , module Data.Bits
-  , module GHC.Real
-  , module GHC.Num
-  , module Data.WideWord
-  , module Data.Word
-  , module Unsafe.Coerce
-  , module Data.Ord
-  ) where
+module Prelude (module Export) where
 
-import Biparse.Biparser (Iso, IsoClass(iso), SubState, SubElement, GetSubState, UpdateStateWithElement, pattern Biparser, upon, ConvertElement, One, one, coerceIso)
-import Biparse.General (take, takeDi)
-import Control.Monad (Monad, return)
-import Control.Monad.Error.Class (MonadError)
-import Control.Monad.Fail (MonadFail)
-import Control.Monad.State.Class (MonadState(get,put))
-import Control.Monad.Writer.Class (MonadWriter)
-import Data.Bits (Bits, (.|.), shiftL, shiftR)
-import Data.Eq (Eq)
-import Data.Function (($), (.))
-import Data.Functor (Functor, (<$>), (<&>))
-import Data.Functor.Alt (Alt((<!>)))
-import Data.Int (Int, Int8, Int16, Int32, Int64)
-import Data.Sequences (IsSequence)
-import Data.WideWord (Word128(..), Word256(..), Int128)
-import GHC.Enum (Enum(toEnum,succ), Bounded)
-import GHC.Num (Num)
-import GHC.Real (Integral, fromIntegral)
-import Text.Show (Show)
-import Data.Word (Word8, Word16, Word32, Word64)
-import Unsafe.Coerce (unsafeCoerce)
-import Data.Ord (Ord)
+import Biparse.Biparser as Export (Iso, IsoClass(iso), SubState, SubElement, GetSubState, UpdateStateWithElement, pattern Biparser, upon, ConvertElement, One, one, coerceIso)
+import Biparse.General as Export (take, takeDi)
+import Control.Monad as Export (Monad, return)
+import Control.Monad.Error.Class as Export (MonadError)
+import Control.Monad.Fail as Export (MonadFail)
+import Control.Monad.State.Class as Export (MonadState(get,put))
+import Control.Monad.Writer.Class as Export (MonadWriter)
+import Data.Bits as Export (Bits, (.|.), shiftL, shiftR)
+import Data.Eq as Export (Eq)
+import Data.Function as Export (($), (.))
+import Data.Functor as Export (Functor, (<$>), (<&>))
+import Data.Int as Export (Int, Int8, Int16, Int32, Int64)
+import Data.Ord as Export (Ord)
+import Data.Sequences as Export (IsSequence)
+import Data.WideWord as Export (Word128(..), Word256(..), Int128)
+import Data.Word as Export (Word8, Word16, Word32, Word64)
+import GHC.Enum as Export (Enum(toEnum,succ), Bounded)
+import GHC.Num as Export (Num)
+import GHC.Real as Export (Integral, fromIntegral)
+import Text.Show as Export (Show)
+import Unsafe.Coerce as Export (unsafeCoerce)

@@ -68,9 +68,9 @@ instance
   , MonadState a m
   , MonadFail m
   , MonadError e m
-  , Alt m
+  , Alternative m
   , MonadFail n
-  , Alt n
+  , Alternative n
   ) => IsoClass c m n a (Optional b) where
   iso = Optional <$> optional (iso @c @m @n @a @b) `upon` unOptional
 instance Default (Optional a) where def = Optional Nothing
@@ -165,7 +165,7 @@ instance {-# OVERLAPS #-}
   , MonadState a m
   , MonadFail m
   , MonadError e m
-  , Alt m
+  , Alternative m
   , MakeParsers c m n a bs
   ) => MakeParsers c m n a (IORef (Accumulating b) ': bs) where
   makeParsers (r :&: rs)
@@ -173,7 +173,7 @@ instance {-# OVERLAPS #-}
           x <- forward $ try $ iso @c @m @n @a
           () <- pure $ unsafePerformIO $ modifyIORef r $ Accumulating . cons x . unAccumulating
           pure True
-      <!> pure False
+      <|> pure False
       )
     : makeParsers @c @m @n @a rs
 instance {-# OVERLAPPABLE #-}
@@ -182,14 +182,14 @@ instance {-# OVERLAPPABLE #-}
   , MonadState a m
   , MonadFail m
   , MonadError e m
-  , Alt m
+  , Alternative m
   ) => MakeParsers c m n a (IORef b ': bs) where
   makeParsers (r :&: rs)
     = SingleSuccessParser ( do
           x <- forward $ try $ iso @c @m @n @a
           () <- pure $ unsafePerformIO $ writeIORef r x
           pure True
-      <!> pure False
+      <|> pure False
     )
     : makeParsers @c @m @n @a rs
 instance MakeParsers c m n a '[] where

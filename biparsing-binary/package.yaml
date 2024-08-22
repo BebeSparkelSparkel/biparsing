@@ -37,7 +37,6 @@ library:
     - Prelude
   dependencies:
     - mtl
-    - semigroupoids
   ghc-options:
     - -Werror
     - -Weverything

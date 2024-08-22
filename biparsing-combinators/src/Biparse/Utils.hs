@@ -15,11 +15,11 @@ module Biparse.Utils
   , char
   ) where
 
+import Biparse.Core.Alternative (Alternative((<|>)))
 import Control.Applicative (Applicative, pure, liftA2)
 import Control.Monad (MonadFail, fail)
 import Data.Function ((.), flip, ($))
 import Data.Functor (Functor, (<$), fmap)
-import Data.Functor.Alt (Alt, (<!>))
 import Data.Maybe (maybe)
 import Data.MonoTraversable (headMay, lastMay, MonoFoldable, Element)
 import Data.Proxy (Proxy(Proxy))
@@ -28,8 +28,8 @@ import Data.String (IsString(fromString))
 import GHC.TypeLits (KnownSymbol, symbolVal, KnownChar, charVal)
 import Text.Printf (IsChar(fromChar))
 
-(!>) :: (Applicative f, Alt f) => f a -> a -> f a
-x !> y = x <!> pure y
+(!>) :: (Applicative f, Alternative f) => f a -> a -> f a
+x !> y = x <|> pure y
 
 infixl 4 <$$>
 (<$$>) :: (Functor f, Functor g) => (a -> b) -> f (g a) -> f (g b)

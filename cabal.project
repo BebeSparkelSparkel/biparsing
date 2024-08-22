@@ -1,13 +1,21 @@
 packages:
   */*.cabal
+  ../mtl/*.cabal
+  ../mono-traversable/mono-traversable/*.cabal
+  ../mono-traversable/mutable-containers/*.cabal
+
+--source-repository-package
+--  type: git
+--  location: https://github.com/bebeSparkelSparkel/mono-traversable.git
+--  tag: 7f865a1b8d9b856939e2fc6249e9ec2e90869448
+--  subdir: mutable-containers
+
+--source-repository-package
+--  type: git
+--  location: https://github.com/bebeSparkelSparkel/mtl.git
+--  tag: b701e12fb840bb488d5785bc21a9a8e67fd0b58a
 
 source-repository-package
   type: git
-  location: https://github.com/bebeSparkelSparkel/mono-traversable.git
-  tag: 7f865a1b8d9b856939e2fc6249e9ec2e90869448
-  subdir: mutable-containers
-
-source-repository-package
-  type: git
-  location: https://github.com/bebeSparkelSparkel/mtl.git
-  tag: b701e12fb840bb488d5785bc21a9a8e67fd0b58a
+  location: git@github.com:Lysxia/first-class-families.git
+  tag: 7962e14f385e46f18dd1db28f07bc7bec15812ef

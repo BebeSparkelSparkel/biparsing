@@ -7,7 +7,7 @@ import GHC.Generics (Generic(Rep,to,from), D1, C1, S1, U1(U1), M1(M1,unM1), K1(K
 import Control.Monad.State (State, evalState)
 
 -- | Define IsoClass for Summed (multiple constructors) ADTs.
--- Cannot be used with (<|>) or (<!>) since no type header, only a constructor header, is defined to differentiate types.
+-- Cannot be used with (<|>) or (<|>) since no type header, only a constructor header, is defined to differentiate types.
 -- The constructor is preceeded by a enumerated element.
 genericBinaryAdtIsoClass :: forall c m n a b.
   ( Generic b
@@ -22,7 +22,7 @@ class GenericBinaryAdtIsoClass c b m n a where
 instance
   ( GenericBinaryAdtIsoClass c cons m n a
   , GenericBinaryAdtIsoClass c cons' m n a
-  , Alt m
+  , Alternative m
   , Monad n
   ) => GenericBinaryAdtIsoClass c (D1 meta (cons :+: cons')) m n a where
   genericBinaryAdtIsoClass' = do
@@ -31,14 +31,14 @@ instance
 instance
   ( GenericBinaryAdtIsoClass c cons m n a
   , GenericBinaryAdtIsoClass c cons' m n a
-  , Alt m
+  , Alternative m
   , Functor n
   ) => GenericBinaryAdtIsoClass c (cons :+: cons') m n a where
   genericBinaryAdtIsoClass' = do
     -- Identity does not have MonadFail so this stupid syntax is required
     (fw,bw) <- genericBinaryAdtIsoClass' @c @cons @_ @_ @a <&> \(Biparser f b) -> (f,b)
     (fw',bw') <- genericBinaryAdtIsoClass' @c @cons' @_ @_ @a <&> \(Biparser f b) -> (f,b)
-    return $ Biparser (L1 <$> fw <!> R1 <$> fw') \case
+    return $ Biparser (L1 <$> fw <|> R1 <$> fw') \case
       L1 x -> L1 <$> bw x
       R1 x -> R1 <$> bw' x
 instance
@@ -49,7 +49,7 @@ instance
   , MonadState a m
   , MonadError e m
   , MonadFail m
-  , Alt m
+  , Alternative m
   , MonadWriter w n
   , MonadFail n
   , ConvertElement c se w n
@@ -73,7 +73,7 @@ instance
   , MonadState a m
   , MonadError e m
   , MonadFail m
-  , Alt m
+  , Alternative m
   , MonadWriter w n
   , MonadFail n
   , ConvertElement c se w n
@@ -96,7 +96,7 @@ instance
   , MonadState a m
   , MonadError e m
   , MonadFail m
-  , Alt m
+  , Alternative m
   , MonadWriter w n
   , MonadFail n
   , ConvertElement c se w n

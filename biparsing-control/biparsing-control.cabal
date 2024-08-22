@@ -27,6 +27,7 @@ library
     src/
   default-extensions:
     BlockArguments
+    DataKinds
     DeriveFunctor
     DerivingVia
     FlexibleContexts
@@ -43,6 +44,7 @@ library
     UndecidableInstances
   build-depends:
     base,
+    bifunctors,
     biparsing-core,
     biparsing-state,
     bytestring,
@@ -52,7 +54,6 @@ library
     mono-traversable,
     mtl,
     profunctors,
-    semigroupoids,
     text,
     transformers
   mixins:

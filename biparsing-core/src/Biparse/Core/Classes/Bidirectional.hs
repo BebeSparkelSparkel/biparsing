@@ -12,13 +12,13 @@ type Item' :: k -> Type
 type family Item' a
 
 -- | Returns one element.
-class One a p | p -> a where
-  one :: Iso p a
+class One a m | m -> a where
+  one :: Iso m a
 
 -- | Returns n elements.
 -- When writing (backwards) all characters should probably be writtern not just N.
-class BiN p where
-  biN :: Int -> Iso p seq
+class BiN m where
+  biN :: Int -> Iso m seq
 
 -- * Forward and Backward Divergence
 
@@ -33,7 +33,7 @@ class Diverge m f b u | m -> f b, b -> u where
 --  -- m
 --  , MonadState s m
 --  , MonadFail m
---  , Alt m
+--  , Alternative m
 --  -- w
 --  -- assignments
 --  , ss ~ SubState s

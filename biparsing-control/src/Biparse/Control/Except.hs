@@ -5,16 +5,13 @@ isException,
 ) where
 
 newtype Except e a = Except {runExcept :: Either e a}
-  deriving (Show, Eq, Functor, Applicative, Monad)
+  deriving (Show, Eq, Functor, Applicative, Alternative, Monad)
 
 except :: (e -> b) -> (a -> b) -> Except e a -> b
 except f g = either f g . runExcept
 
 isException :: Except e a -> Bool
 isException = isLeft . runExcept
-
-instance Alt (Except e) where
-  Except x <!> Except y = Except $ x <!> y
 
 deriving instance MonadError e (Either e) => MonadError e (Except e)
 

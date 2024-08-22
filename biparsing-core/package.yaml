@@ -27,13 +27,12 @@ library:
     - microlens-pro
     - microlens-th
     - mtl >= 2.3.1
-    - profunctors
     - profunctor-monad
-    - semigroupoids
     - transformers >= 0.6.1.1
     - mono-traversable
     - monad-control
     - exceptions
+    - profunctors
 
   default-extensions:
     - AllowAmbiguousTypes
@@ -63,7 +62,7 @@ library:
     - TypeFamilies
     - TypeOperators
   ghc-options:
-    - -Werror
+    #- -Werror
     - -Weverything
 
     - -Wno-implicit-prelude

@@ -36,7 +36,8 @@ test-suite spec
     TypeFamilies
 
   ghc-options:
-    -- -fplugin=Effectful.Plugin
+    -freduction-depth=100000
+
     -Werror
     -Weverything
     -Wno-implicit-prelude

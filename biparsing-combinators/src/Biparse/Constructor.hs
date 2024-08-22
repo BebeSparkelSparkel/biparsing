@@ -37,8 +37,7 @@ import Control.Profunctor.FwdBwd qualified as FB
 import Control.Monad.State qualified as S
 
 newtype Constructor s m n u v = Constructor' {deconstruct :: FwdBwd (ReaderT s m) (S.StateT s n) u v}
-  deriving (Functor, Applicative, Monad, MonadFail)
-instance (Alt m, Alt n) => Alt (Constructor s m n u) where Constructor' x <!> Constructor' y = Constructor' $ x <!> y
+  deriving (Functor, Applicative, Alternative, Monad, MonadFail)
 pattern Constructor :: ReaderT s m v -> (u -> S.StateT s n v) -> Constructor s m n u v
 pattern Constructor fw bw = Constructor' (FwdBwd fw bw)
 {-# COMPLETE Constructor #-}
@@ -103,7 +102,7 @@ type FocusOne is c s m m' n n' ss se w =
   -- m
   , MonadState s m
   , MonadFail m
-  , Alt m
+  , Alternative m
   -- n
   , MonadWriter w n
   -- w

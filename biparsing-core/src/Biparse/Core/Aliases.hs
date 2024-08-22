@@ -3,7 +3,7 @@ module Biparse.Core.Aliases (
 Biparser,
 Iso,
 Unit,
-unit,
+--unit,
 Const,
 ConstU,
 
@@ -47,10 +47,6 @@ type Iso p v = Biparser p v v
 
 -- | Unit when @u@ and @v@ are @()@
 type Unit p = Biparser p () ()
-
--- | Throws away @u@ and @v@
-unit :: forall p u. Profunctor p => Unit p -> Const p u
-unit = lmap $ const ()
 
 -- | Discards @u@ and returns ()
 type Const p u = Biparser p u ()

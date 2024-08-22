@@ -1,7 +1,10 @@
 module Prelude (module Export) where
 
+import Biparse.Core.Alternative as Export
 import Biparse.Core.Classes as Export
+import Biparse.Core.Direction as Export
 import Control.Applicative as Export (Applicative(pure,(<*>)))
+import Control.Arrow as Export (Kleisli(Kleisli))
 import Control.Monad as Export (Monad((>>=),return), (=<<), (>=>), (<=<), MonadFail(fail), (>>))
 import Control.Monad.Accum as Export (MonadAccum)
 import Control.Monad.Error.Class as Export (MonadError(throwError,catchError))
@@ -16,15 +19,13 @@ import Data.Default as Export (Default(def))
 import Data.Either as Export (Either(Left,Right), fromLeft, fromRight, isLeft, either)
 import Data.Eq as Export (Eq((==)))
 import Data.Function as Export ((.), const, ($), flip, id)
-import Data.Functor as Export (Functor(fmap), (<$>), (<$))
-import Data.Functor.Alt as Export (Alt((<!>)))
+import Data.Functor as Export (Functor(fmap), (<$>), (<$), (<&>))
 import Data.Kind as Export (Type)
 import Data.Maybe as Export (maybe)
 import Data.MonoTraversable as Export (MonoPointed(opoint), Element)
-import Data.Monoid as Export (Monoid)
-import Data.Profunctor as Export (Profunctor(dimap))
+import Data.Monoid as Export (Monoid(mempty))
+import Data.Profunctor as Export (Profunctor)
 import Data.Semigroup as Export ((<>))
 import Data.String as Export (String, IsString(fromString))
-import Data.Tuple as Export (uncurry, snd)
-import Profunctor.Colift as Export (Colift(colift))
+import Data.Tuple as Export (curry, uncurry, fst, snd)
 import Text.Show as Export (Show(show))

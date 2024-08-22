@@ -53,7 +53,7 @@ module Biparse.Text.LineBreak (
 --  () => Iso p LineBreakType
 --lineBreakType
 --  =   takeDi  (char @(FromLeft (LineBreaker 'Unix)))    Unix
---  <!> takeDi' (lineBreakerString @'Windows) Windows
+--  <|> takeDi' (lineBreakerString @'Windows) Windows
 --
 --lines :: forall (lb :: LineBreakType) c m n a text up.
 --  ( LineSplitter (LineBreaker lb) up c m n a [text]
@@ -100,10 +100,10 @@ module Biparse.Text.LineBreak (
 ----  , ContextualStateTransformer' c a Maybe m'
 ----  , MonadError e m'
 ----  , MonadFail m'
-----  , Alt m'
+----  , Alternative m'
 ----  , ContextualWriterTransformer c w Maybe n'
 ----  , MonadFail n'
-----  , Alt n'
+----  , Alternative n'
 ----  , ConvertElement c se w n'
 ----  , ConvertSequence c [ss] seq (Biparser c a m n seq)
 ----  , ConvertSequence c seq [ss] n
@@ -123,12 +123,12 @@ module Biparse.Text.LineBreak (
 ----  , ContextualStateTransformer' c a Maybe m'
 ----  , MonadError e m'
 ----  , MonadFail m'
-----  , Alt m'
+----  , Alternative m'
 ----  , MonadState ss (StateTransformer c ss m')
 ----  , ContextualWriterTransformer c w Maybe n'
 ----  , ConvertSequence c ss w n'
 ----  , MonadFail n'
-----  , Alt n'
+----  , Alternative n'
 ----  , ConvertSequence c [ss] seq (Biparser c a m n seq)
 ----  , ConvertSequence c seq [ss] n
 ----  , SubStateContext c a

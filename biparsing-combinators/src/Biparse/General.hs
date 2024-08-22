@@ -80,7 +80,7 @@ takeUni takeWriteMatchReturn = try do
   else expectedFail takeWriteMatchReturn y
 
 takeDi :: forall p m u item.
-  ( Colift p m
+  ( ComapM p m
   , MonadFail m
   , MonadFail (p u)
   , Try (p u)
@@ -97,7 +97,7 @@ takeDi takeWrite matchReturn = takeTri takeWrite matchReturn matchReturn
 
 -- | Allows 'SubElement s'`, 'u', and 'v' to be fixed which works well with Alternative.
 takeTri :: forall p m u item v.
-  ( Colift p m
+  ( ComapM p m
   , MonadFail m
   , MonadFail (p u)
   , Try (p u)
@@ -138,7 +138,7 @@ takeNot x = try do
 -- * Take for prefixes
 
 takeDi' :: forall p m u seq.
-  ( Colift p m
+  ( ComapM p m
   , MonadFail m
   , Profunctor p
   , BiN p
@@ -160,7 +160,7 @@ takeDi' takeWrite matchReturn = takeTri' takeWrite matchReturn matchReturn
 
 -- | Allows 'SubState c s'`, 'u', and 'v' to be fixed which works well with Alternative.
 takeTri' :: forall p m u v seq.
-  ( Colift p m
+  ( ComapM p m
   , MonadFail m
   , Profunctor p
   , BiN p
@@ -197,7 +197,7 @@ takeTri' takeWrite toMatch toReturn = try do
 --  => Biparser p u v
 --  -> Biparser p u ()
 --drop = undefined
-----drop bp = ignoreBackward () $ try bp *> drop bp <!> pure ()
+----drop bp = ignoreBackward () $ try bp *> drop bp <|> pure ()
 --
 ---- | Drop forward elements while predicate is true.
 --dropWhile :: forall c s p n u seq item w.
@@ -306,7 +306,7 @@ takeTri' takeWrite toMatch toReturn = try do
 ----    bw ()
 ----    return u
 ----  where
-----  fw' = mempty <$ fw <!> cons <$> oneFw @c <*> fw'
+----  fw' = mempty <$ fw <|> cons <$> oneFw @c <*> fw'
 --
 ---- | 'x' does not succeed
 --breakWhen' :: forall c s t p seq w e.
@@ -321,7 +321,7 @@ takeTri' takeWrite toMatch toReturn = try do
 ----    let its = initTails $ getSubState @s startState
 ----    tryState $ maybe (fail "Could not find break.") (pure . fst) =<< flip findM its \(h,t) -> do
 ----      put $ updateSubStateContext @c startState h t
-----      fw $> True <!> pure False
+----      fw $> True <|> pure False
 ----  bw' x = do
 ----    tell =<< convertSequence @c x
 ----    bw ()
@@ -333,11 +333,11 @@ takeTri' takeWrite toMatch toReturn = try do
 ----  -> Iso m seq
 ----breakWhen' x
 ----  = bw
-----  <!> ignoreForward  (write *> unit x)
+----  <|> ignoreForward  (write *> unit x)
 ----  where
 ----  bw
 ----    =   mempty <$ (failBackward $ try $ unit x)
-----    <!> do
+----    <|> do
 ----          y <- one `uponM` headAlt
 ----          cons y <$> breakWhen' x `uponM` tailAlt
 --
@@ -372,20 +372,20 @@ takeTri' takeWrite toMatch toReturn = try do
 --  => Biparser p u v
 --  -> Biparser p u (Maybe v)
 --optionMaybe = undefined
-----optionMaybe x = Just <$> try x <!> pure Nothing
+----optionMaybe x = Just <$> try x <|> pure Nothing
 
 -- | Allows a parser to fail and return Maybe instead. Allows writer to optionally run or not.
 optional :: forall p m u v.
   ( forall u'. Functor (p u')
-  , forall u'. Alt (p u')
+  , forall u'. Alternative (p u')
   , forall u'. Applicative (p u')
   , Try (p u)
-  , Colift p m
+  , ComapM p m
   , MonadFail m
   ) 
   => Biparser p u v
   -> Biparser p (Maybe u) (Maybe v)
-optional x = Just <$> try x `uponM` maybe (fail "") pure <!> pure Nothing
+optional x = Just <$> try x `uponM` maybe (fail "") pure <|> pure Nothing
 
 -- * Stripping
 
@@ -449,8 +449,8 @@ stripPrefix prefix = try do
 ----not = fmap Data.Bool.not
 
 -- | If success, returns True. If fails, returns False
-failBool :: (Applicative m, Alt m) => m a -> m Bool
-failBool x = x $> True <!> pure False
+failBool :: (Applicative m, Alternative m) => m a -> m Bool
+failBool x = x $> True <|> pure False
 
 ---- | Causes backward to write nothing.
 --memptyWrite :: forall c s p n u v w.

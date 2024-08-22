@@ -17,20 +17,21 @@ library:
     - name: base
       mixin:
         - hiding (Prelude)
-    - semigroupoids
     - data-default
     - mtl
     - biparsing-core
     - biparsing-state
-    - profunctors
     - mono-traversable
     - text
     - bytestring
     - exceptions
     - monad-control
     - transformers
+    - profunctors
+    - bifunctors
   default-extensions:
     - BlockArguments
+    - DataKinds
     - DeriveFunctor
     - DerivingVia
     - FlexibleContexts
