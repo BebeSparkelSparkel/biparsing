@@ -13,18 +13,20 @@ Null(..),
 import Data.Sequences (IsSequence(uncons))
 import Data.MonoTraversable (Element)
 import Biparse.Core.Update (UpdateStateWithElement(updateStateWithElement))
-import Biparse.Core.Aliases (ReaderT(ReaderT), LazyStateT, pattern LazyStateT, LazyWriterT, pattern LazyWriterT, LazyRWST, pattern LazyRWST) 
+import Biparse.Core.Aliases (ReaderT(ReaderT), CPSWriterT, pattern CPSWriterT, LazyWriterT, pattern LazyWriterT, StrictWriterT, pattern StrictWriterT, LazyStateT, pattern LazyStateT, StrictStateT, pattern StrictStateT, CPSRWST, pattern CPSRWST, LazyRWST, pattern LazyRWST, StrictRWST, pattern StrictRWST)
 import Control.Monad.Catch qualified
 
 class OneFwd a m | m -> a where oneFwd :: m a
 deriving instance OneFwd a m => OneFwd a (IdentityT m)
 instance (OneFwd a m, Monad m) => OneFwd a (ReaderT r m) where oneFwd = lift oneFwd
+instance (OneFwd a m, Monad m, Monoid w) => OneFwd a (CPSWriterT w m) where oneFwd = lift oneFwd
 instance (OneFwd a m, Monad m, Monoid w) => OneFwd a (LazyWriterT w m) where oneFwd = lift oneFwd
+instance (OneFwd a m, Monad m, Monoid w) => OneFwd a (StrictWriterT w m) where oneFwd = lift oneFwd
 instance (a ~ Element seq, UpdateStateWithElement s a, IsSequence seq, MonadFail m) => OneFwd a (LazyStateT (StateSeq s seq) m) where oneFwd = oneFwd'
---instance (a ~ Element seq, UpdateStateWithElement s a, IsSequence seq, MonadFail m) => OneFwd a (StrictStateT (StateSeq s seq) m) where oneFwd = oneFwd'
---instance (a ~ Element seq, UpdateStateWithElement s a, IsSequence seq, MonadFail m, Monoid w) => OneFwd a (CPSRWST r w (StateSeq s seq) m) where oneFwd = oneFwd'
+instance (a ~ Element seq, UpdateStateWithElement s a, IsSequence seq, MonadFail m) => OneFwd a (StrictStateT (StateSeq s seq) m) where oneFwd = oneFwd'
+instance (a ~ Element seq, UpdateStateWithElement s a, IsSequence seq, MonadFail m, Monoid w) => OneFwd a (CPSRWST r w (StateSeq s seq) m) where oneFwd = oneFwd'
 instance (a ~ Element seq, UpdateStateWithElement s a, IsSequence seq, MonadFail m, Monoid w) => OneFwd a (LazyRWST r w (StateSeq s seq) m) where oneFwd = oneFwd'
---instance (a ~ Element seq, UpdateStateWithElement s a, IsSequence seq, MonadFail m, Monoid w) => OneFwd a (StrictRWST r w (StateSeq s seq) m) where oneFwd = oneFwd'
+instance (a ~ Element seq, UpdateStateWithElement s a, IsSequence seq, MonadFail m, Monoid w) => OneFwd a (StrictRWST r w (StateSeq s seq) m) where oneFwd = oneFwd'
 
 oneFwd' ::
   ( IsSequence seq
@@ -80,16 +82,16 @@ instance Peek Maybe where peek = id
 instance Peek Identity where peek = id
 instance (Peek m, Monad m) => Peek (IdentityT m) where peek = liftThrough peek
 instance (Peek m, Monad m) => Peek (ReaderT r m) where peek = liftThrough peek
---instance (Peek m, Monad m, Monoid w) => Peek (CPSWriterT w m) where
---  peek (CPSWriterT x) = CPSWriterT $ peek x
+instance (Peek m, Monad m, Monoid w) => Peek (CPSWriterT w m) where
+  peek (CPSWriterT x) = CPSWriterT $ peek x
 instance (Peek m, Monad m, Monoid w) => Peek (LazyWriterT w m) where peek = liftThrough peek
---instance (Peek m, Monad m, Monoid w) => Peek (StrictWriterT w m) where peek = liftThrough peek
+instance (Peek m, Monad m, Monoid w) => Peek (StrictWriterT w m) where peek = liftThrough peek
 instance (Peek m, Monad m) => Peek (LazyStateT s m) where peek = peekState
---instance (Peek m, Monad m) => Peek (StrictStateT s m) where peek = peekState
---instance (Peek m, Monad m, Monoid w) => Peek (CPSRWST r w s m) where
---  peek (CPSRWST x) = CPSRWST \r s -> peek $ x r s
+instance (Peek m, Monad m) => Peek (StrictStateT s m) where peek = peekState
+instance (Peek m, Monad m, Monoid w) => Peek (CPSRWST r w s m) where
+  peek (CPSRWST x) = CPSRWST \r s -> peek $ x r s
 instance (Peek m, Monad m, Monoid w) => Peek (LazyRWST r w s m) where peek = peekState
---instance (Peek m, Monad m, Monoid w) => Peek (StrictRWST r w s m) where peek = peekState
+instance (Peek m, Monad m, Monoid w) => Peek (StrictRWST r w s m) where peek = peekState
 peekState :: (MonadState s (t m), MonadTransControl t, Peek m, Monad m) => t m a -> t m a
 peekState x = get >>= \s -> liftThrough peek x <* put s
 
@@ -115,16 +117,16 @@ class Try m where try :: m v -> m v
 --  catchError fw \e -> put s *> throwError e
 instance (Try m, Monad m) => Try (IdentityT m) where try = liftThrough try
 instance (Try m, Monad m) => Try (ReaderT r m) where try = liftThrough try
---instance (Try m, Monad m, Monoid w) => Try (CPSWriterT w m) where
---  try (CPSWriterT x) = CPSWriterT $ try x
+instance (Try m, Monad m, Monoid w) => Try (CPSWriterT w m) where
+  try (CPSWriterT x) = CPSWriterT $ try x
 instance (Try m, Monad m, Monoid w) => Try (LazyWriterT w m) where try = liftThrough try
---instance (Try m, Monad m, Monoid w) => Try (StrictWriterT w m) where try = liftThrough try
+instance (Try m, Monad m, Monoid w) => Try (StrictWriterT w m) where try = liftThrough try
 instance (OnError m, Try m) => Try (LazyStateT   s m) where try = tryError
---instance (OnError m, Try m) => Try (StrictStateT s m) where try = tryError
---instance (Try m, OnError m, Monoid w) => Try (CPSRWST    r w s m) where
---  try (CPSRWST x) = CPSRWST \r s -> try $ x r s
+instance (OnError m, Try m) => Try (StrictStateT s m) where try = tryError
+instance (Try m, OnError m, Monoid w) => Try (CPSRWST    r w s m) where
+  try (CPSRWST x) = CPSRWST \r s -> try $ x r s
 instance (OnError m, Monoid w, Try m) => Try (LazyRWST   r w s m) where try = tryError
---instance (OnError m, Monoid w, Try m) => Try (StrictRWST r w s m) where try = tryError
+instance (OnError m, Monoid w, Try m) => Try (StrictRWST   r w s m) where try = tryError
 instance Try IO where try = id
 instance Try Maybe where try = id
 instance Try (Either e) where try = id
@@ -141,12 +143,22 @@ class Monad m => OnError m where onError :: m a -> m b -> m a
 deriving instance OnError m => OnError (IdentityT m)
 instance OnError m => OnError (ReaderT r m) where
   onError (ReaderT x) (ReaderT y) = ReaderT \r -> onError (x r) (y r)
+instance (OnError m, Monoid w) => OnError (CPSWriterT w m) where
+  onError (CPSWriterT x) (CPSWriterT y) = CPSWriterT $ onError x y
 instance (OnError m, Monoid w) => OnError (LazyWriterT w m) where
   onError (LazyWriterT x) (LazyWriterT y) = LazyWriterT $ onError x y
+instance (OnError m, Monoid w) => OnError (StrictWriterT w m) where
+  onError (StrictWriterT x) (StrictWriterT y) = StrictWriterT $ onError x y
 instance OnError m => OnError (LazyStateT s m) where
   onError (LazyStateT x) (LazyStateT y) = LazyStateT \s -> onError (x s) (y s)
+instance OnError m => OnError (StrictStateT s m) where
+  onError (StrictStateT x) (StrictStateT y) = StrictStateT \s -> onError (x s) (y s)
+instance (OnError m, Monoid w) => OnError (CPSRWST r w s m) where
+  onError (CPSRWST x) (CPSRWST y) = CPSRWST \r s -> onError (x r s) (y r s)
 instance (OnError m, Monoid w) => OnError (LazyRWST r w s m) where
   onError (LazyRWST x) (LazyRWST y) = LazyRWST \r s -> onError (x r s) (y r s)
+instance (OnError m, Monoid w) => OnError (StrictRWST r w s m) where
+  onError (StrictRWST x) (StrictRWST y) = StrictRWST \r s -> onError (x r s) (y r s)
 instance OnError IO where onError = Control.Monad.Catch.onError
 instance OnError Maybe where onError = const
 instance OnError (Either e) where onError = const

@@ -222,9 +222,14 @@ type instance Read (Bwd m _) = Read m
 type instance Read (FileT _ _ _ m) = Read m
 type instance Read (IdentityT m) = Read m
 type instance Read (ReaderT r _) = r
+type instance Read (CPSWriterT _ m) = Read m
 type instance Read (LazyWriterT _ m) = Read m
+type instance Read (StrictWriterT _ m) = Read m
 type instance Read (LazyStateT _ m) = Read m
+type instance Read (StrictStateT _ m) = Read m
+type instance Read (CPSRWST r _ _ _) = r
 type instance Read (LazyRWST r _ _ _) = r
+type instance Read (StrictRWST r _ _ _) = r
 type instance Read IO = ()
 type instance Read Maybe = ()
 type instance Read (Except _) = ()
@@ -237,9 +242,14 @@ type instance State (Bwd m _) = State m
 type instance State (FileT _ _ _ m) = State m
 type instance State (IdentityT m) = State m
 type instance State (ReaderT _ m) = State m
+type instance State (CPSWriterT _ m) = State m
 type instance State (LazyWriterT _ m) = State m
+type instance State (StrictWriterT _ m) = State m
 type instance State (LazyStateT s _) = s
+type instance State (StrictStateT s _) = s
+type instance State (CPSRWST _ _ s _) = s
 type instance State (LazyRWST _ _ s _) = s
+type instance State (StrictRWST _ _ s _) = s
 type instance State IO = ()
 type instance State Maybe = ()
 type instance State (Except _) = ()
@@ -352,18 +362,38 @@ instance RunBase (TestParameters r s u a) m => RunBase (TestParameters r s u a) 
   type BaseMonad (ReaderT _ m) = BaseMonad m
   type StM' (ReaderT _ m) a = StM' m a
   runBase x b@(TestParameters {read}) = runBase (runReaderT x read) b
+instance (RunBase (TestParameters r s u a) m, Monoid w) => RunBase (TestParameters r s u a) (CPSWriterT w m) where
+  type BaseMonad (CPSWriterT _ m) = BaseMonad m
+  type StM' (CPSWriterT w m) a = StM' m (a, w)
+  runBase x b = runBase (Control.Monad.Trans.Writer.CPS.runWriterT x) b
 instance RunBase (TestParameters r s u a) m => RunBase (TestParameters r s u a) (LazyWriterT w m) where
   type BaseMonad (LazyWriterT _ m) = BaseMonad m
   type StM' (LazyWriterT w m) a = StM' m (a, w)
   runBase x b = runBase (Control.Monad.Trans.Writer.Lazy.runWriterT x) b
+instance RunBase (TestParameters r s u a) m => RunBase (TestParameters r s u a) (StrictWriterT w m) where
+  type BaseMonad (StrictWriterT _ m) = BaseMonad m
+  type StM' (StrictWriterT w m) a = StM' m (a, w)
+  runBase x b = runBase (Control.Monad.Trans.Writer.Strict.runWriterT x) b
 instance RunBase (TestParameters r s u a) m => RunBase (TestParameters r s u a) (LazyStateT s m) where
   type BaseMonad (LazyStateT s m) = BaseMonad m
   type StM' (LazyStateT s m) a = StM' m (a, s)
   runBase x b@(TestParameters {state}) = runBase (Control.Monad.Trans.State.Lazy.runStateT x state) b
+instance RunBase (TestParameters r s u a) m => RunBase (TestParameters r s u a) (StrictStateT s m) where
+  type BaseMonad (StrictStateT s m) = BaseMonad m
+  type StM' (StrictStateT s m) a = StM' m (a, s)
+  runBase x b@(TestParameters {state}) = runBase (Control.Monad.Trans.State.Strict.runStateT x state) b
+instance (RunBase (TestParameters r s u a) m, Monoid w) => RunBase (TestParameters r s u a) (CPSRWST r w s m) where
+  type BaseMonad (CPSRWST _ _ _ m) = BaseMonad m
+  type StM' (CPSRWST _ w s m) a = StM' m (a, s, w)
+  runBase x b@(TestParameters {read, state}) = runBase (Control.Monad.Trans.RWS.CPS.runRWST x read state) b
 instance RunBase (TestParameters r s u a) m => RunBase (TestParameters r s u a) (LazyRWST r w s m) where
   type BaseMonad (LazyRWST _ _ _ m) = BaseMonad m
   type StM' (LazyRWST _ w s m) a = StM' m (a, s, w)
   runBase x b@(TestParameters {read, state}) = runBase (Control.Monad.Trans.RWS.Lazy.runRWST x read state) b
+instance RunBase (TestParameters r s u a) m => RunBase (TestParameters r s u a) (StrictRWST r w s m) where
+  type BaseMonad (StrictRWST _ _ _ m) = BaseMonad m
+  type StM' (StrictRWST _ w s m) a = StM' m (a, s, w)
+  runBase x b@(TestParameters {read, state}) = runBase (Control.Monad.Trans.RWS.Strict.runRWST x read state) b
 instance RunBase b IO where
   type BaseMonad IO = IO
   type StM' IO a = a
@@ -500,7 +530,7 @@ type family Associate x ys zs where
   Associate x (y ': ys) zs = '(x, y) ': Associate x ys zs
   Associate _ '[] zs = zs
 
-type FileTransformers r w s = '[IdentityT, ReaderT r, LazyWriterT w, LazyStateT s, LazyRWST r w s]
+type FileTransformers r w s = '[IdentityT, ReaderT r, {- CPSWriterT w, -} LazyWriterT w, LazyStateT s, {- CPSRWST r w s, -} LazyRWST r w s, StrictRWST r w s]
 type FileStringsAndTransformers r w s = Combinations Strings (FileTransformers r w s) '[]
 
 type String' = Type
@@ -533,7 +563,7 @@ type instance Eval (StateForward '(s, '(stateT, '(m, str)))) = Fwd (stateT (Stat
 type States :: [State']
 type States = '[(), Position () (), IndexPosition ()]
 type StateTransformers :: [State' -> TransformerK]
-type StateTransformers = '[LazyStateT]
+type StateTransformers = '[LazyStateT, StrictStateT]
 type Monads :: [MonadK]
 type Monads = '[IO, Maybe, Except String]
 
@@ -542,7 +572,7 @@ type ForwardRWSProfunctors r w = Map (RWSForward r w) (Combinations States (Comb
 data RWSForward :: Read' -> Write' -> (State', (Read' -> Write' -> State' -> MonadK -> Exp MonadK, (MonadK, String'))) -> Exp ProfunctorK
 type instance Eval (RWSForward r w '(s, '(f, '(m, str)))) = Fwd (Eval (f r w (StateSeq s str) m))
 type RWSTransformers :: [Read' -> Write' -> State' -> MonadK -> Exp MonadK]
-type RWSTransformers = '[Pure4 LazyRWST, StackedRWST LazyWriterT LazyStateT]
+type RWSTransformers = '[Pure4 CPSRWST, Pure4 LazyRWST, Pure4 StrictRWST, StackedRWST CPSWriterT LazyStateT, StackedRWST LazyWriterT LazyStateT, StackedRWST StrictWriterT StrictStateT]
 data StackedRWST :: (Write' -> TransformerK) -> (State' -> TransformerK) -> Read' -> Write' -> State' -> MonadK -> Exp MonadK
 type instance Eval (StackedRWST writerT stateT r w s m) = ReaderT r (writerT w (stateT s m))
 
@@ -552,15 +582,9 @@ type BackwardFileProfunctors r w s =
   Map FileBackwardsT (Combinations WriteModes (FileStringsAndTransformers r w s) '[]) ^++^
   Pure '[]
 data FileBackwardIO :: IOMode -> String' -> Exp ProfunctorK
-type instance Eval (FileBackwardIO 'ReadMode   str) = Bwd (FileT 'Nothing 'ReadMode   str IO)
-type instance Eval (FileBackwardIO 'WriteMode  str) = Bwd (FileT 'Nothing 'WriteMode  str IO)
-type instance Eval (FileBackwardIO 'AppendMode str) = Bwd (FileT 'Nothing 'AppendMode str IO)
-type instance Eval (FileBackwardIO 'ReadWriteMode str) = Bwd (FileT ('Just 'Backward) 'ReadWriteMode str IO)
+type instance Eval (FileBackwardIO mode str) = Bwd (FileT (MaybeDirection 'Backward mode) mode str IO)
 data FileBackwardsT :: (IOMode, (String', TransformerK)) -> Exp ProfunctorK
-type instance Eval (FileBackwardsT '( 'ReadWriteMode, '(str, t))) = Bwd (FileT ('Just 'Backward) 'ReadWriteMode str IO)
-type instance Eval (FileBackwardsT '( 'ReadMode,   '(str, t))) = Bwd (FileT 'Nothing 'ReadMode   str (t IO))
-type instance Eval (FileBackwardsT '( 'WriteMode,  '(str, t))) = Bwd (FileT 'Nothing 'WriteMode  str (t IO))
-type instance Eval (FileBackwardsT '( 'AppendMode, '(str, t))) = Bwd (FileT 'Nothing 'AppendMode str (t IO))
+type instance Eval (FileBackwardsT '( mode, '(str, t))) = Bwd (FileT (MaybeDirection 'Backward mode) mode str IO)
 type WriteModes = '[WriteMode, ReadWriteMode, AppendMode]
 
 type BackwardWriterProfunctors :: Exp [ProfunctorK]

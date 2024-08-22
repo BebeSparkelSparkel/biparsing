@@ -5,14 +5,22 @@ PutBwd(..),
 UnfoldlExactN(..),
 ) where
 
-import Data.MonoTraversable (MonoPointed(opoint), Element)
 import Biparse.Core.Aliases (LazyWriterT, LazyRWST)
+import Biparse.Core.Aliases (ReaderT(ReaderT), CPSWriterT, pattern CPSWriterT, LazyWriterT, pattern LazyWriterT, StrictWriterT, pattern StrictWriterT, LazyStateT, pattern LazyStateT, StrictStateT, pattern StrictStateT, CPSRWST, pattern CPSRWST, LazyRWST, pattern LazyRWST, StrictRWST, pattern StrictRWST)
 import Control.Monad.Writer (tell)
+import Data.MonoTraversable (MonoPointed(opoint), Element)
 
 class OneBwd a m | m -> a where oneBwd :: a -> m ()
+deriving instance (OneBwd a m, Monad m) => OneBwd a (IdentityT m)
 instance (OneBwd a m, Monad m) => OneBwd a (ReaderT r m) where oneBwd = lift . oneBwd
+instance (Monad m, MonoPointed w, Monoid w, Element w ~ a) => OneBwd a (CPSWriterT w m) where oneBwd = tell . opoint
 instance (Monad m, MonoPointed w, Monoid w, Element w ~ a) => OneBwd a (LazyWriterT w m) where oneBwd = tell . opoint
+instance (Monad m, MonoPointed w, Monoid w, Element w ~ a) => OneBwd a (StrictWriterT w m) where oneBwd = tell . opoint
+instance (OneBwd a m, Monad m) => OneBwd a (LazyStateT s m) where oneBwd = lift . oneBwd
+instance (OneBwd a m, Monad m) => OneBwd a (StrictStateT s m) where oneBwd = lift . oneBwd
+instance (Monad m, MonoPointed w, Monoid w, Element w ~ a) => OneBwd a (CPSRWST r w s m) where oneBwd = tell . opoint
 instance (Monad m, MonoPointed w, Monoid w, Element w ~ a) => OneBwd a (LazyRWST r w s m) where oneBwd = tell . opoint
+instance (Monad m, MonoPointed w, Monoid w, Element w ~ a) => OneBwd a (StrictRWST r w s m) where oneBwd = tell . opoint
 
 class PutBwd a m | m -> a where putBwd :: a -> m ()
 instance (Monad m, Monoid w) => PutBwd w (LazyWriterT w m)  where putBwd = tell
