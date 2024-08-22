@@ -19,7 +19,7 @@ import Control.Monad.Catch qualified
 class OneFwd a m | m -> a where oneFwd :: m a
 deriving instance OneFwd a m => OneFwd a (IdentityT m)
 instance (OneFwd a m, Monad m) => OneFwd a (ReaderT r m) where oneFwd = lift oneFwd
-instance (OneFwd a m, Monad m, Monoid w) => OneFwd a (CPSWriterT w m) where oneFwd = lift oneFwd
+instance (OneFwd a m, Monad m) => OneFwd a (CPSWriterT w m) where oneFwd = lift oneFwd
 instance (OneFwd a m, Monad m, Monoid w) => OneFwd a (LazyWriterT w m) where oneFwd = lift oneFwd
 instance (OneFwd a m, Monad m, Monoid w) => OneFwd a (StrictWriterT w m) where oneFwd = lift oneFwd
 instance (a ~ Element seq, UpdateStateWithElement s a, IsSequence seq, MonadFail m) => OneFwd a (LazyStateT (StateSeq s seq) m) where oneFwd = oneFwd'
@@ -69,14 +69,6 @@ class OnlyFwd m where onlyFwd :: m () -> m ()
 
 -- | Modifies forward so that the Biparser does not consume input nor modify the state.
 class Peek m where peek :: m v -> m v
---peek :: forall c s t m u v.
---  MonadState s m
---  => Biparser c s t m u v
---  -> Biparser c s t m u v
---peek = undefined
---peek (Biparser fw bw) = Biparser
---  (get @s >>= \s -> fw <* put s)
---  bw
 instance Peek IO where peek = id
 instance Peek Maybe where peek = id
 instance Peek Identity where peek = id
@@ -97,24 +89,6 @@ peekState x = get >>= \s -> liftThrough peek x <* put s
 
 -- | Allows trying a forward. If the forward fails the state is returned to the value it was before running.
 class Try m where try :: m v -> m v
---try :: forall c s t m u v e.
---  ( OnError m
---  , MonadState s m
---  )
---  => Biparser c s t m u v
---  -> Biparser c s t m u v
---try = undefined
---try (Biparser fw bw) = Biparser (tryState fw) bw
---
---tryState :: forall s m v e.
---  ( MonadState s m
---  , OnError m
---  )
---  => m v
---  -> m v
---tryState fw = do
---  s <- get @s
---  catchError fw \e -> put s *> throwError e
 instance (Try m, Monad m) => Try (IdentityT m) where try = liftThrough try
 instance (Try m, Monad m) => Try (ReaderT r m) where try = liftThrough try
 instance (Try m, Monad m, Monoid w) => Try (CPSWriterT w m) where

@@ -27,20 +27,25 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC
+  -freduction-depth=100000
+  
+  -Werror
   -Weverything
-
   -Wno-implicit-prelude
+  -Wno-incomplete-uni-patterns
   -Wno-missing-deriving-strategies
+  -Wno-missing-export-lists
+  -Wno-missing-import-lists
   -Wno-missing-kind-signatures
   -Wno-missing-local-signatures
   -Wno-missing-safe-haskell-mode
+  -Wno-orphans
   -Wno-safe
   -Wno-unsafe
-
-  -Wno-orphans
-  -Wno-missing-import-lists
-
+  -Wno-unused-packages
+  -Wno-name-shadowing
 #-}
+
 module Prelude (
 module Export,
 
@@ -54,15 +59,12 @@ Read,
 State,
 ShowStM',
 EqStM',
-ShouldFailQ,
 RunBase(BaseMonad, StM'),
 MakeIsoResult,
 MakeForwardWriterResult,
 MakeForwardStateResult,
 MakeForwardRWSResult,
 MakeResult(..),
---RunBackward(..),
---MakeBackwardResult(..),
 ByteStringBuilder,
 TextBuilder,
 ShouldReturnQ,
@@ -92,7 +94,6 @@ import Control.Monad.Error.Class as Export (throwError, catchError)
 import Control.Monad.Fail as Export (MonadFail(fail))
 import Control.Monad.IO.Class as Export (liftIO)
 import Control.Monad.Identity as Export (IdentityT(runIdentityT))
-import Control.Monad.Reader as Export (ReaderT)
 import Control.Monad.State.Class as Export (MonadState(get,put))
 import Control.Monad.Writer.Class as Export (MonadWriter(tell))
 import Data.Bifunctor as Export (first, second)
@@ -117,7 +118,6 @@ import Data.Maybe as Export (Maybe(Just,Nothing), maybe)
 import Data.MonoTraversable as Export (Element, olength)
 import Data.Monoid as Export (Monoid(mempty))
 import Data.Ord as Export
-import Data.Profunctor as Export (Profunctor)
 import Data.Proxy as Export
 import Data.Semigroup as Export (Semigroup((<>)))
 import Data.Sequence as Export (Seq)
@@ -152,26 +152,17 @@ import Type.Reflection as Export (Typeable, typeRep)
 import Data.Maybe as Export (isNothing)
 import Control.Monad.Reader (runReaderT)
 import Control.Monad.IO.Class as Export (MonadIO)
-import Control.Monad.Identity (runIdentityT)
-import Control.Monad.State.Class (MonadState)
-import Biparse.Control.File (FileT(FileT'), runFileT, OpenWith, Mode, FileT')
-import Biparse.State.Lenses (HasDataId)
---import Biparse.Control.StateError (runStateErrorT)
-import Control.Monad.Writer (runWriterT)
+import Biparse.Control.File (runFileT)
 import Data.ByteString.Builder qualified
 import Data.ByteString.Builder.Internal (byteStringInsert, byteStringThreshold, toLazyByteStringWith, safeStrategy, smallChunkSize)
-import Data.Either (Either(Left))
 import Data.List (elem)
---import Data.List (foldr)
-import Data.MonoTraversable (MonoPointed(opoint))
 import Data.Sequences (cons, snoc)
 import Data.Text.Lazy.Builder qualified
 import GHC.Exts (IsList(..))
 import System.IO.Unsafe (unsafePerformIO)
 import Test.Hspec qualified
---import Test.Hspec.Core.Spec (SpecM)
 import System.IO.Temp (withSystemTempFile)
-import System.IO (openFile, openTempFile, hSeek, hGetContents, SeekMode(AbsoluteSeek), IOMode(ReadMode, WriteMode, ReadWriteMode, AppendMode), withFile, hClose, Handle)
+import System.IO (IOMode(ReadMode, WriteMode, ReadWriteMode, AppendMode), hClose)
 import System.IO qualified
 import Biparse.Core.Update (updateStateWithElement)
 import Control.Monad.Trans.State.Lazy qualified
@@ -181,12 +172,9 @@ import Control.Monad.Trans.Writer.Lazy qualified
 import Control.Monad.Trans.Writer.Strict qualified
 import Control.Monad.Trans.RWS.CPS qualified
 import Control.Monad.Trans.RWS.Lazy qualified
-import Control.Monad.Trans.RWS.Lazy (RWST(RWST))
 import Control.Monad.Trans.RWS.Strict qualified
-import Control.Monad.Trans.Control
 import Fcf
 import Fcf.Combinators
-import Fcf.Class.Monoid
 import Biparse.Core.Direction (Direction(Forward,Backward), WhichDirection)
 
 run :: forall p r s u v a.
@@ -257,7 +245,7 @@ type instance State Identity = ()
 
 -- | Quantified Constraint Trick: https://blog.poisson.chat/posts/2022-09-21-quantified-constraint-trick.html
 class Show (StM' m a) => ShowStM' m a
-instance (Show (StM' m a), Show a) => ShowStM' m a
+instance Show (StM' m a) => ShowStM' m a
 class Eq (StM' m a) => EqStM' m a
 instance Eq (StM' m a) => EqStM' m a
 class ShouldReturn (BaseMonad (p u)) => ShouldReturnQ p u
@@ -291,7 +279,7 @@ instance
   , MonadMask m
   , RunBase (TestParameters r s u String) m
   , BaseMonad m ~ IO
-  ) => RunBase (TestParameters r s u String) (FileT Nothing 'ReadMode text m) where
+  ) => RunBase (TestParameters r s u String) (FileT 'Nothing 'ReadMode text m) where
   type BaseMonad (FileT _ _ _ _) = IO
   type StM' (FileT 'Nothing 'ReadMode _ m) a = StM' m a
   runBase x b@(TestParameters {filePath, parameter = string}) = withSystemTempFile filePath \fp h -> do
@@ -307,7 +295,7 @@ instance
   ) => RunBase (TestParameters r s u a) (FileT 'Nothing 'WriteMode text m) where
   type BaseMonad (FileT _ _ _ _) = IO
   type StM' (FileT 'Nothing 'WriteMode text m) a = (StM' m a, text)
-  runBase x b@(TestParameters {filePath, parameter = string}) = withSystemTempFile filePath \fp h -> do
+  runBase x b@(TestParameters {filePath}) = withSystemTempFile filePath \fp h -> do
     hClose h
     y <- runBase (runFileT x fp) b
     str <- System.IO.readFile fp
@@ -331,10 +319,10 @@ instance
   , RunBase (TestParameters r s u a) m
   , BaseMonad m ~ IO
   , IsString text
-  ) => RunBase (TestParameters r s u a) (FileT ('Just Backward) 'ReadWriteMode text m) where
+  ) => RunBase (TestParameters r s u a) (FileT ('Just 'Backward) 'ReadWriteMode text m) where
   type BaseMonad (FileT _ _ _ _) = IO
-  type StM' (FileT ('Just Backward) 'ReadWriteMode text m) a = (StM' m a, text)
-  runBase x b@(TestParameters {u, filePath, parameter = string}) = withSystemTempFile filePath \fp h -> do
+  type StM' (FileT ('Just 'Backward) 'ReadWriteMode text m) a = (StM' m a, text)
+  runBase x b@(TestParameters {filePath}) = withSystemTempFile filePath \fp h -> do
     hClose h
     y <- runBase (runFileT x fp) b
     str <- System.IO.readFile fp
@@ -349,7 +337,7 @@ instance
   ) => RunBase (TestParameters r s u a) (FileT 'Nothing 'AppendMode text m) where
   type BaseMonad (FileT _ _ _ _) = IO
   type StM' (FileT 'Nothing 'AppendMode text m) a = (StM' m a, text)
-  runBase x b@(TestParameters {filePath, parameter = string}) = withSystemTempFile filePath \fp h -> do
+  runBase x b@(TestParameters {filePath}) = withSystemTempFile filePath \fp h -> do
     hClose h
     y <- runBase (runFileT x fp) b
     str <- System.IO.readFile fp
@@ -419,7 +407,7 @@ instance (IsString text, IsString dataId) => MakeResult 'Forward (Position () Fi
 instance (IsString text, IsString dataId) => MakeResult 'Forward (p -> IndexPosition FilePath -> String -> ws -> v -> (v, StateSeq (IndexPosition dataId) text)) where
   makeResult _ i s _ x = (x, (StateSeq (coerce $ i & dataId %~ fromString @dataId) (fromString s)))
 instance IsString text => MakeResult 'Forward (p -> i -> String -> ws -> v -> (v, StateSeq () text)) where
-  makeResult _ i s _ x = (x, (StateSeq () (fromString s)))
+  makeResult _ _ s _ x = (x, (StateSeq () (fromString s)))
 instance MakeResult 'Forward (p -> i -> ss -> ws -> v -> v) => MakeResult 'Forward (p -> i -> ss -> ws -> v -> (v, ())) where
   makeResult p i s w v = (makeResult @'Forward p i s w v, ())
 instance MakeResult 'Forward (p -> i -> ss -> ws -> v -> (v, s)) => MakeResult 'Forward (p -> i -> ss -> ws -> v -> ((v, ()), s)) where
@@ -478,8 +466,6 @@ instance IsList ByteStringBuilder where
 instance IsString () where fromString = const ()
 instance IsString (Vector Char) where fromString = fromList
 instance IsString a => IsString ((), a) where fromString = ((),) . fromString
---instance IsString Char where fromString [x] = x
---instance IsString Word8 where fromString [x] = c2w x
 
 instance Show a => Show (IO a) where
   show x = unsafePerformIO $ x <&> (\y -> "IO " <> (bool id (cons '(' . flip snoc ')' ) $ ' ' `elem` y) y) . show
@@ -490,7 +476,6 @@ instance Eq a => Eq (IO a) where
 class ShouldFail m where shouldFail :: Show a => m a -> Expectation
 instance ShouldFail IO where shouldFail = (`shouldThrow` anyException)
 instance ShouldFail Maybe where shouldFail = (`shouldSatisfy` isNothing)
---instance (Show a, Show b) => ShouldFail (Either a b) where shouldFail = (`shouldSatisfy` isLeft)
 instance Show e => ShouldFail (Except e) where shouldFail = (`shouldSatisfy` isException)
 
 instance MonadState () IO where
@@ -518,7 +503,7 @@ instance KnownTypeableList cs '[] where
 instance (cs a, KnownTypeableList cs l) => KnownTypeableList cs (a ': l) where
     knownTypeableList = SCons
 
-type Strings = '[String, Text, ByteString]
+type Strings = '[String, Text, ByteString, Seq Char, Vector Char]
 
 type Combinations :: [x] -> [y] -> [(x,y)] -> [(x,y)]
 type family Combinations xs ys zs where
@@ -550,7 +535,7 @@ data FileForwardIO :: IOMode -> String' -> Exp ProfunctorK
 type instance Eval (FileForwardIO mode str) = Fwd (FileT (MaybeDirection 'Forward mode) mode str IO)
 data FileForwardT :: (IOMode, (String', TransformerK)) -> Exp ProfunctorK
 type instance Eval (FileForwardT '(mode, '(str, t))) = Fwd (FileT (MaybeDirection 'Forward mode) mode str (t IO))
-type ReadModes = '[ ReadMode, ReadWriteMode ]
+type ReadModes = '[ 'ReadMode, 'ReadWriteMode ]
 type MaybeDirection :: Direction -> IOMode -> Maybe Direction
 type family MaybeDirection d mode where
   MaybeDirection d 'ReadWriteMode = 'Just d
@@ -584,8 +569,8 @@ type BackwardFileProfunctors r w s =
 data FileBackwardIO :: IOMode -> String' -> Exp ProfunctorK
 type instance Eval (FileBackwardIO mode str) = Bwd (FileT (MaybeDirection 'Backward mode) mode str IO)
 data FileBackwardsT :: (IOMode, (String', TransformerK)) -> Exp ProfunctorK
-type instance Eval (FileBackwardsT '( mode, '(str, t))) = Bwd (FileT (MaybeDirection 'Backward mode) mode str IO)
-type WriteModes = '[WriteMode, ReadWriteMode, AppendMode]
+type instance Eval (FileBackwardsT '( mode, '(str, _))) = Bwd (FileT (MaybeDirection 'Backward mode) mode str IO)
+type WriteModes = '[ 'WriteMode, 'ReadWriteMode, 'AppendMode]
 
 type BackwardWriterProfunctors :: Exp [ProfunctorK]
 type BackwardWriterProfunctors = Map WriteBackward (Combinations Writers (Combinations WriterTransformers Monads '[]) '[])

@@ -11,18 +11,6 @@ module Biparse.Core.ClassesSpec (spec) where
 spec :: Spec
 spec = runAllTests @() @() @() @() @() @() @TestSuite testSuite
 
-oneBP :: One a p => Iso p a
-oneBP = one
-
-peekOneBP :: (One a p, Peek (p a)) => Iso p a
-peekOneBP = peek one
-
-peekTupleBP :: (One a p, Peek (p a), Profunctor p, forall u. Applicative (p u)) => Iso p (a,a)
-peekTupleBP = (,) <$> peek one `upon` fst <*> one `upon` snd
-
-peekAltBP :: (Peek (p char), Try (p char), Alternative (p char), MonadFail (p char), One char p, Show char, Eq char, IsChar char) => Iso p char
-peekAltBP = peek (takeUni (fromChar 'x')) <|> takeUni (fromChar 'a')
-
 type TestSuite :: (Type -> Type -> Type) -> Constraint
 class TestSuite p where testSuite :: Proxy p -> Spec
 instance
@@ -53,7 +41,7 @@ instance
     let runForward :: forall u v. Biparser p u v -> FilePath -> u -> String -> BaseMonad (p u) (StM' (p u) v)
         runForward = run @p @r @s
     describe "one" do
-      let f = runForward oneBP
+      let f = runForward one
       it "success" let
         fp = "one-success-forward.test"
         u = fromChar @char 'a'
@@ -68,7 +56,7 @@ instance
         in shouldFail $ f fp undefined ""
     describe "peek" do
       describe "peek one" do
-        let f = runForward peekOneBP
+        let f = runForward $ peek one
         it "success" let
           fp = "peek-one-success-forward.test"
           u = fromChar @char 'a'
@@ -83,7 +71,7 @@ instance
           in shouldFail $ f fp undefined ""
       it "peek tuple" let
         fp = "peek-tuple-forward.test"
-        f = runForward peekTupleBP fp
+        f = runForward ((,) <$> peek one `upon` fst <*> one `upon` snd) fp
         u = (fromChar @char 'a', fromChar @char 'a')
         in f u "abc" `shouldReturn` makeResult @direction
             (Position @() fp 1 2)
@@ -92,7 +80,7 @@ instance
             "aa"
             u
       describe "peek alt" do
-        let f = runForward peekAltBP
+        let f = runForward $ peek (takeUni (fromChar 'x')) <|> takeUni (fromChar 'a')
         it "take" let
           fp = "peek-alt-take-forward.test"
           u = fromChar @char 'x'

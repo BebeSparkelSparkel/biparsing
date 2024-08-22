@@ -15,37 +15,34 @@ OpenWith,
 OpenFile(..),
 IOMode(..),
 MonadFileGetChar,
---UpdateState(..),
 ) where
 
-import GHC.TypeLits (TypeError, ErrorMessage(Text))
-import System.IO qualified
-import System.IO (FilePath, Handle, IOMode(ReadMode,WriteMode,ReadWriteMode,AppendMode), IO, hClose, hGetPosn, hSetPosn, hGetBuf, hPutBuf)
-import Data.Text.IO qualified
-import Data.Text.Lazy.IO qualified
+import Biparse.Control.Fwd (Fwd(Fwd))
+import Biparse.Core.Update (UpdateStateWithElement(updateStateWithElement))
+import Control.Monad.Catch (MonadThrow, MonadCatch, MonadMask, finally)
+import Control.Monad.IO.Class (MonadIO(liftIO))
+import Control.Monad.Identity (IdentityT)
+import Control.Monad.RWS (RWST(RWST,runRWST), MonadReader(ask), asks, LiftingReader(LiftingReader), LiftingWriter, LiftWriter(LiftWriter), LiftWriterRWS(LiftWriterRWS), LiftingState(LiftingState))
+import Control.Monad.State.Class (MonadState(get,put), modify)
+import Control.Monad.Trans.Control (MonadTransControl(StT,liftWith,restoreT), liftThrough)
+import Control.Monad.Writer.Class (MonadWriter)
+import Data.ByteString (ByteString)
+import Data.ByteString.Builder qualified
+import Data.ByteString.Lazy qualified
+import Data.Kind (Constraint)
+import Data.Maybe (Maybe(Just,Nothing))
 import Data.Text (StrictText)
+import Data.Text.IO qualified
 import Data.Text.Lazy (LazyText)
 import Data.Text.Lazy.Builder qualified
-import Data.ByteString (ByteString)
-import Data.ByteString.Lazy qualified
-import Data.ByteString.Builder qualified
-import Control.Monad.IO.Class (MonadIO(liftIO))
-import Control.Monad.Catch (MonadThrow, MonadCatch, MonadMask, finally)
-import Control.Monad.Identity (IdentityT)
-import Control.Monad.Trans.Control (MonadTransControl(StT,liftWith,restoreT), liftThrough)
-import Data.Maybe (Maybe(Just,Nothing))
-
-import Control.Monad.RWS (RWST(RWST,runRWST), MonadReader(ask), asks, LiftingReader(LiftingReader), LiftingWriter, LiftWriter(LiftWriter), LiftWriterRWS(LiftWriterRWS), LiftingState(LiftingState))
-import Control.Monad.Writer.Class (MonadWriter)
-import Control.Monad.State.Class (MonadState(get,put), modify)
-import Biparse.Core.Update (UpdateStateWithElement(updateStateWithElement))
-import Data.Kind (Constraint)
+import Data.Text.Lazy.IO qualified
 import Data.Word (Word8)
 import Foreign (allocaBytes, sizeOf, poke)
 import Foreign qualified
+import GHC.TypeLits (TypeError, ErrorMessage(Text))
+import System.IO (FilePath, Handle, IOMode(ReadMode,WriteMode,ReadWriteMode,AppendMode), IO, hClose, hGetPosn, hSetPosn, hGetBuf, hPutBuf)
+import System.IO qualified
 import System.IO.Error (ioError, eofErrorType, mkIOError)
-
-import Biparse.Control.Fwd (Fwd(Fwd))
 
 newtype FileT (d :: Maybe Direction) (mode :: IOMode) text m a = FileT' (FileT' text m a)
   deriving (Functor, Applicative, Alternative, Monad, MonadFail, MonadIO, MonadTrans, MonadThrow, MonadCatch, MonadMask)
@@ -94,7 +91,7 @@ type OpenFrom text = OpenFile (OpenWith text)
 data OpenType = Character | Binary
 type OpenWith :: Type -> OpenType
 type family OpenWith t
-type instance OpenWith String = Character
+type instance OpenWith (f Char) = Character
 type instance OpenWith StrictText = Character
 type instance OpenWith LazyText = Character
 type instance OpenWith Data.Text.Lazy.Builder.Builder = Character

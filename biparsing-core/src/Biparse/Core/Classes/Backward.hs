@@ -11,7 +11,7 @@ import Control.Monad.Writer (tell)
 import Data.MonoTraversable (MonoPointed(opoint), Element)
 
 class OneBwd a m | m -> a where oneBwd :: a -> m ()
-deriving instance (OneBwd a m, Monad m) => OneBwd a (IdentityT m)
+deriving instance OneBwd a m => OneBwd a (IdentityT m)
 instance (OneBwd a m, Monad m) => OneBwd a (ReaderT r m) where oneBwd = lift . oneBwd
 instance (Monad m, MonoPointed w, Monoid w, Element w ~ a) => OneBwd a (CPSWriterT w m) where oneBwd = tell . opoint
 instance (Monad m, MonoPointed w, Monoid w, Element w ~ a) => OneBwd a (LazyWriterT w m) where oneBwd = tell . opoint
