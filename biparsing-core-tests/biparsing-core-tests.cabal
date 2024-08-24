@@ -10,6 +10,10 @@ license: BSD-3-Clause
 license-file: LICENSE
 build-type: Simple
 
+flag small
+  description: Run a small subset of the transformer types.
+  default: False
+
 test-suite spec
   type: exitcode-stdio-1.0
   main-is: Spec.hs
@@ -35,9 +39,14 @@ test-suite spec
     TypeApplications
     TypeFamilies
 
-  ghc-options:
-    -freduction-depth=100000
+  if flag(small)
+    cpp-options:
+      -DSMALL
+  else
+    ghc-options:
+      -freduction-depth=100000
 
+  ghc-options:
     -Werror
     -Weverything
     -Wno-implicit-prelude

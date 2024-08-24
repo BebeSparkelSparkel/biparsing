@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE BlockArguments #-}
@@ -27,8 +28,6 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC
-  -freduction-depth=100000
-  
   -Werror
   -Weverything
   -Wno-implicit-prelude
@@ -116,7 +115,7 @@ import Data.List as Export (zip)
 import Data.List.NonEmpty as Export (NonEmpty)
 import Data.Maybe as Export (Maybe(Just,Nothing), maybe)
 import Data.MonoTraversable as Export (Element, olength)
-import Data.Monoid as Export (Monoid(mempty))
+import Data.Monoid as Export (Monoid(mempty), Endo(Endo))
 import Data.Ord as Export
 import Data.Proxy as Export
 import Data.Semigroup as Export (Semigroup((<>)))
@@ -126,7 +125,6 @@ import Data.String as Export (String, IsString(fromString))
 import Data.Text as Export (Text, StrictText)
 import Data.Text.Lazy as Export (LazyText)
 import Data.Tuple as Export (fst, snd, uncurry)
-import Data.Vector as Export (Vector)
 import Data.Word as Export (Word8)
 import GHC.Bits as Export (Bits)
 import GHC.Enum as Export (Enum(succ), maxBound)
@@ -148,6 +146,10 @@ import Text.Printf as Export (IsChar(fromChar,toChar))
 import Text.Show as Export (Show(show))
 import Type.Reflection as Export (Typeable, typeRep)
 
+#ifndef SMALL
+import Data.Vector as Export (Vector)
+#endif
+
 -- Internal Imports
 import Data.Maybe as Export (isNothing)
 import Control.Monad.Reader (runReaderT)
@@ -155,11 +157,8 @@ import Control.Monad.IO.Class as Export (MonadIO)
 import Biparse.Control.File (runFileT)
 import Data.ByteString.Builder qualified
 import Data.ByteString.Builder.Internal (byteStringInsert, byteStringThreshold, toLazyByteStringWith, safeStrategy, smallChunkSize)
-import Data.List (elem)
-import Data.Sequences (cons, snoc)
 import Data.Text.Lazy.Builder qualified
 import GHC.Exts (IsList(..))
-import System.IO.Unsafe (unsafePerformIO)
 import Test.Hspec qualified
 import System.IO.Temp (withSystemTempFile)
 import System.IO (IOMode(ReadMode, WriteMode, ReadWriteMode, AppendMode), hClose)
@@ -464,14 +463,15 @@ instance IsList ByteStringBuilder where
   toList = toList . toLazyByteStringWith (safeStrategy smallChunkSize smallChunkSize) mempty
 
 instance IsString () where fromString = const ()
+#ifndef SMALL
 instance IsString (Vector Char) where fromString = fromList
+#endif
 instance IsString a => IsString ((), a) where fromString = ((),) . fromString
+instance (IsString a, Semigroup a) => IsString (Endo a) where fromString = Endo . (<>) . fromString
 
-instance Show a => Show (IO a) where
-  show x = unsafePerformIO $ x <&> (\y -> "IO " <> (bool id (cons '(' . flip snoc ')' ) $ ' ' `elem` y) y) . show
+instance (Show a, Monoid a) => Show (Endo a) where show (Endo f) = show $ f mempty
 
-instance Eq a => Eq (IO a) where
-  x == y = unsafePerformIO $ liftA2 (==) x y
+instance (Eq a, Monoid a) => Eq (Endo a) where Endo x == Endo y = x mempty == y mempty
 
 class ShouldFail m where shouldFail :: Show a => m a -> Expectation
 instance ShouldFail IO where shouldFail = (`shouldThrow` anyException)
@@ -503,20 +503,38 @@ instance KnownTypeableList cs '[] where
 instance (cs a, KnownTypeableList cs l) => KnownTypeableList cs (a ': l) where
     knownTypeableList = SCons
 
-type Strings = '[String, Text, ByteString, Seq Char, Vector Char]
+type Strings =
+  '[ String
+  ,  ByteString
+#ifndef SMALL
+  ,  Text
+  ,  Seq Char
+  ,  Vector Char
+#endif
+  ]
 
-type Combinations :: [x] -> [y] -> [(x,y)] -> [(x,y)]
-type family Combinations xs ys zs where
-  Combinations (x ': xs) ys zs = Associate x ys (Combinations xs ys zs)
-  Combinations '[] _ zs = zs
+type Combinations :: [x] -> [y] -> [(x,y)]
+type family Combinations xs ys where
+  Combinations (x ': xs) ys = Associate x ys (Combinations xs ys)
+  Combinations '[ ] _ = '[ ]
 
 type Associate :: x -> [y] -> [(x,y)] -> [(x,y)]
 type family Associate x ys zs where
   Associate x (y ': ys) zs = '(x, y) ': Associate x ys zs
   Associate _ '[] zs = zs
 
-type FileTransformers r w s = '[IdentityT, ReaderT r, {- CPSWriterT w, -} LazyWriterT w, LazyStateT s, {- CPSRWST r w s, -} LazyRWST r w s, StrictRWST r w s]
-type FileStringsAndTransformers r w s = Combinations Strings (FileTransformers r w s) '[]
+type FileTransformers r w s =
+  '[ IdentityT
+#ifndef SMALL
+  ,  LazyWriterT w
+  ,  LazyStateT s
+  ,  LazyRWST r w s
+  ,  ReaderT r
+  ,  StrictRWST r w s
+  --,  CPSWriterT w
+  --,  CPSRWST r w s
+#endif
+  ]
 
 type String' = Type
 type Read' = Type
@@ -528,8 +546,10 @@ type ProfunctorK = Type -> Type -> Type
 
 type ForwardFileProfunctors :: Read' -> Write' -> State' -> Exp [ProfunctorK]
 type ForwardFileProfunctors r w s =
-  Map (Uncurry FileForwardIO) (Combinations ReadModes Strings '[]) ^++^
-  Map FileForwardT (Combinations ReadModes (FileStringsAndTransformers r w s) '[]) ^++^
+  Map (Uncurry FileForwardIO) (Combinations ReadModes Strings) ^++^
+#ifndef SMALL
+  Map FileForwardT (Combinations ReadModes (Combinations Strings (FileTransformers r w s))) ^++^
+#endif
   Pure '[]
 data FileForwardIO :: IOMode -> String' -> Exp ProfunctorK
 type instance Eval (FileForwardIO mode str) = Fwd (FileT (MaybeDirection 'Forward mode) mode str IO)
@@ -542,29 +562,50 @@ type family MaybeDirection d mode where
   MaybeDirection _ _ = 'Nothing
 
 type ForwardStateProfunctors :: Exp [ProfunctorK]
-type ForwardStateProfunctors = Map StateForward (Combinations States (Combinations StateTransformers (Combinations Monads Strings '[]) '[]) '[])
+type ForwardStateProfunctors = Map StateForward (Combinations States (Combinations StateTransformers (Combinations Monads Strings)))
 data StateForward :: (State', (State' -> TransformerK, (MonadK, String'))) -> Exp ProfunctorK
 type instance Eval (StateForward '(s, '(stateT, '(m, str)))) = Fwd (stateT (StateSeq s str) m)
 type States :: [State']
-type States = '[(), Position () (), IndexPosition ()]
+type States =
+  '[ Position () ()
+#ifndef SMALL
+  ,  IndexPosition ()
+  , ()
+#endif
+  ]
 type StateTransformers :: [State' -> TransformerK]
 type StateTransformers = '[LazyStateT, StrictStateT]
 type Monads :: [MonadK]
-type Monads = '[IO, Maybe, Except String]
+type Monads =
+  '[ Except String
+#ifndef SMALL
+  ,  IO
+  ,  Maybe
+#endif
+  ]
 
 type ForwardRWSProfunctors :: Read' -> Write' -> Exp [ProfunctorK]
-type ForwardRWSProfunctors r w = Map (RWSForward r w) (Combinations States (Combinations RWSTransformers (Combinations Monads Strings '[]) '[]) '[])
+type ForwardRWSProfunctors r w = Map (RWSForward r w) (Combinations States (Combinations RWSTransformers (Combinations Monads Strings)))
 data RWSForward :: Read' -> Write' -> (State', (Read' -> Write' -> State' -> MonadK -> Exp MonadK, (MonadK, String'))) -> Exp ProfunctorK
 type instance Eval (RWSForward r w '(s, '(f, '(m, str)))) = Fwd (Eval (f r w (StateSeq s str) m))
 type RWSTransformers :: [Read' -> Write' -> State' -> MonadK -> Exp MonadK]
-type RWSTransformers = '[Pure4 CPSRWST, Pure4 LazyRWST, Pure4 StrictRWST, StackedRWST CPSWriterT LazyStateT, StackedRWST LazyWriterT LazyStateT, StackedRWST StrictWriterT StrictStateT]
+type RWSTransformers =
+  '[ Pure4 LazyRWST
+#ifndef SMALL
+  ,  Pure4 CPSRWST
+  ,  Pure4 StrictRWST
+  ,  StackedRWST CPSWriterT LazyStateT
+  ,  StackedRWST LazyWriterT LazyStateT
+  ,  StackedRWST StrictWriterT StrictStateT
+#endif
+  ]
 data StackedRWST :: (Write' -> TransformerK) -> (State' -> TransformerK) -> Read' -> Write' -> State' -> MonadK -> Exp MonadK
 type instance Eval (StackedRWST writerT stateT r w s m) = ReaderT r (writerT w (stateT s m))
 
 type BackwardFileProfunctors :: Read' -> Write' -> State' -> Exp [ProfunctorK]
 type BackwardFileProfunctors r w s =
-  Map (Uncurry FileBackwardIO) (Combinations WriteModes Strings '[]) ^++^
-  Map FileBackwardsT (Combinations WriteModes (FileStringsAndTransformers r w s) '[]) ^++^
+  Map (Uncurry FileBackwardIO) (Combinations WriteModes Strings) ^++^
+  Map FileBackwardsT (Combinations WriteModes (Combinations Writers (FileTransformers r w s))) ^++^
   Pure '[]
 data FileBackwardIO :: IOMode -> String' -> Exp ProfunctorK
 type instance Eval (FileBackwardIO mode str) = Bwd (FileT (MaybeDirection 'Backward mode) mode str IO)
@@ -573,18 +614,34 @@ type instance Eval (FileBackwardsT '( mode, '(str, _))) = Bwd (FileT (MaybeDirec
 type WriteModes = '[ 'WriteMode, 'ReadWriteMode, 'AppendMode]
 
 type BackwardWriterProfunctors :: Exp [ProfunctorK]
-type BackwardWriterProfunctors = Map WriteBackward (Combinations Writers (Combinations WriterTransformers Monads '[]) '[])
+type BackwardWriterProfunctors = Map WriteBackward (Combinations Writers (Combinations WriterTransformers Monads))
 data WriteBackward :: (Write', (Write' -> TransformerK, MonadK)) -> Exp ProfunctorK
 type instance Eval (WriteBackward '(w, '(writerT, m))) = Bwd (writerT w m)
 type WriterTransformers :: [Write' -> TransformerK]
-type WriterTransformers = '[LazyWriterT]
+type WriterTransformers =
+  '[ LazyWriterT
+#ifndef SMALL
+  ,  CPSWriterT
+  ,  StrictWriterT
+#endif
+  ]
 type Writers = Eval (
-  Strings ++
-  '[ByteStringBuilder, TextBuilder]
+  Pure Builders ^++^
+#ifndef SMALL
+  Pure Strings ^++^
+#endif
+  Pure '[]
   )
+type Builders =
+  '[ ByteStringBuilder
+  ,  TextBuilder
+#ifndef SMALL
+  ,  Endo String
+#endif
+  ]
 
 type BackwardRWSProfunctors :: Read' -> State' -> Exp [ProfunctorK]
-type BackwardRWSProfunctors r s = Map (RWSBackward r s) (Combinations Writers (Combinations RWSTransformers Monads '[]) '[])
+type BackwardRWSProfunctors r s = Map (RWSBackward r s) (Combinations Writers (Combinations RWSTransformers Monads))
 data RWSBackward :: Read' -> State' -> (Write', (Read' -> Write' -> State' -> MonadK -> Exp MonadK, MonadK)) -> Exp ProfunctorK
 type instance Eval (RWSBackward r s '(w, '(f, m))) = Bwd (Eval (f r w s m))
 

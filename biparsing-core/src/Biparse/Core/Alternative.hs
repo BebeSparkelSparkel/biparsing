@@ -7,7 +7,6 @@ Alternative(..),
 import Biparse.Core.Aliases (ReaderT(ReaderT), CPSWriterT, pattern CPSWriterT, LazyWriterT, pattern LazyWriterT, StrictWriterT, pattern StrictWriterT, LazyStateT, pattern LazyStateT, StrictStateT, pattern StrictStateT, CPSRWST, pattern CPSRWST, LazyRWST, pattern LazyRWST, StrictRWST, pattern StrictRWST)
 import Control.Applicative qualified as A
 import Control.Arrow (Kleisli(Kleisli))
-import Control.Monad.Reader (ReaderT(ReaderT))
 import Control.Monad.Trans.Identity (IdentityT(IdentityT))
 import Data.Coerce (coerce)
 import Data.Either (Either(Left,Right))
