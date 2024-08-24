@@ -1,62 +1,84 @@
 cabal-version: 2.2
-
--- This file has been generated from package.yaml by hpack version 0.36.0.
---
--- see: https://github.com/sol/hpack
-
-name:           biparsing-test
-version:        0.0.0.1
-synopsis:       Test Prelude for the biparsing suite.
-category:       Parsing
-homepage:       https://github.com/BebeSparkelSparkel/biparsing
-author:         William Rusnack
-maintainer:     William Rusnack
-license:        BSD-3-Clause
-license-file:   LICENSE
-build-type:     Simple
+name: biparsing-test
+version: 0.0.0.1
+synopsis: Test Prelude for the biparsing suite.
+category: Parsing
+homepage: https://github.com/BebeSparkelSparkel/biparsing
+author: William Rusnack
+maintainer: William Rusnack
+license: BSD-3-Clause
+license-file: LICENSE
+build-type: Simple
 
 flag small
   description: Run a small subset of the transformer types.
   default: False
 
+flag padantic
+  description: -Werror -Weverything
+  default: False
+
 library
   exposed-modules:
-      Prelude
+    Prelude
+
   hs-source-dirs:
-      ./
+    ./
+
   build-depends:
-      QuickCheck
-    , base
-    , biparsing-combinators
-    , biparsing-control
-    , biparsing-core
-    , biparsing-state
-    , biparsing-text
-    , bytestring
-    , containers
-    , data-default
-    , exceptions
-    , first-class-families
-    , hspec
-    , hspec-core
-    , microlens
-    , monad-control
-    , mono-traversable
-    , mtl
-    , profunctors
-    , quickcheck-instances
-    , safe
-    , temporary
-    , text >=2.1.1
-    , transformers
+    QuickCheck,
+    base,
+    biparsing-combinators,
+    biparsing-control,
+    biparsing-core,
+    biparsing-state,
+    biparsing-text,
+    bytestring,
+    containers,
+    data-default,
+    exceptions,
+    first-class-families,
+    hspec,
+    hspec-core,
+    microlens,
+    monad-control,
+    mono-traversable,
+    mtl,
+    profunctors,
+    quickcheck-instances,
+    safe,
+    temporary,
+    text >=2.1.1,
+    transformers,
+
+  mixins:
+    base hiding (Prelude)
+
   if flag(small)
     cpp-options:
       -DSMALL
   else
     build-depends:
       vector
+
     ghc-options:
-      -freduction-depth=100000
-  mixins:
-      base hiding (Prelude)
+      -freduction-depth=0
+
+  if flag(padantic)
+    ghc-options:
+      -Werror
+      -Weverything
+      -Wno-implicit-prelude
+      -Wno-incomplete-uni-patterns
+      -Wno-missing-deriving-strategies
+      -Wno-missing-export-lists
+      -Wno-missing-import-lists
+      -Wno-missing-kind-signatures
+      -Wno-missing-local-signatures
+      -Wno-missing-safe-haskell-mode
+      -Wno-orphans
+      -Wno-safe
+      -Wno-unsafe
+      -Wno-unused-packages
+      -Wno-name-shadowing
   default-language: Haskell2010

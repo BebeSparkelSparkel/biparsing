@@ -6,18 +6,28 @@ target=$2
 continue=true
 
 packageFiles() {
-  find $searchDir -name 'package.yaml' 
+  find $searchDir -name 'cabal.*' -maxdepth 1
+}
+
+cabalFiles() {
+  find $searchDir '(' -path '*dist-newstyle*' -prune -or -name '[A-Za-z]*.cabal' ')' -and -type f
+}
+
+haskellFiles() {
+  find $searchDir '(' -path '*dist-newstyle*' -prune -or -name '[A-Za-z]*.hs' ')' -and -type f
 }
 
 cabalAndHaskellFiles() {
-  find $searchDir -path '*dist-newstyle*' -prune -or '(' -name 'cabal.*' -or -name '*.cabal' -or -name '[A-Za-z]*.hs' ')'
+  packageFiles
+  cabalFiles
+  haskellFiles
 }
 
-hpackWatch() {
-  echo hpackWatch
-  while [ $continue = true -a -n "$(packageFiles)" ]
+cabalGildWatch() {
+  echo cabalGildWatch
+  while [ $continue = true -a -n "$(cabalFiles)" ]
   do
-    packageFiles | entr -dap hpack /_
+    cabalFiles | entr -dap sh -c 'cabal-gild --io=$0 && echo generated $0 && sleep 2 || echo failed generating $0' /_
   done
 }
 
@@ -35,7 +45,7 @@ shutdown() {
 }
 trap shutdown INT
 
-packageFiles | xargs -n 1 hpack
-hpackWatch &
+cabalFiles | xargs -P 20 -n 1 sh -c 'cabal-gild --io=$0 && echo generated $0 || echo failed generating $0'
+cabalGildWatch &
 bgPID=$!
 cabalWatch

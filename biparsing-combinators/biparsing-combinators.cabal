@@ -1,69 +1,80 @@
 cabal-version: 2.2
+name: biparsing-combinators
+version: 0.0.0.1
+synopsis: Combinator modules for biparsing.
+category: Parsing
+homepage: https://github.com/BebeSparkelSparkel/biparsing
+author: William Rusnack
+maintainer: William Rusnack
+license: BSD-3-Clause
+license-file: LICENSE
+build-type: Simple
 
-name:           biparsing-combinators
-version:        0.0.0.1
-synopsis:       Combinator modules for biparsing.
-category:       Parsing
-homepage:       https://github.com/BebeSparkelSparkel/biparsing
-author:         William Rusnack
-maintainer:     William Rusnack
-license:        BSD-3-Clause
-license-file:   LICENSE
-build-type:     Simple
+flag padantic
+  description: -Werror -Weverything
+  default: False
 
 library
+  -- -- cabal-gild: discover src --exclude=src/Prelude.hs
   exposed-modules:
-      Biparse.Coerce
-      Biparse.Comap
-      Biparse.General
-      Biparse.IsoClass
-      Biparse.List
+    Biparse.Coerce
+    Biparse.Comap
+    Biparse.General
+    Biparse.IsoClass
+    Biparse.List
+
   other-modules:
-      Prelude
+    Prelude
+
   hs-source-dirs:
-      src/
+    src/
+
   default-extensions:
-      AllowAmbiguousTypes
-      BlockArguments
-      ConstraintKinds
-      DataKinds
-      DeriveFunctor
-      DeriveGeneric
-      DerivingVia
-      DuplicateRecordFields
-      FlexibleContexts
-      FlexibleInstances
-      FunctionalDependencies
-      GeneralizedNewtypeDeriving
-      ImportQualifiedPost
-      LambdaCase
-      MultiParamTypeClasses
-      PatternSynonyms
-      QuantifiedConstraints
-      RankNTypes
-      RecordWildCards
-      ScopedTypeVariables
-      StandaloneDeriving
-      StandaloneKindSignatures
-      TupleSections
-      TypeApplications
-      TypeFamilies
-      TypeOperators
-  ghc-options:
-    -Werror
-    -Weverything
-    -Wno-implicit-prelude
-    -Wno-missing-deriving-strategies
-    -Wno-missing-kind-signatures
-    -Wno-missing-local-signatures
-    -Wno-missing-safe-haskell-mode
-    -Wno-safe
-    -Wno-unsafe
-    -Wno-unused-packages
+    AllowAmbiguousTypes
+    BlockArguments
+    ConstraintKinds
+    DataKinds
+    DeriveFunctor
+    DeriveGeneric
+    DerivingVia
+    DuplicateRecordFields
+    FlexibleContexts
+    FlexibleInstances
+    FunctionalDependencies
+    GeneralizedNewtypeDeriving
+    ImportQualifiedPost
+    LambdaCase
+    MultiParamTypeClasses
+    PatternSynonyms
+    QuantifiedConstraints
+    RankNTypes
+    RecordWildCards
+    ScopedTypeVariables
+    StandaloneDeriving
+    StandaloneKindSignatures
+    TupleSections
+    TypeApplications
+    TypeFamilies
+    TypeOperators
+
+  if flag(padantic)
+    ghc-options:
+      -Werror
+      -Weverything
+      -Wno-implicit-prelude
+      -Wno-missing-deriving-strategies
+      -Wno-missing-kind-signatures
+      -Wno-missing-local-signatures
+      -Wno-missing-safe-haskell-mode
+      -Wno-safe
+      -Wno-unsafe
+      -Wno-unused-packages
   build-depends:
-      base
-    , biparsing-core
-    , biparsing-control
+    base,
+    biparsing-control,
+    biparsing-core,
+
   mixins:
-      base hiding (Prelude)
+    base hiding (Prelude)
+
   default-language: Haskell2010

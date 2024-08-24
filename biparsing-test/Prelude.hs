@@ -27,24 +27,6 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-{-# OPTIONS_GHC
-  -Werror
-  -Weverything
-  -Wno-implicit-prelude
-  -Wno-incomplete-uni-patterns
-  -Wno-missing-deriving-strategies
-  -Wno-missing-export-lists
-  -Wno-missing-import-lists
-  -Wno-missing-kind-signatures
-  -Wno-missing-local-signatures
-  -Wno-missing-safe-haskell-mode
-  -Wno-orphans
-  -Wno-safe
-  -Wno-unsafe
-  -Wno-unused-packages
-  -Wno-name-shadowing
-#-}
-
 module Prelude (
 module Export,
 

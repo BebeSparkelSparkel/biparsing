@@ -1,81 +1,98 @@
 cabal-version: 2.2
+name: biparsing-core
+version: 0.0.0.1
+synopsis: Core modules for biparsing.
+category: Parsing
+homepage: https://github.com/BebeSparkelSparkel/biparsing
+author: William Rusnack
+maintainer: William Rusnack
+license: BSD-3-Clause
+license-file: LICENSE
+build-type: Simple
 
--- This file has been generated from package.yaml by hpack version 0.36.0.
---
--- see: https://github.com/sol/hpack
-
-name:           biparsing-core
-version:        0.0.0.1
-synopsis:       Core modules for biparsing.
-category:       Parsing
-homepage:       https://github.com/BebeSparkelSparkel/biparsing
-author:         William Rusnack
-maintainer:     William Rusnack
-license:        BSD-3-Clause
-license-file:   LICENSE
-build-type:     Simple
+flag padantic
+  description: -Werror -Weverything
+  default: False
 
 library
   exposed-modules:
-      Biparse.Core.Aliases
-      Biparse.Core.Alternative
-      Biparse.Core.Classes
-      Biparse.Core.Classes.Backward
-      Biparse.Core.Classes.Bidirectional
-      Biparse.Core.Classes.Forward
-      Biparse.Core.Comap
-      Biparse.Core.Direction
-      Biparse.Core.Update
+    Biparse.Core.Aliases
+    Biparse.Core.Alternative
+    Biparse.Core.Classes
+    Biparse.Core.Classes.Backward
+    Biparse.Core.Classes.Bidirectional
+    Biparse.Core.Classes.Forward
+    Biparse.Core.Comap
+    Biparse.Core.Direction
+    Biparse.Core.Update
+
   other-modules:
-      Prelude
+    Prelude
+
   hs-source-dirs:
-      src/
+    src/
+
   default-extensions:
-      AllowAmbiguousTypes
-      BlockArguments
-      ConstraintKinds
-      DataKinds
-      DeriveFunctor
-      DeriveGeneric
-      DerivingVia
-      DuplicateRecordFields
-      FlexibleContexts
-      FlexibleInstances
-      FunctionalDependencies
-      GeneralizedNewtypeDeriving
-      ImportQualifiedPost
-      LambdaCase
-      MultiParamTypeClasses
-      PatternSynonyms
-      QuantifiedConstraints
-      RankNTypes
-      RecordWildCards
-      ScopedTypeVariables
-      StandaloneDeriving
-      StandaloneKindSignatures
-      TupleSections
-      TypeApplications
-      TypeFamilies
-      TypeOperators
-  ghc-options: -Weverything -Wno-implicit-prelude -Wno-missing-deriving-strategies -Wno-missing-kind-signatures -Wno-missing-local-signatures -Wno-missing-safe-haskell-mode -Wno-safe -Wno-unsafe -Wno-name-shadowing -Wno-unused-packages
+    AllowAmbiguousTypes
+    BlockArguments
+    ConstraintKinds
+    DataKinds
+    DeriveFunctor
+    DeriveGeneric
+    DerivingVia
+    DuplicateRecordFields
+    FlexibleContexts
+    FlexibleInstances
+    FunctionalDependencies
+    GeneralizedNewtypeDeriving
+    ImportQualifiedPost
+    LambdaCase
+    MultiParamTypeClasses
+    PatternSynonyms
+    QuantifiedConstraints
+    RankNTypes
+    RecordWildCards
+    ScopedTypeVariables
+    StandaloneDeriving
+    StandaloneKindSignatures
+    TupleSections
+    TypeApplications
+    TypeFamilies
+    TypeOperators
+
+  if flag(padantic)
+    ghc-options:
+      -Werror
+      -Weverything
+      -Wno-implicit-prelude
+      -Wno-missing-deriving-strategies
+      -Wno-missing-kind-signatures
+      -Wno-missing-local-signatures
+      -Wno-missing-safe-haskell-mode
+      -Wno-safe
+      -Wno-unsafe
+      -Wno-name-shadowing
+      -Wno-unused-packages
   build-depends:
-      base
-    , containers
-    , data-default
-    , data-diverse
-    , exceptions
-    , extra
-    , hvect
-    , microlens
-    , microlens-mtl
-    , microlens-pro
-    , microlens-th
-    , monad-control
-    , mono-traversable
-    , mtl >=2.3.1
-    , profunctor-monad
-    , profunctors
-    , transformers >=0.6.1.1
+    base,
+    containers,
+    data-default,
+    data-diverse,
+    exceptions,
+    extra,
+    hvect,
+    microlens,
+    microlens-mtl,
+    microlens-pro,
+    microlens-th,
+    monad-control,
+    mono-traversable,
+    mtl >=2.3.1,
+    profunctor-monad,
+    profunctors,
+    transformers >=0.6.1.1,
+
   mixins:
-      base hiding (Prelude)
+    base hiding (Prelude)
+
   default-language: Haskell2010

@@ -1,9 +1,4 @@
 cabal-version: 2.2
-
--- This file has been generated from package.yaml by hpack version 0.36.0.
---
--- see: https://github.com/sol/hpack
-
 name: biparsing-control
 version: 0.0.0.1
 synopsis: Controling Monads and Profunctors for biparsing.
@@ -15,16 +10,24 @@ license: BSD-3-Clause
 license-file: LICENSE
 build-type: Simple
 
+flag padantic
+  description: -Werror -Weverything
+  default: False
+
 library
+  -- cabal-gild: discover src --exclude=src/Prelude.hs
   exposed-modules:
     Biparse.Control.Bwd
     Biparse.Control.Except
     Biparse.Control.File
     Biparse.Control.Fwd
+
   other-modules:
     Prelude
+
   hs-source-dirs:
     src/
+
   default-extensions:
     BlockArguments
     DataKinds
@@ -42,6 +45,7 @@ library
     StandaloneDeriving
     TypeFamilies
     UndecidableInstances
+
   build-depends:
     base,
     bifunctors,
@@ -55,7 +59,26 @@ library
     mtl,
     profunctors,
     text,
-    transformers
+    transformers,
+
   mixins:
     base hiding (Prelude)
+
+  if flag(padantic)
+    ghc-options:
+      -Werror
+      -Weverything
+      -Wno-implicit-prelude
+      -Wno-incomplete-uni-patterns
+      -Wno-missing-deriving-strategies
+      -Wno-missing-export-lists
+      -Wno-missing-import-lists
+      -Wno-missing-kind-signatures
+      -Wno-missing-local-signatures
+      -Wno-missing-safe-haskell-mode
+      -Wno-orphans
+      -Wno-safe
+      -Wno-unsafe
+      -Wno-unused-packages
+      -Wno-name-shadowing
   default-language: Haskell2010

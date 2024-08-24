@@ -14,6 +14,10 @@ flag small
   description: Run a small subset of the transformer types.
   default: False
 
+flag padantic
+  description: -Werror -Weverything
+  default: False
+
 test-suite spec
   type: exitcode-stdio-1.0
   main-is: Spec.hs
@@ -44,24 +48,24 @@ test-suite spec
       -DSMALL
   else
     ghc-options:
-      -freduction-depth=100000
+      -freduction-depth=0
 
-  ghc-options:
-    -Werror
-    -Weverything
-    -Wno-implicit-prelude
-    -Wno-incomplete-uni-patterns
-    -Wno-missing-deriving-strategies
-    -Wno-missing-export-lists
-    -Wno-missing-import-lists
-    -Wno-missing-kind-signatures
-    -Wno-missing-local-signatures
-    -Wno-missing-safe-haskell-mode
-    -Wno-orphans
-    -Wno-safe
-    -Wno-unsafe
-    -Wno-unused-packages
-
+  if flag(padantic)
+    ghc-options:
+      -Werror
+      -Weverything
+      -Wno-implicit-prelude
+      -Wno-incomplete-uni-patterns
+      -Wno-missing-deriving-strategies
+      -Wno-missing-export-lists
+      -Wno-missing-import-lists
+      -Wno-missing-kind-signatures
+      -Wno-missing-local-signatures
+      -Wno-missing-safe-haskell-mode
+      -Wno-orphans
+      -Wno-safe
+      -Wno-unsafe
+      -Wno-unused-packages
   build-tool-depends:
     hspec-discover:hspec-discover
 
