@@ -2,7 +2,8 @@
 module Biparse.Core.Classes.Forward (
 OneFwd(..),
 oneFwd',
-StateSeq(StateSeq),
+StateSeq,
+pattern StateSeq,
 OnlyFwd(..),
 Peek(..),
 Try(..),
@@ -42,9 +43,11 @@ oneFwd' = do
   return x
 
 newtype StateSeq s seq = StateSeq' (s, seq) deriving (Show, Eq)
+{-# COMPLETE StateSeq #-}
 pattern StateSeq :: s -> seq -> StateSeq s seq
 pattern StateSeq s seq = StateSeq' (s, seq)
 instance (Default s, IsString seq) => IsString (StateSeq s seq) where fromString = StateSeq def . fromString
+instance (Default s, Monoid seq) => Default (StateSeq s seq) where def = StateSeq def mempty
 
 -- * Forward and Backward Divergence
 

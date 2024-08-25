@@ -38,10 +38,10 @@ instance
   , direction ~ WhichDirection (p ())
   ) => TestSuite p where
   testSuite _ = describe (show $ typeRep @p) do
-    let runForward :: forall u v. Biparser p u v -> FilePath -> u -> String -> BaseMonad (p u) (StM' (p u) v)
-        runForward = run @p @r @s
+    let run' :: forall u v. Biparser p u v -> FilePath -> u -> String -> BaseMonad (p u) (StM' (p u) v)
+        run' = run @p @r @s
     describe "one" do
-      let f = runForward one
+      let f = run' one
       it "success" let
         fp = "one-success-forward.test"
         u = fromChar @char 'a'
@@ -56,13 +56,12 @@ instance
         in shouldFail $ f fp undefined ""
     describe "peek" do
       describe "peek one" do
-        let f = runForward $ peek one
+        let f = run' $ peek one
         it "success" let
           fp = "peek-one-success-forward.test"
           u = fromChar @char 'a'
           in f fp u "abc" `shouldReturn` makeResult @direction
-              (Position @() fp 1 1)
-              (IndexPosition fp 0)
+              (ZeroPos fp)
               "abc"
               "a"
               u
@@ -71,7 +70,7 @@ instance
           in shouldFail $ f fp undefined ""
       it "peek tuple" let
         fp = "peek-tuple-forward.test"
-        f = runForward ((,) <$> peek one `upon` fst <*> one `upon` snd) fp
+        f = run' ((,) <$> peek one `upon` fst <*> one `upon` snd) fp
         u = (fromChar @char 'a', fromChar @char 'a')
         in f u "abc" `shouldReturn` makeResult @direction
             (Position @() fp 1 2)
@@ -80,13 +79,12 @@ instance
             "aa"
             u
       describe "peek alt" do
-        let f = runForward $ peek (takeUni (fromChar 'x')) <|> takeUni (fromChar 'a')
+        let f = run' $ peek (takeUni (fromChar 'x')) <|> takeUni (fromChar 'a')
         it "take" let
           fp = "peek-alt-take-forward.test"
           u = fromChar @char 'x'
           in f fp u "xa" `shouldReturn` makeResult @direction
-              (Position @() fp 1 1)
-              (IndexPosition fp 0)
+              (ZeroPos fp)
               "xa"
               "x"
               u
@@ -94,56 +92,13 @@ instance
           fp = "peek-alt-take-fail-forward.test"
           u = fromChar @char 'a'
           in f fp u "ab" `shouldReturn` makeResult @direction
-              (Position @() fp 1 2)
-              (IndexPosition fp 1)
+              (ZeroPos fp)
               "b"
               "a"
               u
         it "no match" let
           fp = "peek-alt-no-match-forward.test"
           in shouldFail $ f fp (fromChar @char 'b') "b"
-
---specBackward :: forall (p :: Type -> Type -> Type) char r s.
---  ( One char p
---  , Profunctor p
---  , forall u. Applicative (p u)
---  , forall u. ShouldReturnQ p u
---  , forall u v. MakeBackwardResult v (p u) v
---  , forall u a. Show a => ShowStM' (p u) a
---  , forall u a. Eq a => EqStM' (p u) a
---  , Show char
---  , IsChar char
---  , Eq char
---  , forall u. RunBase (TestParameters 'Backward r s u) (p u)
---  , forall u. ConstructParameter u r
---  , forall u. ConstructParameter u s
---  , forall u. Peek (p u)
---  , Typeable p
---  ) => Spec
---specBackward = describe (show $ typeRep @p) do
---  describe "one" do
---    it "one" let
---      fp = "one-backward.test"
---      b = run @'Backward @p @r @s oneBP fp
---      u = fromChar @char 'a'
---      in b u `shouldReturn` makeResult
---          "a"
---          u
---  describe "peek" do
---    it "peek one" let
---      fp = "peek-one-backward.test"
---      b = run @'Backward @p @r @s peekOneBP fp
---      u = fromChar @char 'a'
---      in b u `shouldReturn` makeResult
---        "a"
---        u
---    it "peek tuple" let
---      fp = "peek-tuple-backward.test"
---      b = run @'Backward @p @r @s peekTupleBP fp
---      u = (fromChar @char 'a', fromChar @char 'b')
---      in b u `shouldReturn` makeResult
---          "ab"
---          u
 
 ----  describe "split" do
 ----    fb "Identity"

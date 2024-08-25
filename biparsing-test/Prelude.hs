@@ -55,14 +55,16 @@ ShouldFailQ,
 ShouldFail,
 shouldFail,
 ForwardOnly(..),
+ZeroPos(..),
 ) where
 
-import Biparse.Control.Except as Export
 import Biparse.Comap as Export
 import Biparse.Control.Bwd as Export
+import Biparse.Control.Except as Export
 import Biparse.Control.File as Export (FileT, OpenFile(openFile), OpenFrom, MonadFileGetChar)
 import Biparse.Control.Fwd as Export
 import Biparse.Core.Aliases as Export
+import Biparse.Core.Alternative as Export
 import Biparse.Core.Classes as Export
 import Biparse.Core.Update as Export (UpdateStateWithElement)
 import Biparse.General as Export
@@ -89,7 +91,6 @@ import Data.Either as Export (Either(Right), isLeft, isRight, either)
 import Data.Eq as Export (Eq((==)), (/=))
 import Data.Function as Export
 import Data.Functor as Export (Functor, (<$>), (<&>), ($>), fmap)
-import Biparse.Core.Alternative as Export
 import Data.Functor.Identity as Export (Identity(Identity,runIdentity))
 import Data.Int as Export
 import Data.Kind as Export (Type, Constraint)
@@ -133,30 +134,31 @@ import Data.Vector as Export (Vector)
 #endif
 
 -- Internal Imports
-import Data.Maybe as Export (isNothing)
-import Control.Monad.Reader (runReaderT)
-import Control.Monad.IO.Class as Export (MonadIO)
 import Biparse.Control.File (runFileT)
-import Data.ByteString.Builder qualified
-import Data.ByteString.Builder.Internal (byteStringInsert, byteStringThreshold, toLazyByteStringWith, safeStrategy, smallChunkSize)
-import Data.Text.Lazy.Builder qualified
-import GHC.Exts (IsList(..))
-import Test.Hspec qualified
-import System.IO.Temp (withSystemTempFile)
-import System.IO (IOMode(ReadMode, WriteMode, ReadWriteMode, AppendMode), hClose)
-import System.IO qualified
+import Biparse.Core.Direction (Direction(Forward,Backward), WhichDirection)
 import Biparse.Core.Update (updateStateWithElement)
+import Biparse.State.Lenses (HasDataId)
+import Control.Monad.IO.Class as Export (MonadIO)
+import Control.Monad.Reader (runReaderT)
+import Control.Monad.Trans.RWS.CPS qualified
+import Control.Monad.Trans.RWS.Lazy qualified
+import Control.Monad.Trans.RWS.Strict qualified
 import Control.Monad.Trans.State.Lazy qualified
 import Control.Monad.Trans.State.Strict qualified
 import Control.Monad.Trans.Writer.CPS qualified
 import Control.Monad.Trans.Writer.Lazy qualified
 import Control.Monad.Trans.Writer.Strict qualified
-import Control.Monad.Trans.RWS.CPS qualified
-import Control.Monad.Trans.RWS.Lazy qualified
-import Control.Monad.Trans.RWS.Strict qualified
-import Fcf
-import Fcf.Combinators
-import Biparse.Core.Direction (Direction(Forward,Backward), WhichDirection)
+import Data.ByteString.Builder qualified
+import Data.ByteString.Builder.Internal (byteStringInsert, byteStringThreshold, toLazyByteStringWith, safeStrategy, smallChunkSize)
+import Data.Maybe as Export (isNothing)
+import Data.Text.Lazy.Builder qualified
+import Fcf (Exp, Eval, Pure, LiftM2, Map, Uncurry, type (++))
+import Fcf.Combinators (Pure4)
+import GHC.Exts (IsList(..))
+import System.IO (IOMode(ReadMode, WriteMode, ReadWriteMode, AppendMode), hClose)
+import System.IO qualified
+import System.IO.Temp (withSystemTempFile)
+import Test.Hspec qualified
 
 run :: forall p r s u v a.
   ( RunBase (TestParameters r s u a) (p u)
@@ -170,9 +172,9 @@ instance (ConstructParameter u a r, ConstructParameter u a s) => ConstructParame
 instance (ConstructParameter u String s, IsString text) => ConstructParameter u String (StateSeq s text) where
   constructParameter filePath u string = StateSeq (constructParameter filePath u string) (fromString string)
 instance IsString dataId => ConstructParameter u a (Position context dataId) where
-  constructParameter filePath _ _ = (def :: Position context ()) & dataId .~ fromString filePath
+  constructParameter filePath _ _ = def & dataId @() .~ fromString filePath
 instance IsString dataId => ConstructParameter u a (IndexPosition dataId) where
-  constructParameter filePath _ _ = (def :: IndexPosition ()) & dataId .~ fromString filePath
+  constructParameter filePath _ _ = def & dataId @() .~ fromString filePath
 instance ConstructParameter u a () where
   constructParameter _ _ _ = ()
 
@@ -233,8 +235,8 @@ class ShouldReturn (BaseMonad (p u)) => ShouldReturnQ p u
 instance ShouldReturn (BaseMonad (p u)) => ShouldReturnQ p u
 class ShouldFail (BaseMonad (p u)) => ShouldFailQ p u
 instance ShouldFail (BaseMonad (p u)) => ShouldFailQ p u
-class MakeResult d (Position () FilePath -> IndexPosition FilePath -> String -> String -> u -> StM' (p u) u) => MakeIsoResult d p u
-instance MakeResult d (Position () FilePath -> IndexPosition FilePath -> String -> String -> u -> StM' (p u) u) => MakeIsoResult d p u
+class (MakeResult d (Position () FilePath -> IndexPosition FilePath -> String -> String -> u -> StM' (p u) u), MakeResult d (ZeroPos -> String -> String -> u -> StM' (p u) u)) => MakeIsoResult d p u
+instance (MakeResult d (Position () FilePath -> IndexPosition FilePath -> String -> String -> u -> StM' (p u) u), MakeResult d (ZeroPos -> String -> String -> u -> StM' (p u) u)) => MakeIsoResult d p u
 class MakeResult d (Position () FilePath -> IndexPosition FilePath -> String -> String -> v -> StM' m ((v, w), s)) => MakeForwardWriterResult d m v w s
 class MakeResult d (Position () FilePath -> IndexPosition FilePath -> String -> String -> v -> StM' m (v, s)) => MakeForwardStateResult d m v s
 class MakeResult d (Position () FilePath -> IndexPosition FilePath -> String -> String -> v -> StM' m (v, s, w)) => MakeForwardRWSResult d m v w s
@@ -377,37 +379,49 @@ instance RunBase b (Except e) where
   runBase = const
 
 class MakeResult (direction :: Direction) a where makeResult :: a
-instance MakeResult 'Forward (p -> i -> ss -> ws -> v -> v) where
+instance MakeResult 'Forward (ZeroPos -> ss -> ws -> v -> v) where
+  makeResult _ _ _ x = x
+instance MakeResult 'Forward (Position () FilePath -> i -> ss -> ws -> v -> v) where
   makeResult _ _ _ _ x = x
-instance MakeResult 'Forward (p -> i -> ss -> ws -> v -> (v, p)) where
+instance (IsString dataId, Default a, HasDataId () a p dataId) => MakeResult 'Forward (ZeroPos -> ss -> ws -> v -> (v, p)) where
+  makeResult (ZeroPos fp) _ _ x = (x, def & dataId @() .~ fromString fp)
+instance MakeResult 'Forward (Position () FilePath -> i -> ss -> ws -> v -> (v, Position () FilePath)) where
   makeResult p _ _ _ x = (x, p)
-instance MakeResult 'Forward (p -> i -> ss -> ws -> v -> (v, i)) where
+instance MakeResult 'Forward (Position () FilePath -> i -> ss -> ws -> v -> (v, i)) where
   makeResult _ i _ _ x = (x, i)
 instance (IsString text, IsString dataId) => MakeResult 'Forward (Position () FilePath -> i -> String -> ws -> v -> (v, StateSeq (Position context dataId) text)) where
   makeResult p _ s _ x = (x, StateSeq (coerce $ p & dataId %~ fromString @dataId) (fromString s))
+--instance (Default a, HasDataId () a s dataId, IsString text, IsString dataId) => MakeResult 'Forward (ZeroPos -> String -> ws -> v -> (v, StateSeq s text)) where
+--  makeResult (ZeroPos fp) s _ x = (x, StateSeq (def @a & dataId @() .~ fromString @dataId fp) (fromString s))
 instance (IsString text, IsString dataId) => MakeResult 'Forward (p -> IndexPosition FilePath -> String -> ws -> v -> (v, StateSeq (IndexPosition dataId) text)) where
   makeResult _ i s _ x = (x, (StateSeq (coerce $ i & dataId %~ fromString @dataId) (fromString s)))
-instance IsString text => MakeResult 'Forward (p -> i -> String -> ws -> v -> (v, StateSeq () text)) where
+instance IsString text => MakeResult 'Forward (Position () FilePath -> i -> String -> ws -> v -> (v, StateSeq () text)) where
   makeResult _ _ s _ x = (x, (StateSeq () (fromString s)))
-instance MakeResult 'Forward (p -> i -> ss -> ws -> v -> v) => MakeResult 'Forward (p -> i -> ss -> ws -> v -> (v, ())) where
+instance MakeResult 'Forward (Position () FilePath -> i -> ss -> ws -> v -> v) => MakeResult 'Forward (Position () FilePath -> i -> ss -> ws -> v -> (v, ())) where
   makeResult p i s w v = (makeResult @'Forward p i s w v, ())
-instance MakeResult 'Forward (p -> i -> ss -> ws -> v -> (v, s)) => MakeResult 'Forward (p -> i -> ss -> ws -> v -> ((v, ()), s)) where
+instance MakeResult 'Forward (Position () FilePath -> i -> ss -> ws -> v -> (v, s)) => MakeResult 'Forward (Position () FilePath -> i -> ss -> ws -> v -> ((v, ()), s)) where
   makeResult p i s w v = first (, ()) $ makeResult @'Forward p i s w v
-instance MakeResult 'Forward (p -> i -> ss -> ws -> v -> (v, s)) => MakeResult 'Forward (p -> i -> ss -> ws -> v -> (v, s, ())) where
+instance MakeResult 'Forward (ZeroPos -> ss -> ws -> v -> (v, s)) => MakeResult 'Forward (ZeroPos -> ss -> ws -> v -> ((v, ()), s)) where
+  makeResult z s w v = first (, ()) $ makeResult @'Forward z s w v
+instance MakeResult 'Forward (Position () FilePath -> i -> ss -> ws -> v -> (v, s)) => MakeResult 'Forward (Position () FilePath -> i -> ss -> ws -> v -> (v, s, ())) where
   makeResult p i s w v = makeResult @'Forward p i s w v & \(v, s) -> (v, s, ())
+instance MakeResult 'Forward (ZeroPos -> ss -> ws -> v -> (v, s)) => MakeResult 'Forward (ZeroPos -> ss -> ws -> v -> (v, s, ())) where
+  makeResult z s w v = makeResult @'Forward z s w v & \(v, s) -> (v, s, ())
 
-instance MakeResult 'Backward (ws -> v -> a) => MakeResult 'Backward (p -> i -> ss -> ws -> v -> a) where
+instance MakeResult 'Backward (ws -> v -> a) => MakeResult 'Backward (Position () FilePath -> i -> ss -> ws -> v -> a) where
   makeResult _ _ _ w v = makeResult @'Backward w v
+instance MakeResult 'Backward (ws -> v -> a) => MakeResult 'Backward (ZeroPos -> ss -> ws -> v -> a) where
+  makeResult _ _ w v = makeResult @'Backward w v
 instance IsString w => MakeResult 'Backward (String -> v -> (v, w)) where
   makeResult w v = (v, fromString w)
-instance MakeResult d (a -> b -> (b, c)) => MakeResult d (a -> b -> (b, (), c)) where
-  makeResult x y = insertUnit $ makeResult @d x y
-instance MakeResult d (a -> b -> (b, c)) => MakeResult d (a -> b -> ((b, ()), c)) where
-  makeResult x y = insertUnit $ makeResult @d x y
-instance MakeResult d (a -> b -> (b, c)) => MakeResult d (a -> b -> ((b, (), ()), c)) where
-  makeResult x y = insertUnit $ makeResult @d x y
-instance MakeResult d (a -> b -> (b, c)) => MakeResult d (a -> b -> ((b, c), ())) where
-  makeResult x y = (makeResult @d x y, ())
+instance MakeResult 'Backward (a -> b -> (b, c)) => MakeResult 'Backward (a -> b -> (b, (), c)) where
+  makeResult x y = insertUnit $ makeResult @'Backward x y
+instance MakeResult 'Backward (a -> b -> (b, c)) => MakeResult 'Backward (a -> b -> ((b, ()), c)) where
+  makeResult x y = insertUnit $ makeResult @'Backward x y
+instance MakeResult 'Backward (a -> b -> (b, c)) => MakeResult 'Backward (a -> b -> ((b, (), ()), c)) where
+  makeResult x y = insertUnit $ makeResult @'Backward x y
+instance MakeResult 'Backward (a -> b -> (b, c)) => MakeResult 'Backward (a -> b -> ((b, c), ())) where
+  makeResult x y = (makeResult @'Backward x y, ())
 
 class InsertUnit a b | b -> a where insertUnit :: a -> b
 --instance InsertUnit a (a, ()) where insertUnit = (, ())
@@ -651,4 +665,9 @@ runAllTests' testSuite = case knownTypeableList @cs @l of
   SCons @_ @a @l' -> do
     testSuite $ Proxy @a
     runAllTests' @cs @l' testSuite
+
+data ZeroPos = ZeroPos FilePath deriving Show
+
+instance HasDataId () () () () where dataId = id
+instance HasDataId () s t b => HasDataId () (StateSeq s a) (StateSeq t a) b where dataId f (StateSeq s x) = flip StateSeq x <$> dataId f s
 

@@ -12,7 +12,7 @@ data IndexPosition dataId = IndexPosition
   { _dataId :: dataId -- | typically () or FilePath
   , _index :: Int
   } deriving (Show, Eq)
-instance HasDataId (IndexPosition a) (IndexPosition b) a b where dataId = lens _dataId \x y -> x {_dataId = y}
+instance HasDataId a (IndexPosition a) (IndexPosition b) b where dataId = lens _dataId \x y -> x {_dataId = y}
 $(makeLensesFor [("_index","index")] ''IndexPosition)
 
 instance Default dataId => Default (IndexPosition dataId) where def = IndexPosition def 0

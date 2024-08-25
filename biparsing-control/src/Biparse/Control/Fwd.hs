@@ -5,14 +5,7 @@
 {-# LANGUAGE StandaloneKindSignatures #-}
 module Biparse.Control.Fwd (Fwd(..)) where
 
-import Control.Monad.State.Class (MonadState(get,put))
-import Debug.Trace (trace)
-import Data.Functor.Const
-import Data.Functor.Compose
 import Data.Bifunctor.Joker (Joker(Joker))
-
-type Flip :: (a -> b -> Type) -> b -> a -> Type
-newtype Flip p b a = Flip (p a b)
 
 -- | 'u' is thrown away
 newtype Fwd m u a = Fwd {runFwd :: m a}

@@ -5,8 +5,7 @@ PutBwd(..),
 UnfoldlExactN(..),
 ) where
 
-import Biparse.Core.Aliases (LazyWriterT, LazyRWST)
-import Biparse.Core.Aliases (ReaderT(ReaderT), CPSWriterT, pattern CPSWriterT, LazyWriterT, pattern LazyWriterT, StrictWriterT, pattern StrictWriterT, LazyStateT, pattern LazyStateT, StrictStateT, pattern StrictStateT, CPSRWST, pattern CPSRWST, LazyRWST, pattern LazyRWST, StrictRWST, pattern StrictRWST)
+import Biparse.Core.Aliases (CPSWriterT, LazyWriterT, StrictWriterT, LazyStateT, StrictStateT, CPSRWST, LazyRWST, StrictRWST)
 import Control.Monad.Writer (tell)
 import Data.MonoTraversable (MonoPointed(opoint), Element)
 

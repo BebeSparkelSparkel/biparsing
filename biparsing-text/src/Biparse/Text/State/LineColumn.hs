@@ -32,7 +32,7 @@ data Position context dataId = Position
   , _line :: Int
   , _column :: Int
   } deriving (Show, Eq)
-instance HasDataId (Position context a) (Position context b) a b where dataId = lens _dataId \x y -> x {_dataId = y}
+instance HasDataId a (Position context a) (Position context b) b where dataId = lens _dataId \x y -> x {_dataId = y}
 $(makeLensesFor [("_line","line"),("_column","column")] ''Position)
 
 instance Default dataId => Default (Position context dataId) where
