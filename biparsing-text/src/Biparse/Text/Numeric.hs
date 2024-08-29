@@ -32,51 +32,51 @@ import Data.List (lookup)
 import GHC.Num (Num((+)))
 import Numeric.Natural (Natural)
 import Biparse.IsoClass (IsoClass(iso))
-import Biparse.Core.Classes (OneFwd(oneFwd), Diverge(diverge), UnfoldlExactN(unfoldlExactN))
+import Biparse.Core.Classes (Diverge(diverge), UnfoldlExactN(unfoldlExactN))
 import Data.Tuple.Extra ((&&&))
 
-naturalBaseTen :: forall p f b number i. NaturalBaseTen p f b number i => Iso p number
+naturalBaseTen :: forall p f b number char. NaturalBaseTen p f b number char => Iso p number
 naturalBaseTen = naturalLimitedBaseTen maxBound
-type NaturalBaseTen p f b number i =
+type NaturalBaseTen p f b number char =
   ( Diverge (p number) f b number
   , MonadFail f
-  , OneFwd i f
   , Try f
   , Alternative f
-  , UnfoldlExactN b i
+  , UnfoldlExactN b char
   , Monad b
   , Show number
   , Integral number
   , Bounded number
   , NumberOfDigits number
-  , i ~ Item' p
-  , Show i
-  , Ix i
-  , Enum i
-  , IsChar i
+  , char ~ Item' p
+  , Show char
+  , Ix char
+  , Enum char
+  , IsChar char
+  , One char f
   )
-instance NaturalBaseTen p f b Word   i => IsoClass p Word   where iso = naturalBaseTen
-instance NaturalBaseTen p f b Word8  i => IsoClass p Word8  where iso = naturalBaseTen
-instance NaturalBaseTen p f b Word16 i => IsoClass p Word16 where iso = naturalBaseTen
-instance NaturalBaseTen p f b Word32 i => IsoClass p Word32 where iso = naturalBaseTen
-instance NaturalBaseTen p f b Word64 i => IsoClass p Word64 where iso = naturalBaseTen
+instance NaturalBaseTen p f b Word   char => IsoClass p Word   where iso = naturalBaseTen
+instance NaturalBaseTen p f b Word8  char => IsoClass p Word8  where iso = naturalBaseTen
+instance NaturalBaseTen p f b Word16 char => IsoClass p Word16 where iso = naturalBaseTen
+instance NaturalBaseTen p f b Word32 char => IsoClass p Word32 where iso = naturalBaseTen
+instance NaturalBaseTen p f b Word64 char => IsoClass p Word64 where iso = naturalBaseTen
 
-naturalLimitedBaseTen :: forall p f b number i.
+naturalLimitedBaseTen :: forall p f b number char.
   ( Diverge (p number) f b number
   , MonadFail f
-  , OneFwd i f
   , Try f
   , Alternative f
-  , UnfoldlExactN b i
+  , UnfoldlExactN b char
   , Monad b
   , Show number
   , Integral number
   , NumberOfDigits number
-  , i ~ Item' p
-  , Show i
-  , Ix i
-  , Enum i
-  , IsChar i
+  , char ~ Item' p
+  , Show char
+  , Ix char
+  , Enum char
+  , IsChar char
+  , One char f
   )
   => number
   -> Iso p number
@@ -92,7 +92,7 @@ naturalLimitedBaseTen limit = diverge @(p number) @f @b @number
     then fw $ 10 * x + d
     else fail $ "Exceeded limit of " <> show limit
   getDigit = try do
-    c <- oneFwd
+    c <- one
     if inRange range c
     then pure $ fromIntegral $ index range c
     else fail $ show c <> " is not a digit."
@@ -100,24 +100,24 @@ naturalLimitedBaseTen limit = diverge @(p number) @f @b @number
   zero :: Item' p
   zero = fromChar '0'
 
-intBaseTen :: forall p f b m number i. IntBaseTen p f b m number i => Iso p number
+intBaseTen :: forall p f b m number char. IntBaseTen p f b m number char => Iso p number
 intBaseTen = do
-  s <- sign
+  s <- sign @char
   n <- naturalBaseTen `upon` abs
   pure $ s n
-type IntBaseTen p f b m number i =
-  ( Sign p m number i
-  , NaturalBaseTen p f b number i
+type IntBaseTen p f b m number char =
+  ( Sign p m number char
+  , NaturalBaseTen p f b number char
   , Monad (p number)
   )
-instance IntBaseTen p f b m Int   i => IsoClass p Int   where iso = intBaseTen
-instance IntBaseTen p f b m Int8  i => IsoClass p Int8  where iso = intBaseTen
-instance IntBaseTen p f b m Int16 i => IsoClass p Int16 where iso = intBaseTen
-instance IntBaseTen p f b m Int32 i => IsoClass p Int32 where iso = intBaseTen
-instance IntBaseTen p f b m Int64 i => IsoClass p Int64 where iso = intBaseTen
+instance IntBaseTen p f b m Int   char => IsoClass p Int   where iso = intBaseTen
+instance IntBaseTen p f b m Int8  char => IsoClass p Int8  where iso = intBaseTen
+instance IntBaseTen p f b m Int16 char => IsoClass p Int16 where iso = intBaseTen
+instance IntBaseTen p f b m Int32 char => IsoClass p Int32 where iso = intBaseTen
+instance IntBaseTen p f b m Int64 char => IsoClass p Int64 where iso = intBaseTen
 
 ---- | Only wirtes digits and not powers of 10.
---eNotation :: forall p f b m number i.
+--eNotation :: forall p f b m number char.
 --  ( Diverge (p Int) f b Int
 --  , forall u. MonadFail (p u)
 --  , forall u. Alternative (p u)
@@ -127,17 +127,16 @@ instance IntBaseTen p f b m Int64 i => IsoClass p Int64 where iso = intBaseTen
 --  , ComapM p m
 --  , MonadFail m
 --  , MonadFail f
---  , OneFwd i f
 --  , Try f
 --  , Alternative f
---  , UnfoldlExactN b i
+--  , UnfoldlExactN b char
 --  , Monad b
 --  , Fractional number
---  , i ~ Item' p
---  , Show i
---  , Ix i
---  , Enum i
---  , IsChar i
+--  , char ~ Item' p
+--  , Show char
+--  , Ix char
+--  , Enum char
+--  , IsChar char
 --  ) => Iso p number
 --eNotation = do
 --  digits <- realBaseTen
@@ -217,36 +216,36 @@ numDigitsWord8 x = if
   | x >= 10 -> 2
   | otherwise -> 1
 
-sign :: forall p m number i. Sign p m number i => Biparser p number (number -> number)
-sign = comap (< 0) $ takeTri (fromChar '-') True negate <|> pure id
-type Sign p m number i =
+sign :: forall char p m number. Sign p m number char => Biparser p number (number -> number)
+sign = comap (< 0) $ takeTri (fromChar '-' :: char) True negate <|> pure id
+type Sign p m number char =
   ( MonadFail (p Bool)
   , Alternative (p Bool)
   , Try (p Bool)
   , Profunctor p
-  , One i p
+  , One char (p char)
   , ComapM p m
   , MonadFail m
   , Ord number
   , Num number
-  , IsChar i
-  , Eq i
-  , Show i
+  , IsChar char
+  , Eq char
+  , Show char
   )
 
 -- | Consume n hex characters lower or upper case. Print n hex characters with a case decided by 'charCase'.
-hex :: forall (charCase :: CharCase) p m number i.
+hex :: forall (charCase :: CharCase) p m number char.
   ( forall u. MonadFail (p u)
-  , One i p
   , ComapM p m
   , MonadFail m
   , Bits number
   , Integral number
   , Show number
   , HexCharMap charCase
-  , Ord i
-  , IsChar i
-  , Show i
+  , Ord char
+  , IsChar char
+  , Show char
+  , One char (p char)
   )
   => Natural
   -> Iso p number
@@ -255,7 +254,7 @@ hex = hex' . fromEnum
   hex' = \case
     0 -> pure zeroBits
     (pred -> n) ->  do
-      c <- one `uponM` lookupChar @charCase . (.&. f) . (`shiftR` (4 * n))
+      c <- one @char @(p char) `uponM` lookupChar @charCase . (.&. f) . (`shiftR` (4 * n))
       h <- lookupHex c
       (shift h (4 * n) +) <$> hex' n 
   f :: number

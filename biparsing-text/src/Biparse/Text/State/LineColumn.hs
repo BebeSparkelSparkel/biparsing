@@ -1,5 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE UndecidableInstances #-}
 module Biparse.Text.State.LineColumn (
 LinesOnly,
 ColumnsOnly,
@@ -13,9 +14,6 @@ ListToElement,
 ) where
 
 import Biparse.State.Lenses (HasDataId(dataId), lens, makeLensesFor)
-import Biparse.Core.Update (UpdateStateWithElement(updateStateWithElement), UpdateStateWithSequence(updateStateWithSequence))
-import Data.MonoTraversable (MonoFoldable)
-import Data.MonoTraversable.Unprefixed (length)
 import Lens.Micro ((+~))
 
 
@@ -84,11 +82,19 @@ instance UpdateStateWithElement (Position ColumnsOnly dataId) text where
 --        ((, 1) . succ . fst)
 --      . (== fromChar '\n')
 
+instance
+  ( MonoFoldable text
+  , Eq char
+  , IsChar char
+  , char ~ Element text
+  ) => UpdateStateWithSequence (Position () dataId) text where
+  updateStateWithSequence = flip $ foldl' $ flip $ bool (column %~ succ) (line %~ succ) . (== fromChar '\n')
+
 instance MonoFoldable text => UpdateStateWithSequence (Position LinesOnly dataId) text where
-  updateStateWithSequence ss = line +~ length ss
+  updateStateWithSequence text = line +~ length text
 
 instance MonoFoldable text => UpdateStateWithSequence (Position ColumnsOnly dataId) text where
-  updateStateWithSequence ss = column +~ length ss
+  updateStateWithSequence text = column +~ length text
 
 -- * Positional Errors
 

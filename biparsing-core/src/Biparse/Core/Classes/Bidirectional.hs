@@ -1,24 +1,43 @@
 {-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE UndecidableInstances #-}
 module Biparse.Core.Classes.Bidirectional (
 Item',
 One(one),
-BiN(biN),
+--BiN(biN),
+StripPrefix(..),
 Diverge(..),
 ) where
 
-import Biparse.Core.Aliases (Iso)
+import Biparse.Core.Alternative (Alternative)
 
 type Item' :: k -> Type
 type family Item' a
 
 -- | Returns one element.
-class One a m | m -> a where
-  one :: Iso m a
+class One a m | m -> a where one :: m a
+deriving instance One a m => One a (IdentityT m)
 
 -- | Returns n elements.
 -- When writing (backwards) all characters should probably be writtern not just N.
-class BiN m where
-  biN :: Int -> Iso m seq
+--class BiN a m | m -> a where biN :: Int -> m a
+
+class StripPrefix a m | m -> a where stripPrefix :: a -> m ()
+--stripPrefix :: forall p seq u eq.
+--  ( Profunctor p
+--  , BiN seq (p seq)
+--  , Try (p u)
+--  , MonadFail (p u)
+--  , Length seq
+--  , Show seq
+--  , Applicative (EqualityWrapper (StripPrefixEqualityCheck p))
+--  , eq ~ EqualityWrapper (StripPrefixEqualityCheck p) seq
+--  , Eq eq
+--  )
+--  => seq
+--  -> Const p u
+--stripPrefix prefix = try do
+--  xs <- biN (length prefix) `uponConst` prefix
+--  unless ((pure prefix :: eq) == pure xs) $ fail $ "Could not match prefix: " <> show prefix
 
 -- * Forward and Backward Divergence
 

@@ -1,3 +1,4 @@
+{-# LANGUAGE UndecidableInstances #-}
 module Biparse.General (
 take,
 takeUnit,
@@ -22,10 +23,11 @@ takeTri',
 --breakAt,
 --optionMaybe,
 optional,
-EqualityWrapper,
-StripPrefixEqualityCheck,
-Length(length),
-stripPrefix,
+--EqualityWrapper,
+--StripPrefixEqualityCheck,
+--Length(length),
+--EqEqualityWrapper,
+--stripPrefix,
 --countElement,
 --countElementSome,
 --not,
@@ -35,13 +37,14 @@ failBool,
 --shouldFail,
 ) where
 
+
 -- * take for single elements
 
 -- | Assumes but disregards the writer context
 take :: forall p u item.
   ( Profunctor p
   , Try (p item)
-  , One item p
+  , One item (p item)
   , forall u'. MonadFail (p u')
   , Eq item
   , Show item
@@ -54,7 +57,7 @@ take takeWrite = unit $ takeUnit takeWrite
 takeUnit :: forall p item.
   ( Profunctor p
   , Try (p item)
-  , One item p
+  , One item (p item)
   , forall u. MonadFail (p u)
   , Eq item
   , Show item
@@ -66,7 +69,7 @@ takeUnit takeWrite = void $ takeUni takeWrite `upon` const takeWrite
 -- | Returns the match
 takeUni :: forall p item.
   ( Try (p item)
-  , One item p
+  , One item (p item)
   , MonadFail (p item)
   , Eq item
   , Show item
@@ -84,7 +87,7 @@ takeDi :: forall p m u item.
   , MonadFail m
   , MonadFail (p u)
   , Try (p u)
-  , One item p
+  , One item (p item)
   , Eq item
   , Show item
   , Eq u
@@ -101,7 +104,7 @@ takeTri :: forall p m u item v.
   , MonadFail m
   , MonadFail (p u)
   , Try (p u)
-  , One item p
+  , One item (p item)
   , Eq item
   , Show item
   , Eq u
@@ -121,7 +124,7 @@ expectedFail :: (MonadFail m, Show a, Show b) => a -> b -> m c
 expectedFail x y = fail $ "Expected a " <> show x <> " but received a " <> show y
 
 takeNot :: forall p item.
-  ( One item p
+  ( One item (p item)
   , MonadFail (p item)
   , Try (p item)
   , Show item
@@ -131,7 +134,7 @@ takeNot :: forall p item.
   -> Iso p item
 takeNot x = try do
   y <- one
-  if x == y
+  if x /= y
   then pure y
   else fail $ "Should not have found an " <> show y
 
@@ -140,18 +143,11 @@ takeNot x = try do
 takeDi' :: forall p m u seq.
   ( ComapM p m
   , MonadFail m
-  , Profunctor p
-  , BiN p
   , Try (p u)
   , Monad (p u)
-  , Try (p ())
-  , MonadFail (p ())
   , Eq u
   , Show u
-  , Length seq
-  , Show seq
-  , Applicative (EqualityWrapper (StripPrefixEqualityCheck p))
-  , Eq (EqualityWrapper (StripPrefixEqualityCheck p) seq)
+  , StripPrefix seq (p seq)
   )
   => seq
   -> u
@@ -162,25 +158,18 @@ takeDi' takeWrite matchReturn = takeTri' takeWrite matchReturn matchReturn
 takeTri' :: forall p m u v seq.
   ( ComapM p m
   , MonadFail m
-  , Profunctor p
-  , BiN p
   , Try (p u)
   , Monad (p u)
-  , Try (p ())
-  , MonadFail (p ())
   , Eq u
   , Show u
-  , Length seq
-  , Show seq
-  , Applicative (EqualityWrapper (StripPrefixEqualityCheck p))
-  , Eq (EqualityWrapper (StripPrefixEqualityCheck p) seq)
+  , StripPrefix seq (p seq)
   )
   => seq
   -> u
   -> v
   -> Biparser p u v
 takeTri' takeWrite toMatch toReturn = try do
-  stripPrefix takeWrite `uponM` \x -> bool (expectedFail toMatch x) (pure ()) $ x == toMatch
+  stripPrefix takeWrite `uponM` \x -> bool (expectedFail toMatch x) (pure takeWrite) $ x == toMatch
   return toReturn
 
 ---- * Take while predicate
@@ -389,36 +378,40 @@ optional x = Just <$> try x `uponM` maybe (fail "") pure <|> pure Nothing
 
 -- * Stripping
 
-data EqualityCheck = CheckEquality | NoEqualityCheck
+--data EqualityCheck = CheckEquality | NoEqualityCheck
+--
+--type EqualityWrapper :: EqualityCheck -> Type -> Type
+--type family EqualityWrapper a where
+--  EqualityWrapper 'CheckEquality = Identity
+--  EqualityWrapper 'NoEqualityCheck = Proxy
+--
+--type StripPrefixEqualityCheck :: (Type -> Type -> Type) -> EqualityCheck
+--type family StripPrefixEqualityCheck p
+--type instance StripPrefixEqualityCheck (Fwd _) = 'CheckEquality
+--type instance StripPrefixEqualityCheck (Bwd _) = 'NoEqualityCheck
+--
+--class Length seq where length :: seq -> Int
+--instance Length String where length = L.length
+--
+--class Eq (EqualityWrapper (StripPrefixEqualityCheck p) seq) => EqEqualityWrapper p seq
+--instance Eq (EqualityWrapper (StripPrefixEqualityCheck p) seq) => EqEqualityWrapper p seq
 
-type EqualityWrapper :: EqualityCheck -> Type -> Type
-type family EqualityWrapper a where
-  EqualityWrapper 'CheckEquality = Identity
-  EqualityWrapper 'NoEqualityCheck = Proxy
-
-type StripPrefixEqualityCheck :: (Type -> Type -> Type) -> EqualityCheck
-type family StripPrefixEqualityCheck p
-type instance StripPrefixEqualityCheck (Fwd _) = 'CheckEquality
-type instance StripPrefixEqualityCheck (Bwd _) = 'NoEqualityCheck
-
-class Length seq where length :: seq -> Int
-
-stripPrefix :: forall p seq u eq.
-  ( Profunctor p
-  , BiN p
-  , Try (p u)
-  , MonadFail (p u)
-  , Length seq
-  , Show seq
-  , Applicative (EqualityWrapper (StripPrefixEqualityCheck p))
-  , eq ~ EqualityWrapper (StripPrefixEqualityCheck p) seq
-  , Eq eq
-  )
-  => seq
-  -> Const p u
-stripPrefix prefix = try do
-  xs <- biN (length prefix) `uponConst` prefix
-  unless ((pure prefix :: eq) == pure xs) $ fail $ "Could not match prefix: " <> show prefix
+--stripPrefix :: forall p seq u eq.
+--  ( Profunctor p
+--  , BiN seq (p seq)
+--  , Try (p u)
+--  , MonadFail (p u)
+--  , Length seq
+--  , Show seq
+--  , Applicative (EqualityWrapper (StripPrefixEqualityCheck p))
+--  , eq ~ EqualityWrapper (StripPrefixEqualityCheck p) seq
+--  , Eq eq
+--  )
+--  => seq
+--  -> Const p u
+--stripPrefix prefix = try do
+--  xs <- biN (length prefix) `uponConst` prefix
+--  unless ((pure prefix :: eq) == pure xs) $ fail $ "Could not match prefix: " <> show prefix
 
 ---- * Counting
 --

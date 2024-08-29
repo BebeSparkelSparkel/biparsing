@@ -9,7 +9,6 @@ ComapM,
 import Data.Profunctor qualified
 import Profunctor.Monad.Cofunctor qualified
 import Profunctor.Monad.Cofunctor (First)
-import Control.Arrow (Kleisli)
 
 comap :: forall p u u' v.
   Profunctor p

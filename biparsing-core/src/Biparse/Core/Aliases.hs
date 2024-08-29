@@ -7,6 +7,7 @@ Unit,
 Const,
 ConstU,
 
+IdentityT(IdentityT),
 ReaderT(ReaderT),
 LazyStateT,
 StrictStateT,
@@ -27,7 +28,6 @@ pattern LazyRWST,
 pattern StrictRWST,
 ) where
 
-import Control.Monad.Trans.Reader (ReaderT(ReaderT))
 import Control.Monad.Trans.State.Lazy qualified
 import Control.Monad.Trans.State.Strict qualified
 import Control.Monad.Trans.Writer.CPS qualified

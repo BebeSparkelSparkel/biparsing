@@ -14,7 +14,7 @@ spec = runAllTests @() @() @() @() @() @() @TestSuite testSuite
 type TestSuite :: (Type -> Type -> Type) -> Constraint
 class TestSuite p where testSuite :: Proxy p -> Spec
 instance
-  ( One char p
+  ( One char (p char)
   , Profunctor p
   , forall u. ShouldReturnQ p u
   , forall u. Applicative (p u)
@@ -33,7 +33,7 @@ instance
   , forall u. Try (p u)
   , forall u. Alternative (p u)
   , forall u. MonadFail (p u)
-  , forall u. MakeIsoResult direction p u
+  , forall u v. MakeResultQ direction p u v
   , ForwardOnly direction
   , direction ~ WhichDirection (p ())
   ) => TestSuite p where
@@ -51,9 +51,8 @@ instance
             "bc"
             "a"
             u
-      forwardOnly @direction $ it "none to take" let
-        fp = "one-none-to-take-forward.test"
-        in shouldFail $ f fp undefined ""
+      forwardOnly @direction $ it "none to take" $
+        shouldFail $ f "one-none-to-take-forward.test" undefined ""
     describe "peek" do
       describe "peek one" do
         let f = run' $ peek one
@@ -65,9 +64,8 @@ instance
               "abc"
               "a"
               u
-        forwardOnly @direction $ it "fail" let
-          fp = "peek-one-fail-forward.test"
-          in shouldFail $ f fp undefined ""
+        forwardOnly @direction $ it "fail" $
+          shouldFail $ f "peek-one-fail-forward.test" undefined ""
       it "peek tuple" let
         fp = "peek-tuple-forward.test"
         f = run' ((,) <$> peek one `upon` fst <*> one `upon` snd) fp

@@ -6,11 +6,9 @@ module Biparse.Text
   , stringShow
   ) where
 
-import Biparse.General (stripPrefix, takeDi, Length, EqualityWrapper, StripPrefixEqualityCheck)
-
 char :: forall p u char.
   ( Profunctor p
-  , One char p
+  , One char (p char)
   , MonadFail (p u)
   , IsChar char
   , Show char
@@ -23,35 +21,24 @@ char c = do
   c'' <- one `uponConst` c'
   unless (c' == c'') $ fail $ "Did not find expected character " <> show c <> " and instead found " <> show c''
 
-string :: forall p u text.
-  ( Profunctor p
-  , Try (p u)
-  , BiN p
-  , MonadFail (p u)
-  , Length text
-  , Show text
-  , Applicative (EqualityWrapper (StripPrefixEqualityCheck p))
-  , Eq (EqualityWrapper (StripPrefixEqualityCheck p) text)
-  )
-  => text
-  -> Const p u
+string :: forall p u text. StripPrefix text (p u) => text -> Const p u
 string = stripPrefix
 
 -- | Tries matching the string @fromString $ show u@ when parsing.
 -- Tries matching @u@ when printing.
-stringShow :: forall p m u char.
-  ( IsString char
-  , Show char
-  , Eq char
-  , One char p
-  , Try (p u)
+stringShow :: forall text p m u.
+  ( Try (p u)
   , MonadFail (p u)
   , ComapM p m
   , MonadFail m
   , Eq u
   , Show u
+  , IsString text
+  , Eq text
+  , Show text
+  , One text (p text)
   )
   => u
   -> Iso p u
-stringShow u = takeDi (fromString $ show u) u
+stringShow u = takeDi (fromString @text $ show u) u
 

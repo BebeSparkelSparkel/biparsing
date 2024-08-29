@@ -5,7 +5,8 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE PolyKinds #-}
-module Biparse.Control.File (
+module Biparse.Control.File
+(
 FileT(FileT, FileT'),
 FileT',
 runFileT,
@@ -14,28 +15,33 @@ OpenFrom,
 OpenWith,
 OpenFile(..),
 IOMode(..),
-MonadFileGetChar,
+MonadFileGetChar(..),
+ReadRequired,
+MonadFilePutChar(..),
+MonadFilePutStr(..),
+WriteRequired,
 ) where
 
-import Biparse.Core.Update (UpdateStateWithElement(updateStateWithElement))
+import Biparse.Control.BP (BP(BP))
+import Biparse.Control.Bwd (Bwd(Bwd,runBwd))
+import Biparse.Control.Fwd (Fwd(Fwd,runFwd))
 import Control.Monad.Catch (MonadThrow, MonadCatch, MonadMask, finally)
 import Control.Monad.IO.Class (MonadIO(liftIO))
 import Control.Monad.RWS (RWST(RWST), MonadReader(ask), asks, LiftingReader(LiftingReader), LiftingWriter, LiftWriter(LiftWriter), LiftingState(LiftingState))
-import Control.Monad.State.Class (MonadState(get,put), modify)
-import Control.Monad.Trans.Control (MonadTransControl, liftThrough)
 import Data.ByteString (ByteString)
+import Data.ByteString qualified
 import Data.ByteString.Builder qualified
 import Data.ByteString.Lazy qualified
-import Data.Kind (Constraint)
-import Data.Maybe (Maybe(Just,Nothing))
 import Data.Text (StrictText)
+import Data.Text.IO qualified
 import Data.Text.Lazy (LazyText)
 import Data.Text.Lazy.Builder qualified
+import Data.Text.Lazy.IO qualified
 import Data.Word (Word8)
 import Foreign (allocaBytes, sizeOf, poke)
 import Foreign qualified
 import GHC.TypeLits (TypeError, ErrorMessage(Text))
-import System.IO (FilePath, Handle, IOMode(ReadMode,WriteMode,ReadWriteMode,AppendMode), IO, hClose, hGetPosn, hSetPosn, hGetBuf, hPutBuf)
+import System.IO (FilePath, Handle, IOMode(ReadMode,WriteMode,ReadWriteMode,AppendMode), hClose, hGetPosn, hSetPosn, hGetBuf, hPutBuf)
 import System.IO qualified
 import System.IO.Error (ioError, eofErrorType, mkIOError)
 
@@ -98,7 +104,7 @@ class OpenFile ot where openFile :: FilePath -> IOMode -> IO Handle
 instance OpenFile 'Character where openFile = System.IO.openFile
 instance OpenFile 'Binary where openFile = System.IO.openBinaryFile
 
-getChar :: forall d mode text m char. (MonadFileGetChar mode char, MonadIO m) => FileT d mode text m char
+getChar :: forall char d mode text m. (MonadFileGetChar mode char, MonadIO m) => FileT d mode text m char
 getChar = liftIO . uncurry (hGetChar @mode) =<< askFile
 {-# WARNING hGetChar, hPutChar "This is hella slow please fix" #-} 
 class ReadRequired mode => MonadFileGetChar mode char where hGetChar :: FilePath -> Handle -> IO char
@@ -138,6 +144,12 @@ putStr str = do
   liftIO $ hPutStr @mode h str
 class WriteRequired mode => MonadFilePutStr mode str where hPutStr :: Handle -> str -> IO ()
 instance WriteRequired mode => MonadFilePutStr mode String where hPutStr = System.IO.hPutStr
+instance WriteRequired mode => MonadFilePutStr mode ByteString where hPutStr = Data.ByteString.hPutStr
+instance WriteRequired mode => MonadFilePutStr mode Data.ByteString.Lazy.ByteString where hPutStr = Data.ByteString.Lazy.hPutStr
+instance WriteRequired mode => MonadFilePutStr mode Data.ByteString.Builder.Builder where hPutStr h = Data.ByteString.Lazy.hPutStr h . Data.ByteString.Builder.toLazyByteString
+instance WriteRequired mode => MonadFilePutStr mode StrictText where hPutStr = Data.Text.IO.hPutStr
+instance WriteRequired mode => MonadFilePutStr mode LazyText where hPutStr = Data.Text.Lazy.IO.hPutStr
+instance WriteRequired mode => MonadFilePutStr mode Data.Text.Lazy.Builder.Builder where hPutStr h = Data.Text.Lazy.IO.hPutStr h . Data.Text.Lazy.Builder.toLazyText
 
 type WriteRequired :: IOMode -> Constraint
 class WriteRequired mode where
@@ -146,58 +158,141 @@ instance WriteRequired 'WriteMode
 instance WriteRequired 'ReadWriteMode
 instance WriteRequired 'AppendMode
 
-instance (UpdateStateWithElement s char, MonadFileGetChar 'ReadMode char, Element text ~ char, MonadState s m, MonadIO m) => OneFwd char (FileT 'Nothing 'ReadMode text m) where
-  oneFwd = do
-    c <- getChar
-    modify $ updateStateWithElement c
-    return c
+instance (One (Fwd m char char) (Fwd ((->) (Fwd m char char)) char), UpdateStateWithElement s char, MonadFileGetChar 'ReadMode char, Element text ~ char, MonadState s m, MonadIO m) => One char (Fwd (BP (FileT 'Nothing 'ReadMode text m)) char) where one = oneGetChar
+instance (One (Fwd m char char) (Fwd ((->) (Fwd m char char)) char), UpdateStateWithElement s char, MonadFileGetChar 'ReadWriteMode char, Element text ~ char, MonadState s m, MonadIO m) => One char (Fwd (BP (FileT ('Just 'Forward) 'ReadWriteMode text m)) char) where one = oneGetChar
+oneGetChar :: forall d mode text m char s.
+  ( MonadState s m
+  , MonadIO m
+  , UpdateStateWithElement s char
+  , One (Fwd m char char) (Fwd ((->) (Fwd m char char)) char)
+  , MonadFileGetChar mode char
+  ) => Fwd (BP (FileT d mode text m)) char char
+oneGetChar = Fwd $ BP do
+  c <- getChar @char
+  modify $ updateStateWithElement c
+  lift $ runFwd @_ @char $ runFwd @_ @char one $ pure @(Fwd m char) c
 
-instance (UpdateStateWithElement s char, MonadFileGetChar 'ReadWriteMode char, Element text ~ char, MonadState s m, MonadIO m) => OneFwd char (FileT ('Just 'Forward) 'ReadWriteMode text m) where
-  oneFwd = do
-    c <- getChar
-    modify $ updateStateWithElement c
-    return c
+instance (MonadFilePutChar 'WriteMode char, MonadIO m, Element text ~ char, One char (Bwd m char)) => One char (Bwd (BP (FileT 'Nothing 'WriteMode text m)) char) where one = onePutChar
+instance (MonadFilePutChar 'ReadWriteMode char, MonadIO m, Element text ~ char, One char (Bwd m char)) => One char (Bwd (BP (FileT ('Just 'Backward) 'ReadWriteMode text m)) char) where one = onePutChar
+instance (MonadFilePutChar 'AppendMode char, MonadIO m, Element text ~ char, One char (Bwd m char)) => One char (Bwd (BP (FileT 'Nothing 'AppendMode text m)) char) where one = onePutChar
+onePutChar ::
+  ( One char (Bwd m char)
+  , MonadIO m
+  , MonadFilePutChar mode char
+  ) => Bwd (BP (FileT d mode text m)) char char
+onePutChar = Bwd \c -> BP $ lift (runBwd one c) <* putChar c
 
-instance (MonadFilePutChar 'WriteMode char, MonadIO m, Element text ~ char) => OneBwd char (FileT 'Nothing 'WriteMode text m) where
-  oneBwd = putChar
+--instance BiN text (Fwd (BP (FileT 'Nothing 'ReadMode text m)) text) where
+--  biN = _
 
-instance (MonadFilePutChar 'ReadWriteMode char, MonadIO m, Element text ~ char) => OneBwd char (FileT ('Just 'Backward) 'ReadWriteMode text m) where
-  oneBwd = putChar
+instance
+  ( MonoTraversable text
+  , Show text
+  , Eq char
+  , MonadFail m
+  , MonadIO m
+  , Try m
+  , OnError m
+  , One char (Fwd (BP (FileT 'Nothing 'ReadMode text m)) char)
+  , char ~ Element text
+  , StripPrefix text (Fwd m text)
+  ) => StripPrefix text (Fwd (BP (FileT 'Nothing 'ReadMode text m)) u) where
+  stripPrefix = stripPrefixFile @text
+instance
+  ( MonoTraversable text
+  , Show text
+  , Eq char
+  , MonadFail m
+  , MonadIO m
+  , Try m
+  , OnError m
+  , MonadState s m
+  , One char (Fwd (BP (FileT ('Just 'Forward) 'ReadWriteMode text m)) char)
+  , char ~ Element text
+  , StripPrefix text (Fwd m text)
+  ) => StripPrefix text (Fwd (BP (FileT ('Just 'Forward) 'ReadWriteMode text m)) u) where
+  stripPrefix = stripPrefixFile @text
 
-instance (MonadFilePutChar 'AppendMode char, MonadIO m, Element text ~ char) => OneBwd char (FileT 'Nothing 'AppendMode text m) where
-  oneBwd = putChar
+stripPrefixFile :: forall text seq t m u char.
+  ( MonadFail (t m)
+  , Show seq
+  , Eq char
+  , One char (Fwd (BP (t m)) char)
+  , char ~ Element seq
+  , MonoTraversable seq
+  , Try (BP (t m))
+  , MonadTrans t
+  , StripPrefix seq (Fwd m text)
+  , Monad m
+  ) => seq -> Fwd (BP (t m)) u ()
+stripPrefixFile prefix = do
+  Fwd $ BP $ lift $ runFwd @_ @text $ stripPrefix prefix
+  try $ for_ prefix \x -> do
+    y <- one `uponConst` x
+    when (x /= y) $ fail $ "Could not match prefix: " <> show prefix
 
-instance (MonadIO m, MonadMask m, Peek m) => Peek (FileT 'Nothing 'ReadMode text m) where
-  peek x = do
+instance
+  ( StripPrefix text (Bwd m text)
+  , MonadFilePutStr 'WriteMode text
+  , MonadIO m
+  ) => StripPrefix text (Bwd (BP (FileT 'Nothing 'WriteMode text m)) u) where
+  stripPrefix prefix = Bwd $ const $ BP do
+    lift $ runBwd (stripPrefix prefix) prefix
+    putStr prefix
+
+instance
+  ( StripPrefix text (Bwd m text)
+  , MonadFilePutStr 'ReadWriteMode text
+  , MonadIO m
+  ) => StripPrefix text (Bwd (BP (FileT ('Just 'Backward) 'ReadWriteMode text m)) u) where
+  stripPrefix prefix = Bwd $ const $ BP do
+    lift $ runBwd (stripPrefix prefix) prefix
+    putStr prefix
+
+instance
+  ( StripPrefix text (Bwd m text)
+  , MonadFilePutStr 'AppendMode text
+  , MonadIO m
+  ) => StripPrefix text (Bwd (BP (FileT 'Nothing 'AppendMode text m)) u) where
+  stripPrefix prefix = Bwd $ const $ BP do
+    lift $ runBwd (stripPrefix prefix) prefix
+    putStr prefix
+
+instance (MonadIO m, MonadMask m, Peek m) => Peek (BP (FileT 'Nothing 'ReadMode text m)) where
+  peek (BP x) = BP $ do
     p <- liftIO . hGetPosn =<< askHandle
     finally (liftThrough peek x) $ liftIO $ hSetPosn p
 
-instance (MonadIO m, MonadMask m, Peek m) => Peek (FileT ('Just 'Forward) 'ReadWriteMode text m) where
-  peek x = do
+instance (MonadIO m, MonadMask m, Peek m) => Peek (BP (FileT ('Just 'Forward) 'ReadWriteMode text m)) where
+  peek (BP x) = BP $ do
     p <- liftIO . hGetPosn =<< askHandle
     finally (liftThrough peek x) $ liftIO $ hSetPosn p
 
-instance (MonadIO m, Try m, OnError m) => Try (FileT 'Nothing 'ReadMode text m) where
-  try x = do
+instance (MonadIO m, Try m, OnError m) => Try (BP (FileT 'Nothing 'ReadMode text m)) where
+  try (BP x) = BP $ do
     p <- liftIO . hGetPosn =<< askHandle
     onError (liftThrough try x) $ liftIO $ hSetPosn p
 
-instance (MonadIO m, Try m, OnError m) => Try (FileT ('Just 'Forward) 'ReadWriteMode text m) where
-  try x = do
+instance (MonadIO m, Try m, OnError m) => Try (BP (FileT ('Just 'Forward) 'ReadWriteMode text m)) where
+  try (BP x) = BP $ do
     p <- liftIO . hGetPosn =<< askHandle
     onError (liftThrough try x) $ liftIO $ hSetPosn p
 
-instance (MonadFilePutStr 'AppendMode text, MonadFail m, OnError m, MonadIO m, Try m, Monoid text) => Try (FileT 'Nothing 'AppendMode text m) where
-  try x = do
-    push mempty
-    y <- try x
-    z <- pop
-    onError
-      do
-        z' <- pop
-        push $ z' <> z
-      $ putStr z
-    return y
+instance (MonadFilePutStr 'AppendMode text, MonadFail m, OnError m, MonadIO m, Try m, Monoid text) => Try (BP (FileT 'Nothing 'AppendMode text m)) where
+  try (BP x) = BP $ onError
+    do
+      push mempty
+      y <- liftThrough try x
+      z <- pop
+      onError
+        do
+          z' <- pop
+          push $ z' <> z
+        do
+          putStr z
+      return y
+    do
+      pop
 
 instance OnError m => OnError (FileT d mode text m) where
   onError (FileT x) (FileT y) = FileT \fp h s -> onError (x fp h s) (y fp h s)

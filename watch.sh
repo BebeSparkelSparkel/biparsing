@@ -17,18 +17,27 @@ haskellFiles() {
   find $searchDir '(' -path '*dist-newstyle*' -prune -or -name '[A-Za-z]*.hs' ')' -and -type f
 }
 
-cabalAndHaskellFiles() {
-  packageFiles
+haskellDirectories() {
+  haskellFiles | xargs -n 1 dirname | sort -u
+}
+
+cabalFilesAndHaskellDirectories() {
   cabalFiles
-  haskellFiles
+  haskellDirectories
 }
 
 cabalGildWatch() {
   echo cabalGildWatch
   while [ $continue = true -a -n "$(cabalFiles)" ]
   do
-    cabalFiles | entr -dap sh -c 'cabal-gild --io=$0 && echo generated $0 && sleep 2 || echo failed generating $0' /_
+    cabalFilesAndHaskellDirectories | entr -dap sh -c 'cabal-gild --io=$0 && echo generated $0 && sleep 2 || echo failed generating $0' /_
   done
+}
+
+cabalAndHaskellFiles() {
+  packageFiles
+  cabalFiles
+  haskellFiles
 }
 
 cabalWatch() {

@@ -17,10 +17,12 @@ flag padantic
 library
   -- cabal-gild: discover src --exclude=src/Prelude.hs
   exposed-modules:
+    Biparse.Control.BP
     Biparse.Control.Bwd
     Biparse.Control.Except
     Biparse.Control.File
     Biparse.Control.Fwd
+    Biparse.Control.OnError
 
   other-modules:
     Prelude
@@ -41,14 +43,18 @@ library
     LambdaCase
     MultiParamTypeClasses
     PatternSynonyms
+    RankNTypes
     ScopedTypeVariables
     StandaloneDeriving
+    StandaloneKindSignatures
+    TypeApplications
     TypeFamilies
     UndecidableInstances
 
   build-depends:
     base,
     bifunctors,
+    biparsing-combinators,
     biparsing-core,
     biparsing-state,
     bytestring,
@@ -57,6 +63,7 @@ library
     monad-control,
     mono-traversable,
     mtl,
+    profunctor-monad,
     profunctors,
     text,
     transformers,
@@ -72,11 +79,9 @@ library
       -Wno-incomplete-uni-patterns
       -Wno-missing-deriving-strategies
       -Wno-missing-export-lists
-      -Wno-missing-import-lists
       -Wno-missing-kind-signatures
       -Wno-missing-local-signatures
       -Wno-missing-safe-haskell-mode
-      -Wno-orphans
       -Wno-safe
       -Wno-unsafe
       -Wno-unused-packages

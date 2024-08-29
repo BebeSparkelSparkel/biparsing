@@ -71,7 +71,6 @@ library
       -Wno-unused-packages
   build-depends:
     base,
-    biparsing-control,
     biparsing-core,
 
   mixins:

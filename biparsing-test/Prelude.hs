@@ -41,7 +41,7 @@ State,
 ShowStM',
 EqStM',
 RunBase(BaseMonad, StM'),
-MakeIsoResult,
+MakeResultQ,
 MakeForwardWriterResult,
 MakeForwardStateResult,
 MakeForwardRWSResult,
@@ -56,19 +56,20 @@ ShouldFail,
 shouldFail,
 ForwardOnly(..),
 ZeroPos(..),
+OnePos(..),
+IndexPos(..),
 ) where
 
 import Biparse.Comap as Export
 import Biparse.Control.Bwd as Export
 import Biparse.Control.Except as Export
-import Biparse.Control.File as Export (FileT, OpenFile(openFile), OpenFrom, MonadFileGetChar)
+import Biparse.Control.File as Export (FileT, OpenFile(openFile), OpenFrom, MonadFileGetChar, MonadFilePutStr(hPutStr), WriteRequired)
 import Biparse.Control.Fwd as Export
 import Biparse.Core.Aliases as Export
 import Biparse.Core.Alternative as Export
 import Biparse.Core.Classes as Export
-import Biparse.Core.Update as Export (UpdateStateWithElement)
 import Biparse.General as Export
-import Biparse.State.Index as Export (IndexPosition(IndexPosition))
+import Biparse.State.Index as Export (IndexPosition(IndexPosition), index)
 import Biparse.Text.State.LineColumn as Export
 import Control.Applicative as Export (Applicative(pure,(<*>)), (*>), (<*), liftA2, empty)
 import Control.Monad as Export (Monad((>>=),return), when, sequence)
@@ -98,7 +99,7 @@ import Data.List as Export (zip)
 import Data.List.NonEmpty as Export (NonEmpty)
 import Data.Maybe as Export (Maybe(Just,Nothing), maybe)
 import Data.MonoTraversable as Export (Element, olength)
-import Data.Monoid as Export (Monoid(mempty), Endo(Endo))
+import Data.Monoid as Export (Monoid(mempty))
 import Data.Ord as Export
 import Data.Proxy as Export
 import Data.Semigroup as Export (Semigroup((<>)))
@@ -116,7 +117,6 @@ import GHC.Float as Export (Double)
 import GHC.Generics as Export (Generic(from,to))
 import GHC.Num as Export (Num, (+), (-))
 import GHC.Real as Export (Fractional, Integral, fromIntegral, Real, div)
-import Lens.Micro as Export ((^.), (.~), (%~), _1, _2, _3)
 import Numeric as Export (showHex)
 import Numeric.Natural as Export (Natural)
 import System.IO as Export (IO, FilePath)
@@ -134,9 +134,9 @@ import Data.Vector as Export (Vector)
 #endif
 
 -- Internal Imports
+import Biparse.Control.BP (BP(runBP))
 import Biparse.Control.File (runFileT)
 import Biparse.Core.Direction (Direction(Forward,Backward), WhichDirection)
-import Biparse.Core.Update (updateStateWithElement)
 import Biparse.State.Lenses (HasDataId)
 import Control.Monad.IO.Class as Export (MonadIO)
 import Control.Monad.Reader (runReaderT)
@@ -151,10 +151,11 @@ import Control.Monad.Trans.Writer.Strict qualified
 import Data.ByteString.Builder qualified
 import Data.ByteString.Builder.Internal (byteStringInsert, byteStringThreshold, toLazyByteStringWith, safeStrategy, smallChunkSize)
 import Data.Maybe as Export (isNothing)
+import Data.Monoid as Export (Endo(Endo,appEndo))
 import Data.Text.Lazy.Builder qualified
 import Fcf (Exp, Eval, Pure, LiftM2, Map, Uncurry, type (++))
-import Fcf.Combinators (Pure4)
 import GHC.Exts (IsList(..))
+import Lens.Micro ((.~), (%~), (+~))
 import System.IO (IOMode(ReadMode, WriteMode, ReadWriteMode, AppendMode), hClose)
 import System.IO qualified
 import System.IO.Temp (withSystemTempFile)
@@ -188,6 +189,7 @@ data TestParameters read state u a = TestParameters
 
 type Read :: (Type -> Type) -> Type
 type family Read m
+type instance Read (BP m) = Read m
 type instance Read (Fwd m _) = Read m
 type instance Read (Bwd m _) = Read m
 type instance Read (FileT _ _ _ m) = Read m
@@ -208,6 +210,7 @@ type instance Read Identity = ()
 
 type State :: (Type -> Type) -> Type
 type family State m
+type instance State (BP m) = State m
 type instance State (Fwd m _) = State m
 type instance State (Bwd m _) = State m
 type instance State (FileT _ _ _ m) = State m
@@ -235,19 +238,31 @@ class ShouldReturn (BaseMonad (p u)) => ShouldReturnQ p u
 instance ShouldReturn (BaseMonad (p u)) => ShouldReturnQ p u
 class ShouldFail (BaseMonad (p u)) => ShouldFailQ p u
 instance ShouldFail (BaseMonad (p u)) => ShouldFailQ p u
-class (MakeResult d (Position () FilePath -> IndexPosition FilePath -> String -> String -> u -> StM' (p u) u), MakeResult d (ZeroPos -> String -> String -> u -> StM' (p u) u)) => MakeIsoResult d p u
-instance (MakeResult d (Position () FilePath -> IndexPosition FilePath -> String -> String -> u -> StM' (p u) u), MakeResult d (ZeroPos -> String -> String -> u -> StM' (p u) u)) => MakeIsoResult d p u
+class
+  ( MakeResult d (Position () FilePath -> IndexPosition FilePath -> String -> String -> v -> StM' (p u) v)
+  , MakeResult d (ZeroPos -> String -> String -> v -> StM' (p u) v)
+  , MakeResult d (OnePos -> String -> String -> v -> StM' (p u) v)
+  , MakeResult d (IndexPos -> String -> String -> v -> StM' (p u) v)
+  ) => MakeResultQ d p u v
+instance
+  ( MakeResult d (Position () FilePath -> IndexPosition FilePath -> String -> String -> v -> StM' (p u) v)
+  , MakeResult d (ZeroPos -> String -> String -> v -> StM' (p u) v)
+  , MakeResult d (OnePos -> String -> String -> v -> StM' (p u) v)
+  , MakeResult d (IndexPos -> String -> String -> v -> StM' (p u) v)
+  ) => MakeResultQ d p u v
 class MakeResult d (Position () FilePath -> IndexPosition FilePath -> String -> String -> v -> StM' m ((v, w), s)) => MakeForwardWriterResult d m v w s
 class MakeResult d (Position () FilePath -> IndexPosition FilePath -> String -> String -> v -> StM' m (v, s)) => MakeForwardStateResult d m v s
 class MakeResult d (Position () FilePath -> IndexPosition FilePath -> String -> String -> v -> StM' m (v, s, w)) => MakeForwardRWSResult d m v w s
---class MakeResult (String -> u -> StM' m v) => MakeBackwardResult u m v
---instance MakeResult (String -> u -> StM' m v) => MakeBackwardResult u m v
 
 type BaseResult m a = BaseMonad m (StM' m a)
 class RunBase b m where
   type BaseMonad m :: Type -> Type
   type StM' m a :: Type
   runBase :: m a -> b -> BaseResult m a
+instance RunBase b m => RunBase b (BP m) where
+  type BaseMonad (BP m) = BaseMonad m
+  type StM' (BP m) a = StM' m a
+  runBase x b = runBase (runBP x) b
 instance RunBase b m => RunBase b (Fwd m u) where
   type BaseMonad (Fwd m _) = BaseMonad m
   type StM' (Fwd m _) a = StM' m a
@@ -379,20 +394,22 @@ instance RunBase b (Except e) where
   runBase = const
 
 class MakeResult (direction :: Direction) a where makeResult :: a
-instance MakeResult 'Forward (ZeroPos -> ss -> ws -> v -> v) where
-  makeResult _ _ _ x = x
-instance MakeResult 'Forward (Position () FilePath -> i -> ss -> ws -> v -> v) where
-  makeResult _ _ _ _ x = x
+instance MakeResult 'Forward (ZeroPos -> ss -> ws -> v -> v) where makeResult _ _ _ x = x
+instance MakeResult 'Forward (OnePos -> ss -> ws -> v -> v) where makeResult _ _ _ x = x
+instance MakeResult 'Forward (IndexPos -> ss -> ws -> v -> v) where makeResult _ _ _ x = x
+instance MakeResult 'Forward (Position () FilePath -> i -> ss -> ws -> v -> v) where makeResult _ _ _ _ x = x
 instance (IsString dataId, Default a, HasDataId () a p dataId) => MakeResult 'Forward (ZeroPos -> ss -> ws -> v -> (v, p)) where
   makeResult (ZeroPos fp) _ _ x = (x, def & dataId @() .~ fromString fp)
+instance (SetRemaining ss p, IsString ss, IsString dataId, Increment p, HasDataId () a p dataId, Default a) => MakeResult 'Forward (OnePos -> String -> ws -> v -> (v, p)) where
+  makeResult (OnePos fp) s _ x = (x, increment 1 $ def & dataId @() .~ fromString fp & setRemaining (fromString s))
+instance (SetRemaining ss p, IsString ss, IsString dataId, Increment p, HasDataId () a p dataId, Default a) => MakeResult 'Forward (IndexPos -> String -> ws -> v -> (v, p)) where
+  makeResult (IndexPos fp i) s _ x = (x, increment i $ def & dataId @() .~ fromString fp & setRemaining (fromString s))
 instance MakeResult 'Forward (Position () FilePath -> i -> ss -> ws -> v -> (v, Position () FilePath)) where
   makeResult p _ _ _ x = (x, p)
 instance MakeResult 'Forward (Position () FilePath -> i -> ss -> ws -> v -> (v, i)) where
   makeResult _ i _ _ x = (x, i)
 instance (IsString text, IsString dataId) => MakeResult 'Forward (Position () FilePath -> i -> String -> ws -> v -> (v, StateSeq (Position context dataId) text)) where
   makeResult p _ s _ x = (x, StateSeq (coerce $ p & dataId %~ fromString @dataId) (fromString s))
---instance (Default a, HasDataId () a s dataId, IsString text, IsString dataId) => MakeResult 'Forward (ZeroPos -> String -> ws -> v -> (v, StateSeq s text)) where
---  makeResult (ZeroPos fp) s _ x = (x, StateSeq (def @a & dataId @() .~ fromString @dataId fp) (fromString s))
 instance (IsString text, IsString dataId) => MakeResult 'Forward (p -> IndexPosition FilePath -> String -> ws -> v -> (v, StateSeq (IndexPosition dataId) text)) where
   makeResult _ i s _ x = (x, (StateSeq (coerce $ i & dataId %~ fromString @dataId) (fromString s)))
 instance IsString text => MakeResult 'Forward (Position () FilePath -> i -> String -> ws -> v -> (v, StateSeq () text)) where
@@ -401,16 +418,24 @@ instance MakeResult 'Forward (Position () FilePath -> i -> ss -> ws -> v -> v) =
   makeResult p i s w v = (makeResult @'Forward p i s w v, ())
 instance MakeResult 'Forward (Position () FilePath -> i -> ss -> ws -> v -> (v, s)) => MakeResult 'Forward (Position () FilePath -> i -> ss -> ws -> v -> ((v, ()), s)) where
   makeResult p i s w v = first (, ()) $ makeResult @'Forward p i s w v
-instance MakeResult 'Forward (ZeroPos -> ss -> ws -> v -> (v, s)) => MakeResult 'Forward (ZeroPos -> ss -> ws -> v -> ((v, ()), s)) where
+instance MakeResult 'Forward (p -> ss -> ws -> v -> (v, s)) => MakeResult 'Forward (p -> ss -> ws -> v -> ((v, ()), s)) where
   makeResult z s w v = first (, ()) $ makeResult @'Forward z s w v
 instance MakeResult 'Forward (Position () FilePath -> i -> ss -> ws -> v -> (v, s)) => MakeResult 'Forward (Position () FilePath -> i -> ss -> ws -> v -> (v, s, ())) where
   makeResult p i s w v = makeResult @'Forward p i s w v & \(v, s) -> (v, s, ())
-instance MakeResult 'Forward (ZeroPos -> ss -> ws -> v -> (v, s)) => MakeResult 'Forward (ZeroPos -> ss -> ws -> v -> (v, s, ())) where
+instance MakeResult 'Forward (p -> ss -> ws -> v -> (v, s)) => MakeResult 'Forward (p -> ss -> ws -> v -> (v, s, ())) where
   makeResult z s w v = makeResult @'Forward z s w v & \(v, s) -> (v, s, ())
+instance MakeResult 'Forward (Position () FilePath -> i -> ss -> ws -> v -> (v, s)) => MakeResult 'Forward (Position () FilePath -> i -> ss -> ws -> v -> ((v, s), ())) where
+  makeResult p i s w v = (makeResult @'Forward p i s w v, ())
+instance MakeResult 'Forward (p -> ss -> ws -> v -> (v, s)) => MakeResult 'Forward (p -> ss -> ws -> v -> ((v, s), ())) where
+  makeResult p s w v = (makeResult @'Forward p s w v, ())
 
 instance MakeResult 'Backward (ws -> v -> a) => MakeResult 'Backward (Position () FilePath -> i -> ss -> ws -> v -> a) where
   makeResult _ _ _ w v = makeResult @'Backward w v
 instance MakeResult 'Backward (ws -> v -> a) => MakeResult 'Backward (ZeroPos -> ss -> ws -> v -> a) where
+  makeResult _ _ w v = makeResult @'Backward w v
+instance MakeResult 'Backward (ws -> v -> a) => MakeResult 'Backward (OnePos -> ss -> ws -> v -> a) where
+  makeResult _ _ w v = makeResult @'Backward w v
+instance MakeResult 'Backward (ws -> v -> a) => MakeResult 'Backward (IndexPos -> ss -> ws -> v -> a) where
   makeResult _ _ w v = makeResult @'Backward w v
 instance IsString w => MakeResult 'Backward (String -> v -> (v, w)) where
   makeResult w v = (v, fromString w)
@@ -477,7 +502,6 @@ instance Show e => ShouldFail (Except e) where shouldFail = (`shouldSatisfy` isE
 instance MonadState () IO where
   get = pure ()
   put = const $ pure ()
-instance UpdateStateWithElement () char where updateStateWithElement = const id
 
 class ForwardOnly (d :: Direction) where forwardOnly :: Applicative m => m () -> m ()
 instance ForwardOnly 'Forward where forwardOnly = id
@@ -548,9 +572,9 @@ type ForwardFileProfunctors r w s =
 #endif
   Pure '[]
 data FileForwardIO :: IOMode -> String' -> Exp ProfunctorK
-type instance Eval (FileForwardIO mode str) = Fwd (FileT (MaybeDirection 'Forward mode) mode str IO)
+type instance Eval (FileForwardIO mode str) = Fwd (BP (FileT (MaybeDirection 'Forward mode) mode str IO))
 data FileForwardT :: (IOMode, (String', TransformerK)) -> Exp ProfunctorK
-type instance Eval (FileForwardT '(mode, '(str, t))) = Fwd (FileT (MaybeDirection 'Forward mode) mode str (t IO))
+type instance Eval (FileForwardT '(mode, '(str, t))) = Fwd (BP (FileT (MaybeDirection 'Forward mode) mode str (t IO)))
 type ReadModes = '[ 'ReadMode, 'ReadWriteMode ]
 type MaybeDirection :: Direction -> IOMode -> Maybe Direction
 type family MaybeDirection d mode where
@@ -560,7 +584,7 @@ type family MaybeDirection d mode where
 type ForwardStateProfunctors :: Exp [ProfunctorK]
 type ForwardStateProfunctors = Map StateForward (Combinations States (Combinations StateTransformers (Combinations Monads Strings)))
 data StateForward :: (State', (State' -> TransformerK, (MonadK, String'))) -> Exp ProfunctorK
-type instance Eval (StateForward '(s, '(stateT, '(m, str)))) = Fwd (stateT (StateSeq s str) m)
+type instance Eval (StateForward '(s, '(stateT, '(m, str)))) = Fwd (BP (stateT (StateSeq s str) m))
 type States :: [State']
 type States =
   '[ Position () ()
@@ -570,7 +594,12 @@ type States =
 #endif
   ]
 type StateTransformers :: [State' -> TransformerK]
-type StateTransformers = '[LazyStateT, StrictStateT]
+type StateTransformers =
+  '[LazyStateT
+#ifndef SMALL
+  ,  StrictStateT
+#endif
+  ]
 type Monads :: [MonadK]
 type Monads =
   '[ Except String
@@ -581,22 +610,24 @@ type Monads =
   ]
 
 type ForwardRWSProfunctors :: Read' -> Write' -> Exp [ProfunctorK]
-type ForwardRWSProfunctors r w = Map (RWSForward r w) (Combinations States (Combinations RWSTransformers (Combinations Monads Strings)))
+type ForwardRWSProfunctors r w = Map (RWSForward r w) (Combinations States (Combinations ForwardRWSTransformers (Combinations Monads Strings)))
 data RWSForward :: Read' -> Write' -> (State', (Read' -> Write' -> State' -> MonadK -> Exp MonadK, (MonadK, String'))) -> Exp ProfunctorK
 type instance Eval (RWSForward r w '(s, '(f, '(m, str)))) = Fwd (Eval (f r w (StateSeq s str) m))
-type RWSTransformers :: [Read' -> Write' -> State' -> MonadK -> Exp MonadK]
-type RWSTransformers =
-  '[ Pure4 LazyRWST
+type ForwardRWSTransformers :: [Read' -> Write' -> State' -> MonadK -> Exp MonadK]
+type ForwardRWSTransformers =
+  '[ BPRWST LazyRWST
+  ,  ForwardStackedRWST LazyWriterT   LazyStateT
 #ifndef SMALL
-  ,  Pure4 CPSRWST
-  ,  Pure4 StrictRWST
-  ,  StackedRWST CPSWriterT LazyStateT
-  ,  StackedRWST LazyWriterT LazyStateT
-  ,  StackedRWST StrictWriterT StrictStateT
+  ,  BPRWST CPSRWST
+  ,  BPRWST StrictRWST
+  ,  ForwardStackedRWST CPSWriterT    LazyStateT
+  ,  ForwardStackedRWST StrictWriterT StrictStateT
 #endif
   ]
-data StackedRWST :: (Write' -> TransformerK) -> (State' -> TransformerK) -> Read' -> Write' -> State' -> MonadK -> Exp MonadK
-type instance Eval (StackedRWST writerT stateT r w s m) = ReaderT r (writerT w (stateT s m))
+data ForwardStackedRWST :: (Write' -> TransformerK) -> (State' -> TransformerK) -> Read' -> Write' -> State' -> MonadK -> Exp MonadK
+type instance Eval (ForwardStackedRWST writerT stateT r w s m) = ReaderT r (writerT w (BP (stateT s m)))
+data BPRWST :: (Read' -> Write' -> State' -> TransformerK) -> Read' -> Write' -> State' -> MonadK -> Exp MonadK
+type instance Eval (BPRWST rwst r w s m) = BP (rwst r w s m)
 
 type BackwardFileProfunctors :: Read' -> Write' -> State' -> Exp [ProfunctorK]
 type BackwardFileProfunctors r w s =
@@ -604,15 +635,15 @@ type BackwardFileProfunctors r w s =
   Map FileBackwardsT (Combinations WriteModes (Combinations Writers (FileTransformers r w s))) ^++^
   Pure '[]
 data FileBackwardIO :: IOMode -> String' -> Exp ProfunctorK
-type instance Eval (FileBackwardIO mode str) = Bwd (FileT (MaybeDirection 'Backward mode) mode str IO)
+type instance Eval (FileBackwardIO mode str) = Bwd (BP (FileT (MaybeDirection 'Backward mode) mode str IO))
 data FileBackwardsT :: (IOMode, (String', TransformerK)) -> Exp ProfunctorK
-type instance Eval (FileBackwardsT '( mode, '(str, _))) = Bwd (FileT (MaybeDirection 'Backward mode) mode str IO)
+type instance Eval (FileBackwardsT '( mode, '(str, _))) = Bwd (BP (FileT (MaybeDirection 'Backward mode) mode str IO))
 type WriteModes = '[ 'WriteMode, 'ReadWriteMode, 'AppendMode]
 
 type BackwardWriterProfunctors :: Exp [ProfunctorK]
 type BackwardWriterProfunctors = Map WriteBackward (Combinations Writers (Combinations WriterTransformers Monads))
 data WriteBackward :: (Write', (Write' -> TransformerK, MonadK)) -> Exp ProfunctorK
-type instance Eval (WriteBackward '(w, '(writerT, m))) = Bwd (writerT w m)
+type instance Eval (WriteBackward '(w, '(writerT, m))) = Bwd (BP (writerT w m))
 type WriterTransformers :: [Write' -> TransformerK]
 type WriterTransformers =
   '[ LazyWriterT
@@ -637,9 +668,21 @@ type Builders =
   ]
 
 type BackwardRWSProfunctors :: Read' -> State' -> Exp [ProfunctorK]
-type BackwardRWSProfunctors r s = Map (RWSBackward r s) (Combinations Writers (Combinations RWSTransformers Monads))
+type BackwardRWSProfunctors r s = Map (RWSBackward r s) (Combinations Writers (Combinations BackwardRWSTransformers Monads))
 data RWSBackward :: Read' -> State' -> (Write', (Read' -> Write' -> State' -> MonadK -> Exp MonadK, MonadK)) -> Exp ProfunctorK
 type instance Eval (RWSBackward r s '(w, '(f, m))) = Bwd (Eval (f r w s m))
+type BackwardRWSTransformers =
+  '[ BPRWST LazyRWST
+  ,  BackwardStackedRWST LazyWriterT   LazyStateT
+#ifndef SMALL
+  ,  BPRWST CPSRWST
+  ,  BPRWST StrictRWST
+  ,  BackwardStackedRWST CPSWriterT    LazyStateT
+  ,  BackwardStackedRWST StrictWriterT StrictStateT
+#endif
+  ]
+data BackwardStackedRWST :: (Write' -> TransformerK) -> (State' -> TransformerK) -> Read' -> Write' -> State' -> MonadK -> Exp MonadK
+type instance Eval (BackwardStackedRWST writerT stateT r w s m) = ReaderT r (BP (writerT w (stateT s m)))
 
 infixr 5 ^++^
 data (^++^) :: Exp [a] -> Exp [a] -> Exp [a]
@@ -667,7 +710,24 @@ runAllTests' testSuite = case knownTypeableList @cs @l of
     runAllTests' @cs @l' testSuite
 
 data ZeroPos = ZeroPos FilePath deriving Show
+data OnePos = OnePos FilePath deriving Show
+data IndexPos = IndexPos FilePath Int deriving Show
 
 instance HasDataId () () () () where dataId = id
 instance HasDataId () s t b => HasDataId () (StateSeq s a) (StateSeq t a) b where dataId f (StateSeq s x) = flip StateSeq x <$> dataId f s
 
+class Increment a where increment :: Int -> a -> a
+instance Increment () where increment = const id
+instance Increment (Position context dataId) where increment = (column +~)
+instance Increment (IndexPosition dataId) where increment = (index +~)
+instance Increment s => Increment (StateSeq s seq) where increment = first . increment
+
+class SetRemaining w a | a -> w where setRemaining :: w -> a -> a
+instance SetRemaining () () where setRemaining = const
+instance SetRemaining seq (StateSeq s seq) where setRemaining = second . const
+
+#ifndef SMALL
+instance WriteRequired mode => MonadFilePutStr mode (Vector Char) where hPutStr h = System.IO.hPutStr h . toList
+instance WriteRequired mode => MonadFilePutStr mode (Seq Char) where hPutStr h = System.IO.hPutStr h . toList
+#endif
+instance WriteRequired mode => MonadFilePutStr mode (Endo String) where hPutStr h = System.IO.hPutStr h . ($ mempty) . appEndo
