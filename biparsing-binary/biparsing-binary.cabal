@@ -55,8 +55,10 @@ library
       -Wno-unused-packages
   build-depends:
     base,
+    biparsing-combinators,
     biparsing-core,
     mtl,
+    profunctors,
     wide-word,
 
   mixins:
@@ -83,10 +85,11 @@ test-suite spec
     GeneralizedNewtypeDeriving
     LambdaCase
     MultiParamTypeClasses
-    OverloadedStrings
+    OverloadedLists
     PatternSynonyms
     RankNTypes
     ScopedTypeVariables
+    StandaloneKindSignatures
     TypeApplications
     TypeFamilies
     TypeOperators

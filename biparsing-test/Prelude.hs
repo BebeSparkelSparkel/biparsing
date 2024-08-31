@@ -109,7 +109,7 @@ import Data.String as Export (String, IsString(fromString))
 import Data.Text as Export (Text, StrictText)
 import Data.Text.Lazy as Export (LazyText)
 import Data.Tuple as Export (fst, snd, uncurry)
-import Data.Word as Export (Word8)
+import Data.Word as Export
 import GHC.Bits as Export (Bits)
 import GHC.Enum as Export (Enum(succ), maxBound)
 import GHC.Err as Export (undefined)
@@ -250,6 +250,7 @@ instance
   , MakeResult d (OnePos -> String -> String -> v -> StM' (p u) v)
   , MakeResult d (IndexPos -> String -> String -> v -> StM' (p u) v)
   ) => MakeResultQ d p u v
+class (MakeResult d (IndexPosition FilePath ->
 class MakeResult d (Position () FilePath -> IndexPosition FilePath -> String -> String -> v -> StM' m ((v, w), s)) => MakeForwardWriterResult d m v w s
 class MakeResult d (Position () FilePath -> IndexPosition FilePath -> String -> String -> v -> StM' m (v, s)) => MakeForwardStateResult d m v s
 class MakeResult d (Position () FilePath -> IndexPosition FilePath -> String -> String -> v -> StM' m (v, s, w)) => MakeForwardRWSResult d m v w s

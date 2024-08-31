@@ -2,23 +2,31 @@
 -- | Used to converte @u@ to the correct type for the biparser.
 module Biparse.Comap (
 module Biparse.Core.Comap,
+comapMay,
 comapConst,
 unit,
 upon,
 uponM,
+uponMay,
 uponConst,
 ) where
 
 import Biparse.Core.Aliases (Unit, Const)
 import Biparse.Core.Comap (comap, comapM, Profunctor, ComapM)
 import Data.Function (flip, (.), const, ($))
+import Data.Maybe (Maybe, maybe)
+import Control.Monad (MonadFail(fail))
+import Control.Applicative (pure)
 
---comapMay :: forall p u u' v.
---  => (u -> Maybe u')
---  -> p u' v
---  -> p u  v
---comapMay f (fw bw) = fw $ bw <=< maybe (fail "backward map to Maybe gave Nothing.") pure . f
---
+comapMay :: forall p m u u' v.
+  ( ComapM p m
+  , MonadFail m
+  )
+  => (u -> Maybe u')
+  -> p u' v
+  -> p u  v
+comapMay f = comapM $ maybe (fail "backward map to Maybe gave Nothing.") pure . f
+
 --comapEither :: forall p u u' v.
 --  => (u -> Either v u')
 --  -> p u' v
@@ -64,13 +72,16 @@ uponM :: forall p m u u' v.
   -> p u v
 uponM = flip comapM
 
---infix 8 `uponMay`
---uponMay :: forall p u u' v.
---  => p u' v
---  -> (u -> Maybe u')
---  -> p u v
---uponMay = flip comapMay
---
+infix 8 `uponMay`
+uponMay :: forall p m u u' v.
+  ( ComapM p m
+  , MonadFail m
+  )
+  => p u' v
+  -> (u -> Maybe u')
+  -> p u v
+uponMay = flip comapMay
+
 --infix 8 `uponEither`
 --uponEither :: forall p u u' v.
 --  )

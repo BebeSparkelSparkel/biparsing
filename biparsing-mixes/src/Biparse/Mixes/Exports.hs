@@ -6,7 +6,7 @@ import Biparse.State.Index as Export
 import Biparse.General as Export
 --import Biparse.List as Export
 import Biparse.Text as Export
-import Biparse.State.LineColumn as Export
+import Biparse.Text.State.LineColumn as Export
 --import Biparse.Text.LineBreak as Export
 import Biparse.Text.Numeric as Export
 import Control.Monad.RWS.Class as Export

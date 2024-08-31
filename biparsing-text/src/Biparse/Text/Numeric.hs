@@ -55,11 +55,11 @@ type NaturalBaseTen p f b number char =
   , IsChar char
   , One char f
   )
-instance NaturalBaseTen p f b Word   char => IsoClass p Word   where iso = naturalBaseTen
-instance NaturalBaseTen p f b Word8  char => IsoClass p Word8  where iso = naturalBaseTen
-instance NaturalBaseTen p f b Word16 char => IsoClass p Word16 where iso = naturalBaseTen
-instance NaturalBaseTen p f b Word32 char => IsoClass p Word32 where iso = naturalBaseTen
-instance NaturalBaseTen p f b Word64 char => IsoClass p Word64 where iso = naturalBaseTen
+instance NaturalBaseTen p f b Word   char => IsoClass Word   p where iso = naturalBaseTen
+instance NaturalBaseTen p f b Word8  char => IsoClass Word8  p where iso = naturalBaseTen
+instance NaturalBaseTen p f b Word16 char => IsoClass Word16 p where iso = naturalBaseTen
+instance NaturalBaseTen p f b Word32 char => IsoClass Word32 p where iso = naturalBaseTen
+instance NaturalBaseTen p f b Word64 char => IsoClass Word64 p where iso = naturalBaseTen
 
 naturalLimitedBaseTen :: forall p f b number char.
   ( Diverge (p number) f b number
@@ -110,11 +110,11 @@ type IntBaseTen p f b m number char =
   , NaturalBaseTen p f b number char
   , Monad (p number)
   )
-instance IntBaseTen p f b m Int   char => IsoClass p Int   where iso = intBaseTen
-instance IntBaseTen p f b m Int8  char => IsoClass p Int8  where iso = intBaseTen
-instance IntBaseTen p f b m Int16 char => IsoClass p Int16 where iso = intBaseTen
-instance IntBaseTen p f b m Int32 char => IsoClass p Int32 where iso = intBaseTen
-instance IntBaseTen p f b m Int64 char => IsoClass p Int64 where iso = intBaseTen
+instance IntBaseTen p f b m Int   char => IsoClass Int   p where iso = intBaseTen
+instance IntBaseTen p f b m Int8  char => IsoClass Int8  p where iso = intBaseTen
+instance IntBaseTen p f b m Int16 char => IsoClass Int16 p where iso = intBaseTen
+instance IntBaseTen p f b m Int32 char => IsoClass Int32 p where iso = intBaseTen
+instance IntBaseTen p f b m Int64 char => IsoClass Int64 p where iso = intBaseTen
 
 ---- | Only wirtes digits and not powers of 10.
 --eNotation :: forall p f b m number char.
@@ -160,8 +160,8 @@ instance IntBaseTen p f b m Int64 char => IsoClass p Int64 where iso = intBaseTe
 --    --cs <- peek $ Data.Sequences.take 20 <$> rest `upon` const mempty
 --    --fail $ "Could not parse " <> show cs <> " to a base 10 real."
 --    fail $ "Could not parse a base 10 real."
---instance () => IsoClass p Float  where iso = realBaseTen
---instance () => IsoClass p Double where iso = realBaseTen
+--instance () => IsoClass Float p  where iso = realBaseTen
+--instance () => IsoClass Double p where iso = realBaseTen
 
 class NumberOfDigits number where numDigits :: number -> Int
 #if WORD_SIZE_IN_BITS == 64

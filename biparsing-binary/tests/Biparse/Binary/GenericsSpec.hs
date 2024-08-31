@@ -8,21 +8,51 @@ import Biparse.Binary.Generics
 --import Data.Bits
 
 spec :: Spec
-spec = do
-  fb "genericBinaryAdtIsoClass"
-    (genericBinaryAdtIsoClass :: Iso IndexContext IO IO () ByteStringBuilder () (IndexPosition LazyByteString) ABC)
-    ()
-    ()
-    ()
-    (\fw -> do
-      it "A" $ fw (startIndex [0]) `shouldReturn` (A, IndexPosition 1 [])
-      it "B" $ fw (startIndex [1,2]) `shouldReturn` (B 2, IndexPosition 2 [])
-      it "C" $ fw (startIndex [2,0,1,255,255,255,255,0]) `shouldReturn` (C 1 maxBound, IndexPosition 7 [0])
-    )
-    \bw -> do
-      it "A" $ bw A `shouldReturn` (A, [0])
-      it "B" $ bw (B 5) `shouldReturn` (B 5, [1,5])
-      it "C" $ bw (C 0x0102 0x03040506) `shouldReturn` (C 0x0102 0x03040506, [2,1,2,3,4,5,6])
+spec = runAllTests @() @() @() @() @() @() @TestSuite testSuite
+
+type TestSuite :: (Type -> Type -> Type) -> Constraint
+class TestSuite p where testSuite :: Proxy p -> Spec
+instance
+  ( ComapM p m
+  , direction ~ WhichDirection (p ())
+  , r ~ Read (p ())
+  , s ~ State (p ())
+  ) => TestSuite p where
+  testSuite _ = describe (show $ typeRep @p) do
+    let run' :: forall u v. Biparser p u v -> FilePath -> u -> String -> BaseMonad (p u) (StM' (p u) v)
+        run' = run @p @r @s
+    describe "genericBinaryAdtIsoClass" do
+      let f = run' $ genericBinaryAdtIsoClass @ABC
+      it "A" let
+        fp = "genericBinaryAdtIsoClass-A.test"
+        u = A
+        in f fp A [0] `shouldReturn` makeResult @direction
+          (IndexPosition fp 1)
+          []
+          [0]
+          A
+      it "B" let
+        fp = "genericBinaryAdtIsoClass-B.test"
+        bs = [1,5]
+        x = B 5
+        in f fp x bs `shouldReturn` makeResult @direction
+          (IndexPosition fp 2)
+          []
+          bs
+          x
+      it "C" let
+        fp = "genericBinaryAdtIsoClass-C.test"
+        x = C 0x0102 0x03040506
+        in f fp x [2,0,1,255,255,255,255,0] `shouldReturn` makeResult @direction
+          (IndexPosition fp 7)
+          [0]
+          [2,1,2,3,4,5,6]
+          x
+--need to convert the new bidirecional tests (reference GeneralSpec.hs)
+--biparsing-text/Prelude.hs needs to export a set of transformers that only use ByteString and ByteString Builders
+--register with the Feds about the company ownership
+--Haskell Planetarium feed aggragator https://haskell.pl-a.net/
+--Anti Military Licenses https://ethicalsource.dev/licenses/
 
 data ABC
   = A
