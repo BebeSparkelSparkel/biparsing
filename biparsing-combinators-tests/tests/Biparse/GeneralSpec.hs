@@ -2,7 +2,7 @@
 module Biparse.GeneralSpec where
 
 spec :: Spec
-spec = runAllTests @() @() @() @() @() @() @TestSuite testSuite
+spec = runAllTests @(Profunctors 'AllStrings () () () () () ()) @TestSuite testSuite
 
 
 type TestSuite :: (Type -> Type -> Type) -> Constraint

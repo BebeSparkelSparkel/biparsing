@@ -145,6 +145,7 @@ putStr str = do
 class WriteRequired mode => MonadFilePutStr mode str where hPutStr :: Handle -> str -> IO ()
 instance WriteRequired mode => MonadFilePutStr mode String where hPutStr = System.IO.hPutStr
 instance WriteRequired mode => MonadFilePutStr mode ByteString where hPutStr = Data.ByteString.hPutStr
+instance WriteRequired mode => MonadFilePutStr mode [Word8] where hPutStr h = Data.ByteString.hPutStr h . Data.ByteString.pack
 instance WriteRequired mode => MonadFilePutStr mode Data.ByteString.Lazy.ByteString where hPutStr = Data.ByteString.Lazy.hPutStr
 instance WriteRequired mode => MonadFilePutStr mode Data.ByteString.Builder.Builder where hPutStr h = Data.ByteString.Lazy.hPutStr h . Data.ByteString.Builder.toLazyByteString
 instance WriteRequired mode => MonadFilePutStr mode StrictText where hPutStr = Data.Text.IO.hPutStr

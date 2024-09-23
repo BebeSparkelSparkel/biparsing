@@ -79,20 +79,22 @@ test-suite spec
 
   default-extensions:
     BlockArguments
+    DataKinds
     DeriveGeneric
     FlexibleContexts
     FlexibleInstances
     GeneralizedNewtypeDeriving
     LambdaCase
     MultiParamTypeClasses
-    OverloadedLists
     PatternSynonyms
+    QuantifiedConstraints
     RankNTypes
     ScopedTypeVariables
     StandaloneKindSignatures
     TypeApplications
     TypeFamilies
     TypeOperators
+    UndecidableInstances
 
   if flag(padantic)
     ghc-options:

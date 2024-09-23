@@ -16,34 +16,37 @@ module Biparse.Binary
   , int128
   ) where
 
-newtype Bin a = Bin a deriving (Show, Eq, Ord, Num, Bits, Enum, Bounded)
+newtype Bin a = Bin {unBin :: a} deriving (Eq, Ord, Num, Bits, Enum, Bounded)
+instance Show a => Show (Bin a) where show = show . unBin
 
 -- * Words
 
-word8 :: (One Word8 (p Word8), Profunctor p, forall u. Monad (p u)) => Iso p Word8
+word8 :: (One Word8 (p Word8)) => Iso p Word8
 word8 = one
-instance (One Word8 (p Word8), Profunctor p, forall u. Monad (p u)) => IsoClass (Bin Word8) p where iso = coerceIso word8
+instance (One Word8 (p Word8)) => IsoClass (Bin Word8) p where iso = coerceIso word8
 
 word16 :: (One Word8 (p Word8), Profunctor p, forall u. Monad (p u)) => Iso p Word16
-word16 = wordTemplate 8 word8
+word16 = wordTemplate word8
 instance (One Word8 (p Word8), Profunctor p, forall u. Monad (p u)) => IsoClass (Bin Word16) p where iso = coerceIso word16
 
 word32 :: (One Word8 (p Word8), Profunctor p, forall u. Monad (p u)) => Iso p Word32
-word32 = wordTemplate 16 word16
+word32 = wordTemplate word16
 instance (One Word8 (p Word8), Profunctor p, forall u. Monad (p u)) => IsoClass (Bin Word32) p where iso = coerceIso word32
 
 word64 :: (One Word8 (p Word8), Profunctor p, forall u. Monad (p u)) => Iso p Word64
-word64 = wordTemplate 32 word32
+word64 = wordTemplate word32
 instance (One Word8 (p Word8), Profunctor p, forall u. Monad (p u)) => IsoClass (Bin Word64) p where iso = coerceIso word64
 
 wordTemplate :: forall p halfWord word.
   ( Bits word
+  , FiniteBits halfWord
   , Integral word
   , Integral halfWord
   , Profunctor p
   , Monad (p word)
-  ) => Int -> Iso p halfWord -> Iso p word
-wordTemplate shiftBy half = do
+  ) => Iso p halfWord -> Iso p word
+wordTemplate half = do
+  let shiftBy = finiteBitSize $ zeroBits @halfWord
   h <- (`shiftL` shiftBy) . fromIntegral <$> half `upon` fromIntegral . (`shiftR` shiftBy)
   l <- fromIntegral <$> half `upon` fromIntegral
   return $ h .|. l
@@ -86,9 +89,9 @@ wideWordTemplate half getTopHalf combiner = do
 
 -- * Ints
 
-int8 :: forall p. (One Word8 (p Word8), Profunctor p, forall u. Monad (p u)) => Iso p Int8
+int8 :: forall p. (One Word8 (p Word8)) => Iso p Int8
 int8 = unsafeCoerce $ word8 @p
-instance (One Word8 (p Word8), Profunctor p, forall u. Monad (p u)) => IsoClass (Bin Int8) p where iso = coerceIso int8
+instance (One Word8 (p Word8)) => IsoClass (Bin Int8) p where iso = coerceIso int8
 
 int16 :: forall p. (One Word8 (p Word8), Profunctor p, forall u. Monad (p u)) => Iso p Int16
 int16 = unsafeCoerce $ word16 @p

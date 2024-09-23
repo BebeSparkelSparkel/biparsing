@@ -3,9 +3,9 @@ module Biparse.Core.Classes.Backward (
 UnfoldlExactN(..),
 ) where
 
-import Biparse.Core.Aliases (CPSWriterT, LazyWriterT, StrictWriterT, LazyStateT, StrictStateT, CPSRWST, LazyRWST, StrictRWST)
-import Control.Monad.Writer (tell)
-import Data.MonoTraversable (MonoPointed(opoint), Element)
+--import Biparse.Core.Aliases (CPSWriterT, LazyWriterT, StrictWriterT, LazyStateT, StrictStateT, CPSRWST, LazyRWST, StrictRWST)
+--import Control.Monad.Writer (tell)
+--import Data.MonoTraversable (MonoPointed(opoint), Element)
 
 class UnfoldlExactN m a | m -> a where
   unfoldlExactN :: Int -> (b -> (b, a)) -> b -> m b

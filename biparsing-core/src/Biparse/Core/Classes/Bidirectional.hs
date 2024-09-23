@@ -8,7 +8,7 @@ StripPrefix(..),
 Diverge(..),
 ) where
 
-import Biparse.Core.Alternative (Alternative)
+--import Biparse.Core.Alternative (Alternative)
 
 type Item' :: k -> Type
 type family Item' a

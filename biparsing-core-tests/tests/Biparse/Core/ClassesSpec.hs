@@ -9,7 +9,7 @@
 module Biparse.Core.ClassesSpec (spec) where
 
 spec :: Spec
-spec = runAllTests @() @() @() @() @() @() @TestSuite testSuite
+spec = runAllTests @(Profunctors 'AllStrings () () () () () ()) @TestSuite testSuite
 
 type TestSuite :: (Type -> Type -> Type) -> Constraint
 class TestSuite p where testSuite :: Proxy p -> Spec
@@ -40,6 +40,7 @@ instance
   testSuite _ = describe (show $ typeRep @p) do
     let run' :: forall u v. Biparser p u v -> FilePath -> u -> String -> BaseMonad (p u) (StM' (p u) v)
         run' = run @p @r @s
+
     describe "one" do
       let f = run' one
       it "success" let

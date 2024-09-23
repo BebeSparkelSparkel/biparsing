@@ -53,50 +53,41 @@ instance
     r1 (R1 x) = x
 instance
   ( ProductIsoClass (sel :*: sel') p
-  , One i (p i)
+  , One Word8 (p Word8)
   , Profunctor p
   , forall u. Try (p u)
   , forall u. MonadFail (p u)
-  , Enum i
-  , Eq i
-  , Show i
   ) => GenericBinaryAdtIsoClass (C1 meta (sel :*: sel')) p a where
   genericBinaryAdtIsoClass' = do
     prefix <- get
     put $ succ prefix
     return do
-      take (toEnum prefix :: i)
+      take (toEnum prefix :: Word8)
       M1 <$> productIsoClass @(sel :*: sel') `upon` unM1
 instance
   ( IsoClass b p
-  , One i (p i)
+  , One Word8 (p Word8)
   , Profunctor p
   , forall u. MonadFail (p u)
   , forall u. Try (p u)
-  , Enum i
-  , Eq i
-  , Show i
   ) => GenericBinaryAdtIsoClass (C1 meta (S1 meta' (Rec0 b))) p a where
   genericBinaryAdtIsoClass' = do
     prefix <- get
     put $ succ prefix
     return do
-      take (toEnum prefix :: i)
+      take (toEnum prefix :: Word8)
       M1 . M1 . K1 <$> iso `upon` unK1 . unM1 . unM1
 instance 
   ( ComapM p m
-  , One i (p i)
+  , One Word8 (p Word8)
   , forall u. MonadFail (p u)
   , forall u. Try (p u)
   , MonadFail m
-  , Enum i
-  , Eq i
-  , Show i
   ) => GenericBinaryAdtIsoClass (C1 meta U1) p a where
   genericBinaryAdtIsoClass' = do
     prefix <- get
     put $ succ prefix
-    return $ takeDi (toEnum prefix :: i) (M1 U1 :: C1 meta U1 a)
+    return $ takeDi (toEnum prefix :: Word8) (M1 U1 :: C1 meta U1 a)
 
 -- | Parses the fields of a record on after the other.
 -- Careful if the IsoClass of a field does not consume a fixed amount because it could start parsing data of the next field.

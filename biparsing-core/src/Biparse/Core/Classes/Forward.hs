@@ -44,6 +44,7 @@ instance (Peek m, Monad m) => Peek (StrictStateT s m) where peek = liftThrough p
 instance (Peek m, Monad m, Monoid w) => Peek (CPSRWST r w s m) where
   peek (CPSRWST x) = CPSRWST \r s -> peek $ x r s
 instance (Peek m, Monad m, Monoid w) => Peek (LazyRWST r w s m) where peek = liftThrough peek
+instance (Peek m, Monad m, Monoid w) => Peek (StrictRWST r w s m) where peek = liftThrough peek
 
 -- | Allows trying a forward. If the forward fails the state is returned to the value it was before running.
 class Try m where try :: m v -> m v
